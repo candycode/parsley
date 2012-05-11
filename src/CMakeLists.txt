@@ -19,7 +19,4 @@ SET( PARSER_TEST_SRCS parsertest.cpp
    )
 
 
-
-ADD_EXECUTABLE( scratch ${SCRATCH_SRCS} )
-
 ADD_ExECUTABLE( parsertest ${PARSER_TEST_SRCS} )
