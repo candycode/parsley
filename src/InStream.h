@@ -37,7 +37,7 @@ public:
 	///@param is input stream.
 	InChStream( IT& is ) :  isp_( &is ), lines_( 0 ),
                             lineChars_( 0 ), eolIt_( eols_.begin() ),
-                            locale_( is.getloc() )
+                            locale_( is.getloc() ), eof_( false )
 	{
 #ifndef BUFFERED_IN_STREAM
 		//@warning required on MS Windows with VC++, issues in istreams require the stream to be
@@ -57,10 +57,11 @@ public:
 	{
 		assert( isp_ != 0 && "NULL STREAM POINTER" );
 		char_type c = 0;
-		if( isp_->good() ) c = isp_->get();
-		else
-		{
-			throw std::logic_error( "Attempt to read from invalid stream" );
+		if( isp_->good() ) {
+            c = isp_->get();
+            if( isp_->eof() ) eof_ = true;
+		} else {
+ 			throw std::logic_error( "Attempt to read from invalid stream" );
 			return c; // in case exception handling disabled
 		} 
 		if( c == EOL_ )
@@ -100,6 +101,7 @@ public:
 	{
 		assert( isp_ != 0 && "NULL STREAM POINTER" );
 		isp_->clear();
+        eof_ = false;
 	}
 
 	/// Returns current get pointer position.
@@ -118,7 +120,7 @@ public:
 	{
 		assert( isp_ != 0 && "NULL STREAM POINTER" );
 		if( isp_->tellg() == p ) return *isp_;
-		if( isp_->eof() ) isp_->clear();
+		if( eof() ) clear();
 		
 		if( isp_->tellg() > p ) BackwardSeek( p );
 		else ForwardSeek( p );
@@ -158,7 +160,7 @@ public:
 	bool eof() 
 	{ 
 		assert( isp_ != 0 && "NULL STREAM POINTER" );
-		return isp_->eof();
+		return isp_->eof() || eof_;
 	}
     
 	/// Returns number of lines read.
@@ -180,7 +182,7 @@ private:
 	void BackwardSeek( streampos p )
 	{
 		assert( isp_ != 0 && "NULL STREAM POINTER" );
-		isp_->seekg( p );
+	    isp_->seekg( p );
 		const streamoff sp = p; 
 		reolIt_ = std::find_if( eols_.rbegin(), eols_.rend(),
 					std::bind1st( std::greater< streamoff >(), sp ) );
@@ -213,6 +215,9 @@ private:
 	typename EOLs::reverse_iterator reolIt_;
     /// Current locale, recorded at construction time.
     const std::locale locale_;
+    /// Track when eof reached, this is required so that we can return true in
+    /// case eof was reached but an attempt to read past eof was made.
+    bool eof_;
 };
 
 /// Convenience typedef for stadard streams.
