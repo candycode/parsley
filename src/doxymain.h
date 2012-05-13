@@ -33,7 +33,7 @@
  * \subsection dependencies Dependencies
  * No dependencies other than @c STL.
  * \subsection build Building
- * Building is performed through <em>CMake</em>. Should work with any version; tested with version @c 2.6.
+ * Building is performed through <em>CMake</em>. Should work with any version; tested with versions @c 2.6 and @c 2.8.
  */
 
 //==============================================================================
