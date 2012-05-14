@@ -31,7 +31,7 @@
  *  
  * \section depend_sec Compilation 
  * \subsection dependencies Dependencies
- * No dependencies other than @c STL.
+ * No dependencies, the only C++ library used is STL.
  * \subsection build Building
  * Building is performed through <em>CMake</em>. Should work with any version; tested with versions @c 2.6 and @c 2.8.
  */
