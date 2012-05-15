@@ -80,7 +80,7 @@ public:
 		if( !is.good() ) return false;
 		Char c = is.get();
 		while( is.good() && IsBlank( c ) ) c = is.get();
-		if( is.good() ) is.unget(); 
+		/*if( is.good() )*/is.clear(); is.unget(); 
 		return true;
 	}
 	SkipBlankParser* Clone() const { return new SkipBlankParser( *this ); }
