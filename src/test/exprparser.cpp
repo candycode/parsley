@@ -4,6 +4,8 @@
 #include <cassert>
 #include <sstream>
 #include <algorithm>
+#include <list>
+#include <stack>
 
 #include "types.h"
 #include "InStream.h"
@@ -55,25 +57,24 @@ namespace eval
 	typedef std::map< ValueID, Any > Values;
 	bool HandleValues( StateID sid, const Values& v )
 	{
-	    static int level = 0; //parenthesis
-	    static Program::iterator levelBegin, levelEnd;
+            Program::iterator levelBegin, levelEnd;
 	    switch( sid )
 	    {
 	    case EXPRESSION_BEGIN:
-		 ++level;
-		 state_->program_.push_back( OP( LEFT_P, 0, level ) );
-		 levelBegin = --( state_->program_.end() );
+		 state_->program_.push_back( OP( LEFT_P ) );
+		 levelStack_.push( --( state_->program_.end() ) );
 		 break;
 	    case EXPRESSION_END: {
-		     --level;
-		     state_->program_.push_back( OP( RIGHT_P, 0, level ) );
+		     state_->program_.push_back( OP( RIGHT_P ) );
 		     levelEnd = --( state_->program_.end() );
+                     levelBegin = levelStack_.top();
+                     levelStack_.pop();
 		     const double V = state_->Evaluate( ++levelBegin, levelEnd );
 		     state_->program_.erase( --levelBegin, ++levelEnd );
 		     state_->program_.push_back( OP( VAL, V ) );    
 		     break;
 		 } 
-	    case VALUE: state_->program_.push_back( OP( VAL, v.find("operand")->second, level ) ) ;
+	    case VALUE: state_->program_.push_back( OP( VAL, v.find("operand")->second ) ) ;
 			break;
 	    case OPERATOR: 
 		{
@@ -84,7 +85,7 @@ namespace eval
 		    else if( op == "/" ) state_->program_.push_back( OP( DIV ) );
 		}
 		break;
-	    case EOF_:  if( level != 0 ) {
+	    case EOF_:  if( !levelStack_.empty() ) {
 			    throw std::logic_error( "Unmatched parenthesis" );
 			    return false; //in case no exception handling enabled
 			}  
@@ -106,7 +107,6 @@ namespace eval
 	}
 	Print* Clone() const { return new Print( *this ); }
     public: 
-#define p(v) {std::cout<<v<<std::endl;}
         struct State 
         {
             Program program_;
@@ -149,6 +149,7 @@ namespace eval
         Print( SmartPtr< State > s ) : state_( s ) {} 
     private:
         SmartPtr< State > state_;
+	std::stack< Program::iterator > levelStack_;
 
     };
 } //namespace eval
@@ -158,8 +159,8 @@ void TestExprEval()
     std::cout << "EXPRESSION EVALUATOR" << std::endl;
     std::cout << "====================" << std::endl;
 
-    const String EXPR  = "1+3*(4-1/3.3)"; 
-    std::cout << "Expression: " << EXPR << " = " << (1+3*4-1/3.3) << std::endl;
+    const String EXPR  = "1+3*(4-(2-1/3.3))"; 
+    std::cout << "Expression: " << EXPR << " = " << 1+3*(4-(2-1/3.3)) << std::endl;
     std::istringstream iss( EXPR );
     InStream is( iss );
     SmartPtr< eval::Print::State > state( new eval::Print::State );
@@ -185,9 +186,7 @@ void TestExprEval()
                                                                        C("*","operator") ) ) );
     pm.SetParser( eval::EXPRESSION_BEGIN, ( __ > C("(","open") ) );
     pm.SetParser( eval::EXPRESSION_END,   ( __ > C(")","closed") ) );
-    //pm.SetParser( MUL,   Parser( AL( DONT_SKIP_BLANKS ) >= __ >= C("*","operator"), PRINT ) );
     pm.SetParser( eval::EOF_, ( eof_ ) );
-    
     
     pm.Apply( is, eval::START );
 }
