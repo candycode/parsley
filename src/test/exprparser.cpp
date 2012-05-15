@@ -11,6 +11,7 @@
 #include "parser_operators.h"
 #include "ParserManager.h"
 #include "typedefs.h"
+#include "parser_operators.h"
 
 static SkipBlankParser __; // skip blanks static BlankParser _; // parse blank
 static SkipToNextLineParser endl_; // skip to next line
@@ -170,9 +171,9 @@ void TestExprEval()
     pm.AddState( eval::EXPRESSION_BEGIN, eval::EXPRESSION_BEGIN );
     pm.AddState( eval::EXPRESSION_BEGIN, eval::VALUE );
     pm.AddState( eval::VALUE, eval::EXPRESSION_END );
-    pm.AddState( eval::EXPRESSION_END, eval::OPERATOR );
     pm.AddState( eval::EXPRESSION_END, eval::EXPRESSION_END );
     pm.AddState( eval::EXPRESSION_END, eval::EOF_ );
+    pm.AddState( eval::EXPRESSION_END, eval::OPERATOR );
     pm.AddState( eval::VALUE, eval::OPERATOR ).AddState( eval::VALUE, eval::EOF_ );
     pm.AddState( eval::OPERATOR, eval::EXPRESSION_BEGIN );
     pm.AddState( eval::OPERATOR, eval::VALUE );
@@ -185,7 +186,7 @@ void TestExprEval()
     pm.SetParser( eval::EXPRESSION_BEGIN, ( __ > C("(","open") ) );
     pm.SetParser( eval::EXPRESSION_END,   ( __ > C(")","closed") ) );
     //pm.SetParser( MUL,   Parser( AL( DONT_SKIP_BLANKS ) >= __ >= C("*","operator"), PRINT ) );
-    pm.SetParser( eval::EOF_, ( __ > eof_ ) );
+    pm.SetParser( eval::EOF_, ( eof_ ) );
     
     
     pm.Apply( is, eval::START );
