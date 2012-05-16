@@ -19,5 +19,5 @@ Some additions/changes which will likely happen in the near future:
 
 [Preliminary public docs)](http://candycode.github.com/parsley)
 
-###License
+##License
 _Parsley_ is distributed under the terms of the _[New BSD License](/candycode/parsley/tree/master/license)_.
