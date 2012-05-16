@@ -19,9 +19,6 @@ Some additions/changes which will likely happen in the near future:
 
 [Preliminary public docs)](http://candycode.github.com/parsley)
 
-##License
-
-
 License
 =======
 
