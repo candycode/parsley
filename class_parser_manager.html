@@ -352,6 +352,7 @@ Private Attributes</h2></td></tr>
   </dd>
 </dl>
 <dl class="return"><dt><b>Returns:</b></dt><dd><code>true</code> if a new state has been selected or the termination state reached, <code>false</code> otherwise. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000001">Todo:</a></b></dt><dd>investigate the option of supporting hierarchical state conteollers allowing to assign state conteollers to specific states instead of parsers e.g. <code> if( states.empty() ) { controller = controllers_[ curstate ]; controller.Apply( is, curstate ); </code> </dd></dl>
 
 <p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00103">103</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
@@ -375,7 +376,7 @@ Private Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_i_state_controller.html#ad9f340e596537790fda71c0a6f494b4e">IStateController</a>.</p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00144">144</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00151">151</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -396,7 +397,7 @@ Private Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_i_state_controller.html#ad5d620a3ca062b27bf25e78e2fcbff89">IStateController</a>.</p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00158">158</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00165">165</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -418,7 +419,7 @@ Private Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_i_state_controller.html#a2480cc8c050b4ab1f0e0e1fee1ef2331">IStateController</a>.</p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00151">151</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00158">158</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -512,7 +513,7 @@ Private Attributes</h2></td></tr>
 
 <p>Set state manger. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00140">140</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00147">147</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -567,7 +568,7 @@ Private Attributes</h2></td></tr>
 
 <p>Current State; 0 -&gt; invalid state. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00165">165</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00172">172</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -584,7 +585,7 @@ Private Attributes</h2></td></tr>
 
 <p>Disabled states. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00175">175</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00182">182</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -601,7 +602,7 @@ Private Attributes</h2></td></tr>
 
 <p>End state. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00177">177</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00184">184</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -618,7 +619,7 @@ Private Attributes</h2></td></tr>
 
 <p>Maps parser id (string) to state id. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00171">171</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00178">178</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -635,7 +636,7 @@ Private Attributes</h2></td></tr>
 
 <p>StateID counter. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00173">173</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00180">180</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -651,7 +652,7 @@ Private Attributes</h2></td></tr>
 <div class="memdoc">
 <p>State manager. Its methods are invoked from withing the <a class="el" href="class_parser_manager.html#a7839ce970476fcb82d546a17dc87c053">ParserManager::Apply</a> method to handle parsed values and enable/disable states depending on specific state and state values. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00181">181</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00188">188</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -668,7 +669,7 @@ Private Attributes</h2></td></tr>
 
 <p>Maps state to list of possible next states. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00167">167</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00174">174</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -685,7 +686,7 @@ Private Attributes</h2></td></tr>
 
 <p>Maps state to parser. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00169">169</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00176">176</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -696,7 +697,7 @@ Private Attributes</h2></td></tr>
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed May 16 2012 12:50:07 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed May 16 2012 15:04:35 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>

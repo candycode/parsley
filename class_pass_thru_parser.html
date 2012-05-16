@@ -91,13 +91,13 @@ Public Member Functions</h2></td></tr>
 <p>Sample usage: </p>
 <div class="fragment"><pre class="fragment"> std::istringstream iss5( <span class="stringliteral">&quot;| string 1 |  string 2 | string 3 | string 4 |  gfdgfd&quot;</span> );
  <a class="code" href="class_in_ch_stream.html" title="Input character stream class featuring automatic tracking of current line and char.">InStream</a> is5( iss5 );
- <a class="code" href="class_and_parser.html" title="Applies a sequence of parsers to the input stream in the order supplied by the client code...">AndParser</a> separator(<a class="code" href="parsertest___b_r_o_k_e_n_8cpp.html#a29efd61dc415237ac72bb040263ee83a">DONT_SKIP_BLANKS</a> ); 
- separator &gt;= <a class="code" href="compositeparsers_8cpp.html#add64be90952d155c638739fac683e388">__</a> &gt;= <a class="code" href="parsertest___b_r_o_k_e_n_8cpp.html#a06f5b15016d9d8ac78d1e19a3848b20b">C</a>( <span class="stringliteral">&quot;|&quot;</span> ) ;
+ <a class="code" href="class_and_parser.html" title="Applies a sequence of parsers to the input stream in the order supplied by the client code...">AndParser</a> separator(<a class="code" href="moldenformat_8cpp.html#a29efd61dc415237ac72bb040263ee83a">DONT_SKIP_BLANKS</a> ); 
+ separator &gt;= <a class="code" href="compositeparsers_8cpp.html#add64be90952d155c638739fac683e388">__</a> &gt;= <a class="code" href="typedefs_8h.html#a06f5b15016d9d8ac78d1e19a3848b20b" title="only returns true if the string is equal to a constant value">C</a>( <span class="stringliteral">&quot;|&quot;</span> ) ;
  <a class="code" href="class_tuple_parser.html" title="Parser for sequences of values of the same type separated by a separator expression and bound with a ...">TupleParser&lt;&gt;</a> tl4( 
    <a class="code" href="class_not_parser.html" title="Parse method returns the negation of what the contained parser Parse method returns.">NotParser&lt;OrParser&gt;</a>( separator / <a class="code" href="class_next_line_parser.html" title="Skips all blanks until next line.">NextLineParser</a>() ), <span class="stringliteral">&quot;strings&quot;</span>, separator &gt; <a class="code" href="compositeparsers_8cpp.html#add64be90952d155c638739fac683e388">__</a>,
    separator,
    <a class="code" href="class_pass_thru_parser.html" title="Pass through parser: always validates the input.">PassThruParser</a>(),
-   <a class="code" href="parsertest___b_r_o_k_e_n_8cpp.html#ad7e8a0e8cf571902fff54b8a5d89d9d8">SKIP_BLANKS</a> ); <span class="comment">// end parser always succeeds i.e. no end parser separator for tuple</span>
+   <a class="code" href="moldenformat_8cpp.html#ad7e8a0e8cf571902fff54b8a5d89d9d8">SKIP_BLANKS</a> ); <span class="comment">// end parser always succeeds i.e. no end parser separator for tuple</span>
  assert( tl4.Parse( is5 ) );
  std::vector&lt; Any &gt; vs2 = tl4[ <span class="stringliteral">&quot;strings&quot;</span> ];
  assert( vs2.size() == 5 );
@@ -207,7 +207,7 @@ Public Member Functions</h2></td></tr>
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed May 16 2012 12:50:07 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed May 16 2012 15:04:35 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
