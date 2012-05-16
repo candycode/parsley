@@ -17,7 +17,7 @@ Some additions/changes which will likely happen in the near future:
 * actual `Tuple` class, the current version requires all the elements to be of
   the same kind
 
-[Docs(being updated)](http://candycode.github.com/parsley)
+[Preliminary public docs)](http://candycode.github.com/parsley)
 
 ###License
-_Parsley_ is distributed under the terms of the _[New BSD License](/candycode/parsley/license)_.
+_Parsley_ is distributed under the terms of the _[New BSD License](/candycode/parsley/tree/master/license)_.
