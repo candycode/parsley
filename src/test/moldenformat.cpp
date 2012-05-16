@@ -3,27 +3,16 @@
 #include <iostream>
 #include <cassert>
 #include <sstream>
+#include <fstream>
 
 #include "types.h"
 #include "InStream.h"
 #include "parsers.h"
 #include "parser_operators.h"
 #include "ParserManager.h"
+#include "typedefs.h"
 
 
-typedef AlphaNumParser A;
-typedef FirstAlphaNumParser FA;
-typedef UIntParser U;
-typedef FloatParser F;
-typedef String S;
-typedef ConstStringParser C;
-typedef NotParser<ConstStringParser> NC;
-typedef NotParser< AndParser > NAL;
-typedef AndParser AL;
-typedef OrParser OL;
-typedef TupleParser<-1> T;
-typedef TupleParser<3> T3;
-typedef TupleParser<2> T2;
 static SkipBlankParser __;
 static BlankParser _;
 static SkipToNextLineParser endl_;
@@ -33,17 +22,10 @@ const bool DONT_SKIP_BLANKS = !SKIP_BLANKS;
 const bool SKIP_TO_NEXT_LINE = true;
 const bool DONT_SKIP_TO_NEXT_LINE = !SKIP_TO_NEXT_LINE;
 
-
-
-
 //==============================================================================
-//                              ADDITIONAL TESTS
+// READ MOLDEN DATA FROM STRINGSTREAM AND ACTUAL FILES WITH WIN AND UNIX EOL
 //==============================================================================
 
-//==============================================================================
-// READ MOLDEN DATA FROM STRING STREAM AND ACTUAL FILES WITH WIN AND UNIX EOL
-//==============================================================================
-#if 1
 
 enum { START, MOLDEN_FORMAT, TITLE, TITLE_DATA, ATOMS, ATOM_DATA, GTO,
        GTO_ATOM_NUM, GTO_SHELL_INFO, GTO_COEFF_EXP, EOL_, EOF_, SKIP_LINE };
@@ -119,16 +101,12 @@ public:
         State() : basisFunctionNum_( 0 ), basisFunctionCounter_( 0 ), line_( 0 ) {}
     };
 
-
     Print( State* s ) : state_( s ) {}
-
-    
 
 private:
     SmartPtr< State > state_;
 };
 
-#include <fstream>
 //==============================================================================
 // TEST:  >>>START
 // ...
@@ -199,6 +177,8 @@ void TestMoldenChunk1( /*std::istream& is*/ )
             "0.80000000000000E+00 0.10000000000000E+01\n";
 
     std::istringstream iss( oss.str() );
+
+//FILE PATHS
 #ifdef WIN32
     std::ifstream ifs1( "c:\\projects\\parsley\\data\\molden.input" );
     std::ifstream ifs2( "c:\\projects\\parsley\\data\\molden.input.win" );
@@ -269,134 +249,11 @@ void TestMoldenChunk1( /*std::istream& is*/ )
     pm.Apply( is2, START );
 
 }
-#endif
-
-//==============================================================================
-// RECURSIVE & CALLBACK PARSERS
-//==============================================================================
-
-//------------------------------------------------------------------------------
-class RefParser : public IParser
-{
-public:
-    typedef IParser* IParserPtr; //smart pointers ?
-    typedef IParser::Values Values;
-    RefParser() : ref_( 0 ), memStartPos_( 0 ), memEndPos_( 0 ) {}
-    RefParser( IParser& ip ) : ref_( &ip ), memStartPos_( 0 ), memEndPos_( 0 ) {}
-    const Values& GetValues() const { return values_; }
-    const ValueType& operator[]( const KeyType& k ) const { return ref_->operator[]( k ); }
-    bool Parse( InStream& is )
-    {
-        assert( ref_ && "NULL PARSER REFERENCE" );
-        // little memoization logic: if text already parsed simply skip to
-        // end of parsed text
-        if( memStartPos_ == is.tellg() && !(ref_->GetValues().empty()) )
-        {
-            is.seekg( memEndPos_ );
-            return true;
-        }
-        const StreamPos p = is.tellg();
-        const bool ok = ref_->Parse( is );
-        // if parsed record begin and end of parsed text
-        if( ok )
-        {
-            memStartPos_ = p;
-            memEndPos_ = is.tellg();
-            values_ = ref_->GetValues();
-            //for( Values::const_iterator i = values_.begin(); i != values_.end(); ++i )
-            //{
-            //  std::cout << i->second << ' ';
-            //}
-            //std::cout << std::endl;
-        }
-        return ok;
-    }
-    RefParser* Clone() const { return new RefParser( *this ); }
-private:
-    StreamPos memStartPos_;
-    StreamPos memEndPos_;
-    mutable Values values_;
-    IParserPtr ref_;
-};
-
-template < class CBackT, class ParserT >
-class CBackParser : public IParser
-{
-public:
-    typedef IParser::Values Values;
-    typedef CBackT CallBackType;
-    typedef ParserT ParserType;
-    CBackParser( const ParserType& p, const CallBackType& cback ) : p_( p ), cback_( cback ) {}
-    const Values& GetValues() const { return p_.GetValues(); }
-    const ValueType& operator[]( const KeyType& k ) const { return p_.operator[]( k ); }
-    bool Parse( InStream& is ) { if( p_.Parse( is ) ) return cback_( p_.GetValues() ); return false; }
-    CBackParser* Clone() const { return new CBackParser( *this ); }
-private:
-    ParserType p_;
-    CallBackType cback_;
-};
-
-bool CBack( const IParser::Values& v )
-{
-    return true;
-    std::cout << *v.begin() << std::endl;
-    return true;
-}
-
-template < class CB, class P >
-CBackParser< CB, P > MakeCBackParser( const CB& cb, const P& p )
-{
-    return CBackParser< CB, P >( cb, p );
-}
-
-
-void TestRecursion()
-{
-    typedef bool (*CBackType)(const IParser::Values& );
-    typedef CBackParser< CBackType, Parser > CBP;
-    Parser expr;
-    Parser rexpr = RefParser( expr );
-    Parser value = ( C("("), rexpr ,C(")") ) / F();
-    expr = ( RefParser( value ), ( C("+") / C("-") ), RefParser( expr ) ) / RefParser( value );
-    std::istringstream iss( "1+(2+3)-1-(23+23.5)" );
-    InStream is( iss );
-    if( !expr.Parse( is ) || !is.eof() )
-    {
-        std::cout << "ERROR AT " << is.tellg() <<  std::endl;
-    }
-    else std::cout << "OK" << std::endl;
-}
-
-
 
 //------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    
-    TestRecursion();
-    //std::wistringstream iss(L"");
-    //assert( iss.get() == WEOF ); //WEOF is windows only
-    //assert( iss.get() == WEOF ); 
-    //std::cout << ([3]sss) << std::endl;
-    try
-    {
-#if 1
-        TestTokenizers();
-        TestParsers();
-        TestExpressionEvaluator();
-#endif
-        TestMoldenChunk1();
-        
-    } catch( const std::exception& e )
-    {
-        std::cerr << e.what();
-        std::cout << "\nPRESS <ENTER>" << std::endl;
-        std::cin.get();
-        return 1;
-
-    }
-    std::cout << "\nPRESS <ENTER>" << std::endl;
-    std::cin.get();
+    TestMoldenChunk1();
     return 0;
 }
 
