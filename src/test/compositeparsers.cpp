@@ -1,4 +1,4 @@
-/// @file compositeparsers.cpp Test/sample code.
+/// @file compositeparsers.cpp test/sample code.
 /// Test parsers built from combining other parsers, i.e.
 /// lexers whuich validate expressions composed of multiple
 /// tokens parsed with basic parser types. 

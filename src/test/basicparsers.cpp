@@ -1,4 +1,4 @@
-/// @file basicparsers.cpp Test/sample code.
+/// @file basicparsers.cpp test/sample code.
 /// Test all the token parsers i.e. parsers used to
 /// extract individual tokens.
 

@@ -104,7 +104,14 @@ public:
     {
         //if( is.fail() || is.bad() ) return false;
         const States& states = stateMap_[ curState ];
-        // end condition
+        ///@todo investigate the option of supporting hierarchical state conteollers
+        ///allowing to assign state conteollers to specific states instead of parsers
+        /// e.g. 
+        /// <code>
+        /// if( states.empty() ) {
+        ///   controller = controllers_[ curstate ];
+        ///   controller.Apply( is, curstate );
+        /// </code> 
         if( curState == endState_ || states.empty() ) return true;
         States::const_iterator i;
         bool validated = false;

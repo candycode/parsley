@@ -1,4 +1,5 @@
-/// @file parsertest.cpp Test/sample code.
+/// @file parsertest.cpp test/sample code.
+/// Implementation of a parser for mathematical expressions.
 
 #include <iostream>
 #include <cassert>

@@ -8,7 +8,7 @@
 #include <iterator>
 
 //------------------------------------------------------------------------------
-/// @brief Class that can hold instances of any type.
+/// @brief Minimal implementation of a class that can hold instances of any type.
 /// @ingroup utility
 class Any
 {

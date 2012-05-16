@@ -1,4 +1,5 @@
-// @file parsertest.cpp Test/sample code.
+///@file moldenformat test/sample code.
+///Prser for a subset of the Molden format
 
 #include <iostream>
 #include <cassert>
