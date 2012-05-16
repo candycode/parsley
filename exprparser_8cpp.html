@@ -67,6 +67,9 @@
 <div class="textblock"><code>#include &lt;iostream&gt;</code><br/>
 <code>#include &lt;cassert&gt;</code><br/>
 <code>#include &lt;sstream&gt;</code><br/>
+<code>#include &lt;algorithm&gt;</code><br/>
+<code>#include &lt;list&gt;</code><br/>
+<code>#include &lt;stack&gt;</code><br/>
 <code>#include &quot;<a class="el" href="types_8h_source.html">types.h</a>&quot;</code><br/>
 <code>#include &quot;<a class="el" href="_in_stream_8h_source.html">InStream.h</a>&quot;</code><br/>
 <code>#include &quot;<a class="el" href="parsers_8h_source.html">parsers.h</a>&quot;</code><br/>
@@ -136,7 +139,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00204">204</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00194">194</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -154,7 +157,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00165">165</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00157">157</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -170,7 +173,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00014">14</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00018">18</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -185,7 +188,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00018">18</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00022">22</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -200,7 +203,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00020">20</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00024">24</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -215,7 +218,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00015">15</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00019">19</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -230,7 +233,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00016">16</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00020">20</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -245,7 +248,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00017">17</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00021">21</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -260,7 +263,7 @@ Variables</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00019">19</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
+<p>Definition at line <a class="el" href="exprparser_8cpp_source.html#l00023">23</a> of file <a class="el" href="exprparser_8cpp_source.html">exprparser.cpp</a>.</p>
 
 </div>
 </div>
@@ -268,7 +271,7 @@ Variables</h2></td></tr>
 
 
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon May 14 2012 14:51:25 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed May 16 2012 12:50:07 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.7.6.1
 </small></address>
