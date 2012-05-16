@@ -4,7 +4,7 @@ The framework currently contains types implementing lexers and
 parsers which can be composed to generate more complex parsing classes.
 
 I am personally using this library to parse nearly-unstructured data from quantum electronic
-structure computations where in many case there is no concept of file format
+structure computations where in many cases there is no concept of file format
 of validation so you usually have to crawl through piles of unrelevant text including
 citatons, quote of the day and info on the submitted job to extract and properly interpret
 the contained data.
@@ -13,6 +13,6 @@ It is also possible to use this library to create Parsing Expression Grammar bas
 parsers or parse simple languages.
 
 Some additions/changes which will likely happen in the near future:
-* hieraichical state controller
+* hierarchical state controller
 * actual `Tuple` class, the current version requires all the elements to be of
   the same kind
