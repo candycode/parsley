@@ -10,4 +10,9 @@ citatons, quote of the day and info on the submitted job to extract and properly
 the contained data.
 
 It is also possible to use this library to create Parsing Expression Grammar based
-parsers or parse simple languages. 
+parsers or parse simple languages.
+
+Some additions/changes which will likely happen in the near future:
+* hieraichical state controller
+* actual `Tuple` class, the current version requires all the elements to be of
+  the same kind
