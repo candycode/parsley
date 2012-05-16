@@ -16,3 +16,6 @@ Some additions/changes which will likely happen in the near future:
 * recursive `ParserManager`
 * actual `Tuple` class, the current version requires all the elements to be of
   the same kind
+
+[Docs(being updated)](http://candycode.github.com/parsley)
+
