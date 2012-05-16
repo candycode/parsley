@@ -13,6 +13,6 @@ It is also possible to use this library to create Parsing Expression Grammar bas
 parsers or parse simple languages.
 
 Some additions/changes which will likely happen in the near future:
-* hierarchical state controller
+* recursive `ParserManager`
 * actual `Tuple` class, the current version requires all the elements to be of
   the same kind
