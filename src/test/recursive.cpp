@@ -1,5 +1,5 @@
 /// @file recursive.cpp sample code.
-/// Implementation of callback and recursoive parsers.
+/// Implementation of callback and recursive parsers.
 #include <iostream>
 #include <cassert>
 #include <sstream>
