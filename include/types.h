@@ -17,6 +17,7 @@ typedef InStream::char_type Char;
 typedef String ValueID;
 typedef int StateID;
 typedef String ParserID;
+enum {EMPTY_STATE = -1};
 
 // wrappers useful for future unicode support
 inline double ToFloat( const char* str ) { return ::atof( str ); }

@@ -18,6 +18,25 @@
 
 #include "StateManager.h"
 
+struct ITransitionCBack {
+    typedef std::map< ValueID, Any > Values;
+    void operator()( const Values& v, StateID from, StateID to ) { Apply( v, from, to ); }
+    virtual void Apply( const Values&, StateID, StateID ) = 0;
+    virtual ~ITransitionCBack() {}
+};
+
+class TransitionCBack : public ITransitionCBack {
+public:
+    TransitionCBack() {}
+    TransitionCBack( ITransitionCBack* ptr ) : pImpl_( ptr ) {}
+    void Apply( const Values& v, StateID from, StateID to) { 
+        if( pImpl_ ) pImpl_->Apply( v, from, to );
+    }
+private:
+    SmartPtr< ITransitionCBack > pImpl_;
+};
+
+
 //------------------------------------------------------------------------------
 /// @brief State machine implementation.
 ///
@@ -35,13 +54,14 @@ class ParserManager : public IStateController
     typedef std::map< StateID, Parser > StateParserMap;
     typedef std::map< ParserID, StateID > ParserStateMap;
     typedef std::set< StateID > DisabledStates;
+    typedef std::map< StateID, std::map< StateID, TransitionCBack > > TransitionCBackMap;
 
 public:
     /// Constructor.
     /// @param sm state manager to handle parsed values.
     ParserManager( const StateManager& sm ) : stateManager_( sm ) {}
     /// Default constructor.
-    ParserManager() {}      
+    ParserManager()  {}
     /// Links a state to a parser.
     /// @param sid state id.
     /// @param p parser.
@@ -69,6 +89,37 @@ public:
         if( stateMap_.find( prev ) == stateMap_.end() ) AddState( prev );
         stateMap_[ prev ].push_back( next );
         return *this;
+    }
+private:
+    template < StateID invalidState >
+    class StateAdder {
+        ParserManager& pm_;
+    public:          
+        StateAdder( ParserManager& pm ) : pm_( pm ) {}
+        StateAdder operator()( StateID prev, StateID next ) {
+            pm_.AddState( prev, next );
+            return StateAdder( pm_ );
+        }
+        StateAdder operator()( StateID prev, 
+                               StateID next1, 
+                               StateID next2,
+                               StateID next3 = invalidState,
+                               StateID next4 = invalidState,
+                               StateID next5 = invalidState,
+                               StateID next6 = invalidState ) {
+            pm_.AddState( prev, next1 );
+            pm_.AddState( prev, next2 );
+            if( next3 != invalidState ) pm_.AddState( prev, next3 );
+            if( next4 != invalidState ) pm_.AddState( prev, next4 );
+            if( next5 != invalidState ) pm_.AddState( prev, next5 );
+            if( next6 != invalidState ) pm_.AddState( prev, next6 );
+            return StateAdder( pm_ );
+        }
+    };
+public:
+    template < StateID sid >
+    StateAdder< sid > AddStates() {
+        return StateAdder< sid >( *this );
     }
     /// Set initial state.
     void SetInitialState( StateID sid )
@@ -104,7 +155,8 @@ public:
     {
         //if( is.fail() || is.bad() ) return false;
         const States& states = stateMap_[ curState ];
-        ///@todo investigate the option of supporting hierarchical state conteollers
+        const StateID prevState = curState;
+        ///@todo investigate the option of supporting hierarchical state controllers
         ///allowing to assign state conteollers to specific states instead of parsers
         /// e.g. 
         /// <code>
@@ -131,6 +183,7 @@ public:
                 {
                     validated = true;
                     stateManager_.UpdateState( *this, curState  );
+                    transitionCBack_[ prevState ][ curState ]( l.GetValues(), prevState, curState );
                     break;
                 }
             }
@@ -186,6 +239,8 @@ private:
     /// ParserManager::Apply method to handle parsed values and enable/disable
     /// states depending on specific state and state values.
     StateManager stateManager_;
+    /// Transition callback
+    TransitionCBackMap transitionCBack_;
 };
 
 

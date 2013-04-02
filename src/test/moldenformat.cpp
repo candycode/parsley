@@ -29,7 +29,7 @@ const bool DONT_SKIP_TO_NEXT_LINE = !SKIP_TO_NEXT_LINE;
 
 
 enum { START, MOLDEN_FORMAT, TITLE, TITLE_DATA, ATOMS, ATOM_DATA, GTO,
-       GTO_ATOM_NUM, GTO_SHELL_INFO, GTO_COEFF_EXP, EOL_, EOF_, SKIP_LINE };
+       GTO_ATOM_NUM, GTO_SHELL_INFO, GTO_COEFF_EXP, EOL_, EOF_, SKIP_LINE, INVALID_STATE };
 
 class Print : public IStateManager
 {
@@ -200,27 +200,58 @@ void TestMoldenChunk1( /*std::istream& is*/ )
     
     ParserManager pm( PRINT );
     pm.SetBeginEndStates( START, EOF_ );
-    pm.AddState( /*previous*/ START, /*current*/ MOLDEN_FORMAT ).
-       AddState( /*previous*/ START, /*current*/ SKIP_LINE ).
-       AddState( /*previous*/ SKIP_LINE, /*current*/ MOLDEN_FORMAT ).
-       AddState( /*previous*/ SKIP_LINE, /*current*/ START ).
-       AddState( /*previous*/ MOLDEN_FORMAT, /* current */ TITLE ).
-       AddState( /*previous*/ TITLE, /*current*/ ATOMS ).
-       AddState( /*previous*/ TITLE, /*current*/ TITLE_DATA ).
-       AddState( /*previous*/ TITLE_DATA, /*current*/ ATOMS ).
-       AddState( /*previous*/ ATOMS, /*current*/ ATOM_DATA ).
-       AddState( /*previous*/ ATOM_DATA, /*current*/ ATOM_DATA ).
-       AddState( /*previous*/ ATOM_DATA, /*current*/ GTO ).
-       AddState( /*previous*/ GTO, /*current*/ GTO_ATOM_NUM ).
-       AddState( GTO_ATOM_NUM, GTO_SHELL_INFO).
-       AddState( GTO_SHELL_INFO, GTO_COEFF_EXP ).
-       AddState( GTO_COEFF_EXP, GTO_SHELL_INFO ).
-       AddState( GTO_COEFF_EXP, GTO_COEFF_EXP ).
-       AddState( GTO_COEFF_EXP, GTO_ATOM_NUM ).
-       AddState( GTO_COEFF_EXP, EOF_ ). //end of file
-       AddState( GTO_COEFF_EXP, EOL_ ); //end of line: will stop a the end of GTO input, e.g. before [MO] tag
-    
-    //AL BRS; BRS >= C("[") >= NC("]") >= C("]");
+    // pm.AddState( /*previous*/ START, /*current*/ MOLDEN_FORMAT ).
+    //    AddState( /*previous*/ START, /*current*/ SKIP_LINE ).
+    //    AddState( /*previous*/ SKIP_LINE, /*current*/ MOLDEN_FORMAT ).
+    //    AddState( /*previous*/ SKIP_LINE, /*current*/ START ).
+    //    AddState( /*previous*/ MOLDEN_FORMAT, /* current */ TITLE ).
+    //    AddState( /*previous*/ TITLE, /*current*/ ATOMS ).
+    //    AddState( /*previous*/ TITLE, /*current*/ TITLE_DATA ).
+    //    AddState( /*previous*/ TITLE_DATA, /*current*/ ATOMS ).
+    //    AddState( /*previous*/ ATOMS, /*current*/ ATOM_DATA ).
+    //    AddState( /*previous*/ ATOM_DATA, /*current*/ ATOM_DATA ).
+    //    AddState( /*previous*/ ATOM_DATA, /*current*/ GTO ).
+    //    AddState( /*previous*/ GTO, /*current*/ GTO_ATOM_NUM ).
+    //    AddState( GTO_ATOM_NUM, GTO_SHELL_INFO).
+    //    AddState( GTO_SHELL_INFO, GTO_COEFF_EXP ).
+    //    AddState( GTO_COEFF_EXP, GTO_SHELL_INFO ).
+    //    AddState( GTO_COEFF_EXP, GTO_COEFF_EXP ).
+    //    AddState( GTO_COEFF_EXP, GTO_ATOM_NUM ).
+    //    AddState( GTO_COEFF_EXP, EOF_ ). //end of file
+    //    AddState( GTO_COEFF_EXP, EOL_ ); //end of line: will stop a the end of GTO input, e.g. before [MO] tag
+    // pm.AddStates<-1>()
+    //    ( /*previous*/ START, /*current*/ MOLDEN_FORMAT )
+    //    ( /*previous*/ START, /*current*/ SKIP_LINE )
+    //    ( /*previous*/ SKIP_LINE, /*current*/ MOLDEN_FORMAT )
+    //    ( /*previous*/ SKIP_LINE, /*current*/ START )
+    //    ( /*previous*/ MOLDEN_FORMAT, /* current */ TITLE )
+    //    ( /*previous*/ TITLE, /*current*/ ATOMS )
+    //    ( /*previous*/ TITLE, /*current*/ TITLE_DATA )
+    //    ( /*previous*/ TITLE_DATA, /*current*/ ATOMS )
+    //    ( /*previous*/ ATOMS, /*current*/ ATOM_DATA )
+    //    ( /*previous*/ ATOM_DATA, /*current*/ ATOM_DATA )
+    //    ( /*previous*/ ATOM_DATA, /*current*/ GTO )
+    //    ( /*previous*/ GTO, /*current*/ GTO_ATOM_NUM )
+    //    ( GTO_ATOM_NUM, GTO_SHELL_INFO )
+    //    ( GTO_SHELL_INFO, GTO_COEFF_EXP )
+    //    ( GTO_COEFF_EXP, GTO_SHELL_INFO )
+    //    ( GTO_COEFF_EXP, GTO_COEFF_EXP )
+    //    ( GTO_COEFF_EXP, GTO_ATOM_NUM )
+    //    ( GTO_COEFF_EXP, EOF_ ) //end of file
+    //    ( GTO_COEFF_EXP, EOL_ ); //end of line: will stop a the end of GTO input, e.g. before [MO] tag
+    pm.AddStates< INVALID_STATE >()
+       ( START, MOLDEN_FORMAT, SKIP_LINE )
+       ( SKIP_LINE, MOLDEN_FORMAT, START )
+       ( MOLDEN_FORMAT, TITLE )
+       ( TITLE, ATOMS, TITLE_DATA )
+       ( TITLE_DATA, ATOMS )
+       ( ATOMS, ATOM_DATA )
+       ( ATOM_DATA, ATOM_DATA, GTO)
+       ( GTO, GTO_ATOM_NUM )
+       ( GTO_ATOM_NUM, GTO_SHELL_INFO )
+       ( GTO_SHELL_INFO, GTO_COEFF_EXP )
+       ( /* from */ GTO_COEFF_EXP, 
+          /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
     TupleParser<> coord( FloatParser(), "coord", __, _, endl_ );
     pm.SetParser( MOLDEN_FORMAT, ( C("[") > C("Molden Format") > C("]") )  );
     pm.SetParser( START, NotParser< AL >( C("[") > C("Molden Format") > C("]") ) );
