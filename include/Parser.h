@@ -32,6 +32,7 @@ struct IParser
     /// Returns copy of current instance.
     /// @return pointer to newly created instance.
     virtual IParser* Clone() const = 0;
+    virtual ~IParser() {}
 };
 
 //------------------------------------------------------------------------------
@@ -298,15 +299,15 @@ public:
             const Values& v = parser_.GetValues();
             for( Values::const_iterator i = v.begin(); i != v.end(); ++i ) values_.push_back( i->second );
         }
-        if( counter < countMin_ || counter > countMax_ && countMax_ >= 0 ) ok = false;
-        else ok = true; // counter in [countMin_, countMax_] dsgfds 
+        if( counter < countMin_ || ( counter > countMax_ && countMax_ >= 0 ) ) ok = false;
+        else ok = true; // counter in [countMin_, countMax_]
         }
         return ok;
     }
     /// Convenience operator to set the minimum and maximum amount of times the parser should
     /// be invoked.
     MultiParser& operator()( int minCount, int maxCount = -1 )
-    { countMin_ = minCount; countMax_ = maxCount; }
+    { countMin_ = minCount; countMax_ = maxCount; return *this; }
     /// Implementation of IParser::GetValues. Returns a single (key, value) pair where
     /// the key is the name specified in the constructor and the value is a list of
     /// parsed values.
