@@ -22,16 +22,19 @@ struct ITransitionCBack {
     typedef std::map< ValueID, Any > Values;
     void operator()( const Values& v, StateID from, StateID to ) { Apply( v, from, to ); }
     virtual void Apply( const Values&, StateID, StateID ) = 0;
+    virtual ITransitionCBack* Clone() const = 0;
     virtual ~ITransitionCBack() {}
 };
 
 class TransitionCBack : public ITransitionCBack {
 public:
     TransitionCBack() {}
+    TransitionCBack( const TransitionCBack& other ) : pImpl_( other.pImpl_ ? other.pImpl_->Clone() : 0 ) {}
     TransitionCBack( ITransitionCBack* ptr ) : pImpl_( ptr ) {}
     void Apply( const Values& v, StateID from, StateID to) { 
         if( pImpl_ ) pImpl_->Apply( v, from, to );
     }
+    TransitionCBack* Clone() const { return new TransitionCBack( *this ); }
 private:
     SmartPtr< ITransitionCBack > pImpl_;
 };
@@ -76,6 +79,9 @@ public:
         }
         else stateMap_[ s ] = States();
     }
+    void SetTransitionCBack( StateID prev, StateID next, const TransitionCBack& cback ) {
+        transitionCBack_[ prev ][ next ] = cback;
+    }
     /// Adds a transition from a state to another. If the previous state
     /// doesn't exist it is automatically added.
     /// Each state can have an unspecified number of next possible states.
@@ -94,10 +100,14 @@ private:
     template < StateID invalidState >
     class StateAdder {
         ParserManager& pm_;
+        StateID prevState_;
+        StateID nextState_;
     public:          
-        StateAdder( ParserManager& pm ) : pm_( pm ) {}
+        StateAdder( ParserManager& pm ) : pm_( pm ), prevState_( invalidState ), nextState_( invalidState ) {}
         StateAdder operator()( StateID prev, StateID next ) {
             pm_.AddState( prev, next );
+            prevState_ = prev;
+            nextState_ = next;
             return StateAdder( pm_ );
         }
         StateAdder operator()( StateID prev, 
@@ -114,6 +124,11 @@ private:
             if( next5 != invalidState ) pm_.AddState( prev, next5 );
             if( next6 != invalidState ) pm_.AddState( prev, next6 );
             return StateAdder( pm_ );
+        }
+        StateAdder operator[]( const TransitionCBack& cback ) {
+            if( prevState_ != invalidState && nextState_ != invalidState ) {
+                pm_.SetTransitionCBack( prevState_, nextState_, cback ); 
+            }
         }
     };
 public:
