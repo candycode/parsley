@@ -6,6 +6,7 @@ _Parsley_ is distributed under the terms of the _New BSD License_
 ---
 
 Copyright (c) 2010-2013 Ugo Varetto
+
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
