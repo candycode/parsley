@@ -37,7 +37,7 @@ public:
     TransitionCBack( ITransitionCBack* ptr ) : pImpl_( ptr ) {}
     TransitionCBack& Swap( TransitionCBack& v ) { ::Swap( pImpl_, v.pImpl_ ); return *this; } 
     TransitionCBack& operator=( const TransitionCBack& v ) { TransitionCBack( v ).Swap( *this ); return *this;  }
-    void Apply( const Values& v, StateID from, StateID to) { 
+    void Apply( const Values& v, StateID from, StateID to) {
         if( pImpl_ ) pImpl_->Apply( v, from, to );
     }
     TransitionCBack* Clone() const { return new TransitionCBack( *this ); }
@@ -61,8 +61,7 @@ private:
 /// StateManager::HandleValue is invoked passing to it the extracted
 /// values and the state id of the matched state.
 /// @ingroup MainClasses
-class ParserManager : public IStateController
-{
+class ParserManager : public IStateController {
     typedef std::list< StateID > States;
     typedef std::map< StateID, States > StateMap;
     typedef std::map< StateID, Parser > StateParserMap;
@@ -94,10 +93,8 @@ public:
     ParserAdder SetParsers() { return ParserAdder( *this ); }
     /// Adds a new state.
     /// @param s state id.
-    void AddState( StateID s )
-    {
-        if( stateMap_.find( s ) != stateMap_.end() ) 
-        {
+    void AddState( StateID s ) {
+        if( stateMap_.find( s ) != stateMap_.end() ) {
             throw std::logic_error( "State id already present" );
         }
         else stateMap_[ s ] = States();
@@ -113,8 +110,7 @@ public:
     /// @param prev previous state id
     /// @param next next state id
     /// @return reference to @c *this.
-    ParserManager& AddState( StateID prev, StateID next )
-    {
+    ParserManager& AddState( StateID prev, StateID next ) {
         if( stateMap_.find( prev ) == stateMap_.end() ) AddState( prev );
         stateMap_[ prev ].push_back( next );
         return *this;
@@ -171,20 +167,17 @@ public:
         return StateAdder< sid >( *this );
     }
     /// Set initial state.
-    void SetInitialState( StateID sid )
-    { 
+    void SetInitialState( StateID sid ) {
         if( stateMap_.find( sid ) == stateMap_.end() ) stateMap_[ sid ] = States();
         curState_ = sid;
     }
     /// Set last state. 
-    void SetEndState( StateID sid )
-    {
+    void SetEndState( StateID sid ) {
         if( stateMap_.find( sid ) == stateMap_.end() ) stateMap_[ sid ] = States();
         endState_ = sid;
     }
     /// Convenience method to set begin and end states in one call.
-    void SetBeginEndStates( StateID begin, StateID end )
-    {
+    void SetBeginEndStates( StateID begin, StateID end ) {
         SetInitialState( begin );
         SetEndState( end );
     }
@@ -204,8 +197,7 @@ public:
 #ifdef USE_TRANSITION_CBACKS
         , const Values& prevValues)
 #endif     
-        )
-    {
+        ) {
 #ifndef USE_TRANSITION_CBACKS // use transition cbacks instead of state manager        
         //if( is.fail() || is.bad() ) return false;
         const States& states = stateMap_[ curState ];
@@ -221,20 +213,16 @@ public:
         const StateID prevState = curState;
         States::const_iterator i;
         bool validated = false;
-        for( i = states.begin(); i != states.end(); ++i )
-        {
+        for( i = states.begin(); i != states.end(); ++i ) {
             if( disabledStates_.count( *i ) > 0 ) continue;
             Parser& l = stateParserMap_[ *i ];
-            if( l.Parse( is ) )
-            {
+            if( l.Parse( is ) ) {
                 curState = *i;
-                if( !stateManager_.HandleValues( *i, l.GetValues() ) )
-                {
+                if( !stateManager_.HandleValues( *i, l.GetValues() ) ) {
                     validated = false;
                     break;
                 }
-                else 
-                {
+                else {
                     validated = true;
                     stateManager_.UpdateState( *this, curState  );
                     if( !transitionCBack_.empty() 
@@ -247,8 +235,7 @@ public:
                 }
             }
         }
-        if( i == states.end() || !validated )
-        {
+        if( i == states.end() || !validated ) {
             stateManager_.HandleError( curState, is.get_lines() );
             return false;
         }
@@ -264,30 +251,25 @@ public:
         if( curState == endState_ || states.empty() ) return true;
         const StateID prevState = curState;
         States::const_iterator i;
-        for( i = states.begin(); i != states.end(); ++i )
-        {
+        for( i = states.begin(); i != states.end(); ++i ) {
             curState = *i;
             TransitionCBack& tcback = transitionCBack_[ prevState ][ curState ];
             if( !tback
                 .Enabled( prevValues, prevState, curState ) ) continue;
             Parser& l = stateParserMap_[ curState ];     
-            if( l.Parse( is ) )
-            {   
-                if( !tback.Validate( l.GetValues(), prevState, curState ) )
-                {
+            if( l.Parse( is ) ) {
+                if( !tback.Validate( l.GetValues(), prevState, curState ) ) {
                     validated = false;
                     break;
                 }
-                else 
-                {
+                else {
                     validated = true; 
                     tcback.Apply( l.GetValues(), prevState, curState );                
                 }
                 break;
             }
         }
-        if( i == states.end() || !validated )
-        {
+        if( i == states.end() || !validated ) {
             tcback.OnError( prevState, curState, is.get_lines() );
             return false;
         }
@@ -300,22 +282,19 @@ public:
     /// IStateController::DisableState implementation.
     /// Adds a state to the set of disabled states which are then not considered
     /// for possible transitions in the ParserManager::Apply method.
-    void DisableState( StateID id )
-    {
+    void DisableState( StateID id ) {
         disabledStates_.insert( id );
     }
     /// IStateController::EnableState implementation.
     /// Removes the state from the set of disabled states making it available
     /// againg as a target for possible transitions.
-    void EnableState( StateID id )
-    {
+    void EnableState( StateID id ) {
         if( disabledStates_.count( id ) == 0 ) return;
         disabledStates_.erase( id );
     }
     /// IStateController::EnableAllStates implementation.
     /// Empties the set of disabled states.
-    void EnableAllStates()
-    {
+    void EnableAllStates() {
         disabledStates_.clear();
     }
 

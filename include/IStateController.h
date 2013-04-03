@@ -5,9 +5,9 @@
 
 #include "types.h"
 
-///@interface IStateController IStateController.h. Defines the actions available to enable/disable states.
-struct IStateController
-{
+///@interface IStateController IStateController.h. Defines the actions available
+///to enable/disable states.
+struct IStateController {
     virtual void EnableState( StateID ) = 0;
     virtual void DisableState( StateID ) = 0;
     virtual void EnableAllStates() = 0;

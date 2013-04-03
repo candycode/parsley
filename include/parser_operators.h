@@ -10,52 +10,45 @@
 /// @ingroup operators
 
 /// @ingroup AndParserOperators
-inline AndParser operator,( AndParser al1, const Parser& al2 )
-{
+inline AndParser operator,( AndParser al1, const Parser& al2 ) {
     al1.Add( al2 );
     return al1;
 }
 
 /// @ingroup AndParserOperators
-inline AndParser operator,( const Parser& al1, AndParser al2 )
-{
+inline AndParser operator,( const Parser& al1, AndParser al2 ) {
     al2.AddFront( al1 );
     return al2;
 }
 
 /// @ingroup AndParserOperators
-inline AndParser operator,( const Parser& al1, const Parser& al2 )
-{
+inline AndParser operator,( const Parser& al1, const Parser& al2 ) {
     AndParser al;
     al.Add( al1 ).Add( al2 );
     return al;
 }
 
 /// @ingroup AndParserOperators
-inline AndParser operator>( AndParser al1, const Parser& al2 )
-{
+inline AndParser operator>( AndParser al1, const Parser& al2 ) {
     al1.Add( al2 );
     return al1;
 }
 
 /// @ingroup AndParserOperators
-inline AndParser operator>( const Parser& al1, AndParser al2 )
-{
+inline AndParser operator>( const Parser& al1, AndParser al2 ) {
     al2.AddFront( al1 );
     return al2;
 }
 
 /// @ingroup AndParserOperators
-inline AndParser operator>( const Parser& al1, const Parser& al2 )
-{
+inline AndParser operator>( const Parser& al1, const Parser& al2 ) {
     AndParser al;
     al.Add( al1 ).Add( al2 );
     return al;
 }
 
 /// @ingroup AndParserOperators
-inline AndParser operator&( const Parser& al1, const Parser& al2 )
-{
+inline AndParser operator&( const Parser& al1, const Parser& al2 ) {
     AndParser al;
     al.Add( al1 ).Add( al2 );
     return al;
@@ -67,22 +60,19 @@ inline AndParser operator&( const Parser& al1, const Parser& al2 )
 /// @ingroup operators
 
 /// @ingroup OrParserOperators
-inline OrParser operator/( const Parser& ol1, OrParser& ol2 )
-{
+inline OrParser operator/( const Parser& ol1, OrParser& ol2 ) {
     ol2.Add( ol1 );
     return ol2;
 }
 
 /// @ingroup OrParserOperators
-inline OrParser operator/( OrParser& ol1, const Parser& ol2 )
-{
+inline OrParser operator/( OrParser& ol1, const Parser& ol2 ) {
     ol1.Add( ol2 );
     return ol1;
 }
 
 /// @ingroup OrParserOperators
-inline OrParser operator/( const Parser& al1, const Parser& al2 )
-{
+inline OrParser operator/( const Parser& al1, const Parser& al2 ) {
     OrParser al;
     al.Add( al1 ).Add( al2 );
     return al;

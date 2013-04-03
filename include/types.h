@@ -21,7 +21,6 @@ typedef int StateID;
 typedef String ParserID;
 typedef std::map< ValueID, Any > Values;
 
-
 // wrappers useful for future unicode support
 inline double ToFloat( const char* str ) { return ::atof( str ); }
 inline int ToInt( const char* str ) { return ::atoi( str ); }

@@ -20,22 +20,18 @@ typedef std::string String;
 //-----------------------------------------------------------------------------
 /// @brief Skips all blanks until next line.
 /// @ingroup BlankParsers
-class NextLineParser : public IParser
-{
+class NextLineParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
-    const Values& GetValues() const
-    { 
+    const Values& GetValues() const {
         static const Values dummy;
         return dummy;
     }
-    const ValueType& operator[]( const KeyType&  ) const
-    {
+    const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
-    bool Parse( InStream& is ) 
-    {
+    bool Parse( InStream& is ) {
         if( is.eof() ) return true;
         if( !is.good() ) return false;
         Char c = is.get(); 
@@ -47,8 +43,7 @@ public:
     }
     NextLineParser* Clone() const { return new NextLineParser( *this ); }
 private:
-    bool IsBlank( Char c ) const
-    {
+    bool IsBlank( Char c ) const {
         return ::IsSpace( c ) != 0 && c != '\n';
     }
     Char Eol() const { return '\n'; }
@@ -58,22 +53,18 @@ private:
 //-----------------------------------------------------------------------------
 /// @brief Advance to the next non-blank character.
 /// @ingroup BlankParsers
-class SkipBlankParser : public IParser
-{
+class SkipBlankParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         static const Values dummy;
         return dummy;
     }
-    const ValueType& operator[]( const KeyType&  ) const
-    {
+    const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
-    bool Parse( InStream& is ) 
-    {
+    bool Parse( InStream& is ) {
         if( is.eof() ) return true;
         if( !is.good() ) return false;
         Char c = is.get();
@@ -83,8 +74,7 @@ public:
     }
     SkipBlankParser* Clone() const { return new SkipBlankParser( *this ); }
 private:
-    bool IsBlank( Char c ) const
-    {
+    bool IsBlank( Char c ) const {
         return ::IsSpace( c ) != 0;
     }
 };
@@ -92,22 +82,18 @@ private:
 //-----------------------------------------------------------------------------
 /// @brief Advance to next line skipping all blank and non blank characters.
 /// @ingroup BlankParsers
-class SkipToNextLineParser : public IParser
-{
+class SkipToNextLineParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         static const Values dummy;
         return dummy;
     }
-    const ValueType& operator[]( const KeyType&  ) const
-    {
+    const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
-    bool Parse( InStream& is ) 
-    {
+    bool Parse( InStream& is ) {
         //Always returns true: used to skip blanks
         if( is.eof() ) return true;
         if( !is.good() ) return false;
@@ -122,24 +108,20 @@ public:
 //-----------------------------------------------------------------------------
 /// @brief Parse blanks.
 /// @ingroup BlankParsers
-class BlankParser : public IParser
-{
+class BlankParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         static const Values dummy;
         return dummy;
     }
-    const ValueType& operator[]( const KeyType&  ) const
-    {
+    const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
     /// @return @c false if first character is not blank or input not in good state,
     /// @c true otherwise.
-    bool Parse( InStream& is ) 
-    {
+    bool Parse( InStream& is ) {
         if( !is.good() && !is.eof() ) return false;
         if( is.eof() ) return true;
         Char c = is.get();
@@ -149,8 +131,7 @@ public:
     }
     BlankParser* Clone() const { return new BlankParser( *this ); }
 private:
-    bool IsBlank( Char c ) const
-    {
+    bool IsBlank( Char c ) const {
         return ::IsSpace( c ) != 0;
     }
 };
@@ -158,23 +139,19 @@ private:
 //-----------------------------------------------------------------------------
 /// @brief Parse end of file character.
 /// @ingroup BlankParsers
-class EofParser : public IParser
-{
+class EofParser : public IParser {
 public: 
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         static const Values dummy;
         return dummy;
     }
-    const ValueType& operator[]( const KeyType&  ) const
-    {
+    const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
     /// @return @c true if input stream @c eof flag set; @c false otherwise.
-    bool Parse( InStream& is ) 
-    {
+    bool Parse( InStream& is ) {
         return is.eof();  
     }
     EofParser* Clone() const { return new EofParser( *this ); }
@@ -184,8 +161,7 @@ public:
 //------------------------------------------------------------------------------
 /// @brief Parse unsigned int.
 /// @ingroup NumberParsers
-class UIntParser : public IParser
-{
+class UIntParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -195,15 +171,13 @@ public:
     /// Parses che characters composing an unsigned integer value. The characters are stored
     /// inside an member variable for further conversion to <tt>unsigned int</tt>.
     /// @return @c true if unsigned integer parsed; @c false otherwise. 
-    bool Parse( InStream& is )
-    {
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
         Char c = is.get();
         if( !is.good() ) return false;
-        if( ::IsDigit( c ) == 0 )
-        {
+        if( ::IsDigit( c ) == 0 ) {
             is.unget();
             return false;
         }
@@ -215,10 +189,8 @@ public:
     /// Performs text to number conversion and returns parsed value.
     /// @return value map composed of one (name,value) pair where the name is the one
     /// assigned in the constructor and the value is the parsed unsigned int value.
-    const Values& GetValues() const
-    {
-        if( valueMap_.empty() && !token_.empty() )
-        {
+    const Values& GetValues() const {
+        if( valueMap_.empty() && !token_.empty() ) {
             valueMap_.insert( std::make_pair( name_, unsigned( ::ToInt( token_.c_str() ) ) ) );
         }
         return valueMap_;
@@ -226,8 +198,7 @@ public:
 
     /// Performs text to number conversion if needed and returns parsed value if key found.
     /// @return Any instance containing unsigned integer value.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -240,13 +211,11 @@ public:
     UIntParser* Clone() const { return new UIntParser( *this ); }
 
 private:
-    void GetNumber( InStream& is ) 
-    {
+    void GetNumber( InStream& is ) {
         if( !is.good() ) return;
         Char c = is.get();
         if( !is.good() ) return;
-        while( is.good() && ::IsDigit( c ) != 0 )
-        {
+        while( is.good() && ::IsDigit( c ) != 0 ) {
             token_.push_back( c );
             c = is.get();
         }
@@ -269,8 +238,7 @@ private:
 ///
 /// Makes use of UIntParser.
 /// @ingroup NumberParsers
-class IntParser : public IParser
-{
+class IntParser : public IParser {
 public: 
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -280,24 +248,20 @@ public:
     /// Parses che characters composing an  integer value. The characters are stored
     /// inside an member variable for further conversion to <tt>int</tt>.
     /// @return @c true if integer parsed; @c false otherwise.  
-    bool Parse( InStream& is )
-    {
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
-        bool ok = false;
-        {
+        bool ok = false; {
         REWIND r( ok, is );
         Char c = is.get();
         if( !is.good() ) return false;
-        if( c == '+' || c == '-' )
-        {
+        if( c == '+' || c == '-' ) {
             UIntParser uil;
             if( uil.Parse( is ) ) { token_ = c + uil.GetText(); ok = true; }
             else return false;          
         }
-        else
-        {
+        else {
             UIntParser uil;
             if( uil.Parse( is ) ) { token_ = uil.GetText(); ok = true; }
             else return false;
@@ -310,11 +274,9 @@ public:
     /// Performs text to number conversion and returns parsed value.
     /// @return value map composed of one (name,value) pair where the name is the one
     /// assigned in the constructor and the value is the parsed integer value.
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         //valueMap_[]= won't work on Apple gcc 4.0.x
-        if( valueMap_.empty() && !token_.empty() )
-        {
+        if( valueMap_.empty() && !token_.empty() ) {
             valueMap_.insert( std::make_pair( name_, int( ::ToInt( token_.c_str() ) ) ) );
         }
         return valueMap_;
@@ -322,8 +284,7 @@ public:
 
     /// Performs text to number conversion if needed and returns parsed value if key found.
     /// @return Any instance containing integer value.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -354,8 +315,7 @@ private:
 /// to be locale-aware by reading the decimal separator through a call to
 /// @code std::use_facet< std::numpunct< Char > >( is.getloc() ).decimal_point ();@endcode
 /// @ingroup NumberParsers
-class FloatParser : public IParser
-{
+class FloatParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -364,29 +324,24 @@ public:
     virtual const String& GetText() const { return token_ ; }
     /// Reads a floating point number and stores the sequence of parsed characters into
     /// a member variable. No conversion to a float number is performed during parsing.
-    virtual bool Parse( InStream& is )  
-    {
+    virtual bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
         // in case support for locale-dependent decimal separator is needed:
         //Char decimalSeparator_ = 
         //    std::use_facet< std::numpunct< Char > >( is.getloc() ).decimal_point ();
-        bool ok = false;
-        {
+        bool ok = false; {
         REWIND r( ok, is );
         const Char c = is.get();
         if( !is.good() ) return false;  
-        if( c == '+' || c == '-' )
-        {
+        if( c == '+' || c == '-' ) {
             if( Apply( &FloatParser::MatchUnsigned, is, c ) ) token_ = c + token_;
         }
-        else if( c == '.' )
-        {
+        else if( c == '.' ) {
             if( Apply( &FloatParser::MatchFractional, is, c ) ) token_ = c + token_;
         }
-        else if( ::IsDigit( c ) != 0 )
-        { 
+        else if( ::IsDigit( c ) != 0 ) {
             is.unget();
             Apply( &FloatParser::MatchUnsigned, is, 0 );
         }
@@ -398,26 +353,22 @@ public:
     /// Performs text to float conversion and returns parsed value.
     /// @return value map composed of one (name,value) pair where the name is the one
     /// assigned in the constructor and the value is the parsed float value.
-    const Values& GetValues() const
-    {
-        if( valueMap_.empty() && !token_.empty() )
-        {
+    const Values& GetValues() const {
+        if( valueMap_.empty() && !token_.empty() ) {
             valueMap_.insert( std::make_pair( name_, ::ToFloat( token_.c_str() ) ) );
         }
         return valueMap_;
     }
     /// Performs text to float conversion if needed and returns parsed value if key found.
     /// @return Any instance containing float value. 
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
         return i->second;
     }
 
-    virtual FloatParser* Clone() const
-    {
+    virtual FloatParser* Clone() const {
         return new FloatParser( *this );
     }
 
@@ -425,14 +376,12 @@ public:
 private:
     typedef bool( FloatParser::*MatchMethod )( InStream& ); 
 
-    bool Apply( MatchMethod f, InStream& is, Char last )
-    {
+    bool Apply( MatchMethod f, InStream& is, Char last ) {
         if( !is.good() ) return false;
         const String tmp = token_; // save current value
         const StreamPos pos = is.tellg();
         const bool m = (this->*f)( is );
-        if( !m )
-        {
+        if( !m ) {
             //restore previous value
             token_ = tmp;
             //restore stream pointer
@@ -443,8 +392,7 @@ private:
         return last == 0 || m;
     }
 
-    bool MatchUnsigned( InStream& is )
-    {
+    bool MatchUnsigned( InStream& is ) {
         if( !is.good() ) return false;
         const Char c = is.get();
         if( !is.good() ) return false;
@@ -456,19 +404,16 @@ private:
         return false;
     }
 
-    bool MatchFractional( InStream& is )
-    {
+    bool MatchFractional( InStream& is ) {
         if( !is.good() ) return false;
         const Char c = is.get();
         if( !is.good() ) return false;
-        if( ::IsDigit( c ) )
-        {
+        if( ::IsDigit( c ) ) {
             token_.push_back( c ); Apply( &FloatParser::MatchFractional, is, 0 );
             return true;
         }
         else if( c == 'E' || c == 'D' || 
-                 c == 'e' || c == 'd' )
-        {
+                 c == 'e' || c == 'd' ) {
              // problem: on windows 'D' (with both vc++ and migw) is properly
              // understood but not on linux/mac: need to force a 'D' -> 'E' translation
              token_.push_back( 'E' ); return Apply( &FloatParser::MatchExponent, is, c );
@@ -476,17 +421,14 @@ private:
         is.unget();
         return false;
     }
-    bool MatchExponent( InStream& is ) 
-    {
+    bool MatchExponent( InStream& is ) {
         if( !is.good() ) return false;
         const Char c = is.get();
         if( !is.good() ) return false;
-        if( c == '+' || c == '-' )
-        {
+        if( c == '+' || c == '-' ) {
             token_.push_back( c ); return Apply( &FloatParser::MatchExponent, is, c );
         }
-        else if( ::IsDigit( c ) )
-        {
+        else if( ::IsDigit( c ) ) {
             token_.push_back( c ); Apply( &FloatParser::MatchExponent, is,  0 ); return true;
         }
         is.unget();
@@ -506,11 +448,9 @@ private:
 //------------------------------------------------------------------------------
 /// @brief Validator for alphanumeric strings.
 /// @ingroup validators 
-struct AlphaNumValidator
-{
+struct AlphaNumValidator {
     /// Validates any alphanumeric value
-    bool Validate( const String&, Char newChar ) const
-    {
+    bool Validate( const String&, Char newChar ) const {
         return ::IsAlnum( newChar ) != 0;
     }
     
@@ -519,16 +459,14 @@ struct AlphaNumValidator
 
 /// @brief Validator for alphanumeric string starting with an alphabetical character.
 /// @ingroup validators
-struct FirstAlphaNumValidator
-{
+struct FirstAlphaNumValidator {
     /// Validates a new character only if it's an alphabetical value or if
     /// it's an alphanumeric value and the validated string is not empty.
     /// @param s currently parsed characters.
     /// @param newChar current character to validate.
     /// @return @c true if new character is alphabetical or is a digit but not
     /// the first character to be parsed.
-    bool Validate( const String& s, Char newChar ) const
-    {
+    bool Validate( const String& s, Char newChar ) const {
         return s.empty() ? ::IsAlpha( newChar ) != 0 || ::IsDigit( newChar ) != 0
             : ::IsAlpha( *s.begin() ) != 0 && 
               ( ::IsAlpha( newChar ) != 0 || ::IsDigit( newChar ) != 0 );
@@ -541,8 +479,7 @@ struct FirstAlphaNumValidator
 /// @ingroup validators
 /// @todo use stream's facilities to perform uppercase \<-\> lowercase conversion
 /// since this is much better for future @e locale and @e Unicode support.
-class ConstStringValidator
-{
+class ConstStringValidator {
 public:
     /// Constructor.
     /// @param s constant string to validate.
@@ -562,8 +499,7 @@ public:
     /// @param newChar last read character.
     /// @return @c true if character matches corresponding constant string
     /// character, @c false otherwise.
-    bool Validate( const String& , Char newChar ) const
-    {
+    bool Validate( const String& , Char newChar ) const {
         if( count_ >= value_.length() ) return false;
         if( ignoreCase_ ) return ::ToLower( value_[ count_++ ] ) == ::ToLower( newChar );
         return value_[ count_++ ] == newChar;
@@ -593,8 +529,7 @@ private:
 /// @endcode
 /// @ingroup StringParsers
 template < class ValidatorT = AlphaNumValidator >
-class SequenceParser : public IParser
-{
+class SequenceParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -613,15 +548,13 @@ public:
     SequenceParser( const SequenceParser& l ) 
         : name_( l.name_ ), token_( l.token_ ), valueMap_( l.valueMap_ ), validator_( l.validator_ ) {}
     /// Overridden IParser::Parse method.
-    bool Parse( InStream& is )
-    {   
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         validator_.Reset();
         if( !is.good() ) return false;
         Char c = 0;
-        while( !is.eof() )
-        {
+        while( !is.eof() ) {
             c = is.get();
             if( !is.good() ) {
                 return token_.length() > 0;
@@ -633,17 +566,14 @@ public:
         return token_.length() > 0;
     }
     /// Overridden IParser::GetValues method.   
-    const Values& GetValues() const
-    {
-        if( valueMap_.empty() & !token_.empty() )
-        {
+    const Values& GetValues() const {
+        if( valueMap_.empty() & !token_.empty() ) {
             valueMap_.insert( std::make_pair( name_, token_ ) );
         }
         return valueMap_;
     }
     /// Overridden IParser::operator[] .
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -669,8 +599,7 @@ private:
 ///
 /// Contains a @c SequenceParser<ConstStringValidator> to perform the actual parsing.
 /// @ingroup StringParsers
-class ConstStringParser : public IParser
-{
+class ConstStringParser : public IParser {
 public:
     ConstStringParser( const String& s, const ValueID& name = ValueID(), bool ignoreCase = true ) :
       csv_( ConstStringValidator( s, ignoreCase ), name ) {}
@@ -687,8 +616,7 @@ private:
 ///
 /// Contains/ a @c SequenceParser<AlphaNumValidator> to perform the actual parsing.
 /// @ingroup StringParsers
-class AlphaNumParser : public IParser
-{
+class AlphaNumParser : public IParser {
 public:
     AlphaNumParser( const String& name ) : anl_( name ) {}
     bool Parse( InStream& is ) { return anl_.Parse( is ); }
@@ -706,8 +634,7 @@ private:
 /// Contains a @c SequenceParser<AlphaNumValidator> to validate 
 /// characters past the first character.
 /// @ingroup StringParsers
-class FirstAlphaNumParser : public IParser
-{
+class FirstAlphaNumParser : public IParser {
 public:  
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -716,17 +643,14 @@ public:
     FirstAlphaNumParser( const String& name ) : name_( name ) {}
     /// IParser::Parse implementation: checks if the first character is a letter
     /// then uses the included SequenceParser to parse additional input.
-    bool Parse( InStream& is )
-    { 
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
         Char c = is.get();
-        if( ::IsAlpha( c ) != 0 )
-        {
+        if( ::IsAlpha( c ) != 0 ) {
             token_ += c;
-            if( anl_.Parse( is ) )
-            {
+            if( anl_.Parse( is ) ) {
                 token_ += anl_.GetText();
             }
             return true;
@@ -735,14 +659,12 @@ public:
         return false;
     }
     /// IParser::GetValues implementation.
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         if( valueMap_.empty() ) valueMap_.insert( std::make_pair( name_, token_ ) );
         return valueMap_;
     }
     /// IParser::operator[] implementation.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -762,8 +684,7 @@ private:
 /// expression and bound with a start/end expression.
 /// @ingroup Parsers
 template < int SIZE = -1 > // 
-class TupleParser : public IParser
-{
+class TupleParser : public IParser {
 public:  
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -789,14 +710,12 @@ public:
     /// applies end parser. Note that it will always parse as many values as possible to make
     /// it possible to report an error when the number of parsed values exceeds the number
     /// of required values.
-    bool Parse( InStream& is )
-    {
+    bool Parse( InStream& is ) {
         values_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
         int counter = 0;
-        bool ok = false;
-        {
+        bool ok = false; {
         // record current file pointer and rewind when exiting scope in case
         // parser not applied; nested scope required if local variable used
         // as signal
@@ -808,8 +727,7 @@ public:
         std::vector< ValueType >::size_type s = 0;
         // start applying value parser
         if( skipBlanks_ ) SkipBlanks( is );
-        while( /*!( endReached = endParser_.Parse( is ) ) &&*/ valueParser_.Parse( is ) )
-        {
+        while( /*!( endReached = endParser_.Parse( is ) ) &&*/ valueParser_.Parse( is ) ) {
             // parsed values: add values to value array
             /*s =*/ AddValue( valueParser_.GetValues() );
             // increment value counter
@@ -836,17 +754,14 @@ public:
     /// @return size of tuple.
     static int Size() { return SIZE; }
     /// IParser::GetValues implementation.
-    const Values& GetValues() const
-    {
-        if( valueMap_.empty() && !values_.empty() )
-        {
+    const Values& GetValues() const {
+        if( valueMap_.empty() && !values_.empty() ) {
             valueMap_.insert( std::make_pair( name_, values_ ) );
         }
         return valueMap_;
     }
     /// IParser::operator[] implementation
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -857,10 +772,8 @@ public:
 
 private:
     /// Advances to first non-blank character or @c EOF.
-    void SkipBlanks( InStream& is )
-    {
-        if( is.good() )
-        {
+    void SkipBlanks( InStream& is ) {
+        if( is.good() ) {
             Char c = is.get();
             while( is.good() && ::IsSpace( c ) != 0  ) c = is.get();
             if( is.good() ) is.unget();
@@ -868,8 +781,7 @@ private:
     }
 
     /// Adds value to parsed value array.
-    std::vector< ValueType >::size_type AddValue( const Values& v )
-    {
+    std::vector< ValueType >::size_type AddValue( const Values& v ) {
         std::vector< ValueType >::size_type bs = values_.size();
         for( Values::const_iterator i = v.begin();
              i != v.end();
@@ -914,8 +826,7 @@ private:
 /// assert( vs2.size() == 5 );
 /// @endcode
 /// @ingroup Parsers
-class PassThruParser : public IParser
-{
+class PassThruParser : public IParser {
 public:
     bool Parse( InStream&  ) { return true; }
     const Values& GetValues() const { static const Values v; return v; }

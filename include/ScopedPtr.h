@@ -10,8 +10,7 @@
 /// @brief Scoped pointer implementation; uses default memory de-allocator.
 /// @ingroup utility
 template < class T >
-class ScopedPtr
-{
+class ScopedPtr {
     /// Type used in the implementation of the the unspecified bool idiom: i.e.
     /// perform automatic conversion to bool type from member function pointer.
     typedef void ( ScopedPtr< T >::*BoolType )() const;
@@ -23,19 +22,16 @@ public:
     /// Default constructor.
     ScopedPtr() : rawPtr_( 0 ) {}
     /// Explicit constructor from pointer.
-    template < class U > explicit SmartPtr(U* p )
-    {
+    template < class U > explicit SmartPtr(U* p ) {
         rawPtr_ = dynamic_cast< PointerType >( p );
     }
     /// Copy constructor.
-    ScopedPtr( const ScopedPtr& sp )
-    {
+    ScopedPtr( const ScopedPtr& sp ) {
         rawPtr_ = Clone( sp );
     }
     /// Copy constructor from smart pointer of different type.
     template < class U >
-    SmartPtr( const ScopedPtr< U >& sp )
-    {
+    SmartPtr( const ScopedPtr< U >& sp ) {
         rawPtr_ = Clone( sp );
     }
     /// De-reference operator.
@@ -44,8 +40,7 @@ public:
     PointerType operator->() const { return rawPtr_; }
     /// Assignment operator.
     template < class U >
-    ScopedPtr& operator=( const ScopedPtr< U >& sp )
-    {
+    ScopedPtr& operator=( const ScopedPtr< U >& sp ) {
         if( GetPointer( sp ) == rawPtr_ ) return *this;
         Release();
         rawPtr_ = Clone( sp );
@@ -68,8 +63,7 @@ private:
     template < class P >
     friend typename ScopedPtr< P >::PointerType Clone( const ScopedPtr< P >& );
     /// Decrements the ref. counter, deletes object if count is 0
-    void Release()
-    { 
+    void Release() {
         delete rawPtr_;
         rawPtr_ = 0;
     }
@@ -86,15 +80,13 @@ template < class P >
 inline void Release( const SmartPtr<P>& sp ) { sp.Release(); }
 
 template < class P >
-typename ScopedPtr< P >::PointerType Clone( const ScopedPtr< P >& p )
-{
+typename ScopedPtr< P >::PointerType Clone( const ScopedPtr< P >& p ) {
     //Clone method required
     return p.Clone();
 }
 
 template < class P > 
-inline void Swap( ScopedPtr< P >& p1, ScopedPtr< P >& p2 )
-{ 
+inline void Swap( ScopedPtr< P >& p1, ScopedPtr< P >& p2 ) {
     std::swap( p1.rawPtr_, p2.rawPtr_ );
     std::swap( p1.count_,  p2.count_ );
 }   

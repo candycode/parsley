@@ -14,8 +14,7 @@
 /// parsed values, errors and enable/disable states of an IStateController 
 /// instance. Methods of this interface are invoked by ParserManager::Apply 
 /// during the parsing process.
-struct IStateManager
-{
+struct IStateManager {
     /// Type of parsed values.
     typedef std::map< ValueID, Any > Values;
     /// Handle values for a specific state. Implementations of this method
@@ -48,8 +47,7 @@ struct IStateManager
 /// @brief Implementation of IStateManager interface to support polymorphic value semantics
 /// through pImpl idiom.
 /// @ingroup MainClasses
-class StateManager : public IStateManager
-{
+class StateManager : public IStateManager {
 public:
     /// Default constructor.
     StateManager() {}
@@ -62,29 +60,25 @@ public:
     /// Assignment from IStateManager.
     StateManager( const IStateManager& v ) : pImpl_( v.Clone() ) {}
     /// Implementation of IStateManager::HandleValues.
-    bool HandleValues( StateID sid,  const Values& v )
-    { 
+    bool HandleValues( StateID sid,  const Values& v ) {
         CheckPointer();
         return pImpl_->HandleValues( sid, v ); //will fail in release mode if NULL pointer exceptions off
     }
     /// Implementation of IStateManager::HandleError.
-    void HandleError( StateID sid, int line ) 
-    {
+    void HandleError( StateID sid, int line ) {
         CheckPointer();
         pImpl_->HandleError( sid, line ); //will fail in release mode if NULL pointer exceptions off
     }
     /// Implementation of IStateManager::Clone.
     StateManager* Clone() const { return new StateManager( *this ); }
     /// Implementation of IStateManager::UpdateState.
-    void UpdateState( IStateController& sc, StateID sid ) const 
-    {
+    void UpdateState( IStateController& sc, StateID sid ) const {
         assert( pImpl_ != 0 && "NULL StateManager pointer" );
         pImpl_->UpdateState( sc, sid );
     }
 private:
     /// Check if pointer to implementation is @c NULL.
-    bool CheckPointer()
-    {
+    bool CheckPointer() {
         assert( pImpl_ );
         if( !pImpl_ ) throw std::runtime_error( "NULL StateManager pointer" );
         if( !pImpl_ ) return false; //release mode, no exceptions
@@ -96,27 +90,27 @@ private:
 
 //template < class DerivedT >
 //class TableStateManager : public IStateManager
-//{
+// {
 //public:
 //  typedef bool ( DerivedT::*StateManagerMethod )( StateID, const Values& );
 //  typedef bool ( DerivedT::*ErrorHandlerMethod )( StateID );
 //  bool HandleValues( StateID id, const Values& v )
-//  {
+// {
 //      return ( this->* )valueHandlers_[ id ]( id, v );
 //  }
 //  bool HandleError( StateID id )
-//  {
+// {
 //      return ( this->* )errorHandlers_[ id ]( id );
 //  }
 //  bool SetStateManagerMethod( StateID id, StateManagerMethod hm )
-//  {
+// {
 //      bool replaced = false;
 //      if( valueHandlers_.find( id ) != valueHandlers_.end() ) replaced = true;
 //      valueHandlers_[ id ] = hm;
 //      return replaced;
 //  }
 //  bool SetErrorHandlerMethod( StateID id, ErrorHandlerMethod hm )
-//  {
+// {
 //      bool replaced = false;
 //      if( errorHandlers_.find( id ) != errorHandlers_.end() ) replaced = true;
 //      errorHandlers_[ id ] = hm;

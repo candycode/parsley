@@ -11,8 +11,7 @@
 #include "SmartPtr.h"
 
 /// @interface IParser Parser.h Public interface for parsers.
-struct IParser
-{
+struct IParser {
     /// Value type in map.
     typedef Values::value_type::second_type ValueType;
     /// Key type in map.
@@ -24,7 +23,7 @@ struct IParser
     /// @c std::logic_error exception if key not found.
     /// @return constant reference to values from key.
     /// @exception std::logic error
-    virtual const ValueType& operator[]( const KeyType& k ) const = 0; // throw std::logic_error
+    virtual const ValueType& operator[]( const KeyType& k ) const = 0;
     /// Performs parsing on input stream.
     virtual bool Parse( InStream& ) = 0;
     /// Returns copy of current instance.
@@ -38,20 +37,21 @@ struct IParser
 ///
 /// Allows value semantics with polymorphic types through the @c pImpl idiom:
 /// - an implementation of IParser is stored internally
-/// - all calls to IParser methods are forwarded to the containted IParser implementation
-/// the contained IParser instance is owned my Parser objects and deleted when Parser
-/// deleted.
-/// Note that contained parsers are never shared: new copies are created during constructors
-/// and assignment.
+/// - all calls to IParser methods are forwarded to the containted IParser 
+///   implementation
+/// the contained IParser instance is owned my Parser objects and deleted when 
+/// Parser deleted.
+/// Note that contained parsers are never shared: new copies are created during 
+/// construction and assignment.
 /// @ingroup MainClasses
-class Parser : public IParser
-{
+class Parser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     typedef InCharStream InStream;
     /// Returns @c false if no contained implementation available, true otherwise.
-    /// @return @c false if internal pointer to IParser instance is @c NULL @c true otherwise.
+    /// @return @c false if internal pointer to IParser instance is @c NULL 
+    ///         @c true otherwise.
     bool Empty() const { return pImpl_ == 0; }
     /// Default constructor.
     Parser() {}
@@ -61,26 +61,25 @@ public:
     /// @return reference to @c *this after swap.
     Parser& Swap( Parser& l ) { ::Swap( pImpl_, l.pImpl_ ); return *this; } 
     /// Assignment operator from other parser.
-    Parser& operator=( const Parser& l ) { Parser( l ).Swap( *this ); return *this;  }
+    Parser& operator=( const Parser& l ) { 
+        Parser( l ).Swap( *this ); return *this;  
+    }
     /// Constructor from IParser implementation.
     Parser( const IParser& l ) : pImpl_( l.Clone() ) {}
     /// Implementation of IParser::GetValues.
-    const Values& GetValues() const
-    { 
+    const Values& GetValues() const {
         CheckPointer();
-        return pImpl_->GetValues(); //will fail in release mode if exceptions off
+        return pImpl_->GetValues();
     }
     /// Implementation of IParser::operator[]
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         CheckPointer();
         return pImpl_->operator[]( k );
     }
     /// Implementation of IParser::Parse.
-    bool Parse( InStream& is )
-    {
+    bool Parse( InStream& is ) {
         CheckPointer();
-        if( !pImpl_ ) return false; //in case exception are disabled in release mode
+        if( !pImpl_ ) return false;
         return pImpl_->Parse( is );
     }
     /// Implementation of IParser::Clone.
@@ -90,22 +89,23 @@ private:
     /// Check internal pointer to owned IParser instance.
     /// @return @c true if internal pointer not @c NULL, @c false otherwise.
     /// @exception std::runtime_error if pointer @c NULL.
-    bool CheckPointer() const 
-    {
+    bool CheckPointer() const {
         assert( pImpl_ );
         if( !pImpl_ ) throw std::runtime_error( "NULL Parser pointer" );
         if( !pImpl_ ) return false; //release mode, no exceptions
         return true;
     }
-    /// Owned instance of IParser to which all IParser method calls are forwarded.
+    /// Owned instance of IParser to which all IParser method calls are 
+    /// forwarded.
     SmartPtr< IParser > pImpl_;
 };
 
 //-----------------------------------------------------------------------------
-/// @brief Utility class used to rewind an input stream if a monitored values is @c false.
+/// @brief Utility class used to rewind an input stream if a monitored values 
+/// is @c false.
 /// 
-/// The input stream get pointer position is recorded in the constructor and reset
-/// in the destructor if the condition value is @c false.
+/// The input stream get pointer position is recorded in the constructor and r
+/// reset in the destructor if the condition value is @c false.
 /// @tparam IstreamT input stream type e.g. @c std::istream.
 ///
 /// Usage:
@@ -121,8 +121,7 @@ private:
 /// }
 /// //rewind if condition not met
 /// @endcode
-template< class IstreamT > class RewindManager
-{
+template< class IstreamT > class RewindManager {
     /// Position in stream.
     typedef typename IstreamT::streampos StreamPos;
 public:
@@ -135,10 +134,8 @@ public:
     /// When object goes out of scope the monitored value is checked:
     /// if the condition value is @c false the input stream get pointer
     /// is rewound to the initial position recorded in the constructor.
-    ~RewindManager()
-    { 
-        if( !flag_ ) 
-        {
+    ~RewindManager() {
+        if( !flag_ ) {
 //#ifdef __GNUC__ // note: gcc requires eof flag not set for seekg to work
                   //       doesn't arm to force a clear on vc++ either 
             is_.clear();
@@ -159,10 +156,9 @@ private:
 typedef RewindManager< InStream > REWIND;
 
 //------------------------------------------------------------------------------
-/// @brief Applies a sequence of parsers to the input stream in the order supplied by
-/// the client code, optionally skipping leading blanks.
-class AndParser : public IParser
-{
+/// @brief Applies a sequence of parsers to the input stream in the order 
+/// supplied by the client code, optionally skipping leading blanks.
+class AndParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -178,24 +174,25 @@ public:
     /// Add new parser as the first element in the sequence of parsers to apply.
     /// @param p parser to insert.
     /// @return reference to @c *this.
-    AndParser& AddFront( const Parser& p ) { parsers_.push_front( p );  return *this; }
+    AndParser& AddFront( const Parser& p ) { 
+        parsers_.push_front( p );  return *this; 
+    }
     /// Append parser to parser sequence.
     /// @param p parser to append.
     /// @return reference to @c *this.
-    AndParser& Add( const Parser& p ) { parsers_.push_back( p );  return *this; }
-    /// Implementation of IParser::Parse. Returns @c true if and only if all the parsers
-    /// in the sequnce return true; @c false otherwise.
-    bool Parse( InStream& is )
-    {
+    AndParser& Add( const Parser& p ) { 
+        parsers_.push_back( p );  return *this; 
+    }
+    /// Implementation of IParser::Parse. Returns @c true if and only if all 
+    /// the parsers in the sequnce return true; @c false otherwise.
+    bool Parse( InStream& is ) {
         valueMap_.clear();
         //if( !is.good() ) return false;
-        bool ok = false;
-        {
+        bool ok = false; {
         REWIND r( ok, is );
         for( Parsers::iterator i = parsers_.begin();
              i != parsers_.end();
-             ++i )
-        {
+             ++i ) {
             if( skipBlanks_) SkipBlanks( is );
             if( !i->Parse( is ) ) return false;
         }
@@ -208,15 +205,13 @@ public:
     /// Implementation of IParser::GetValues.
     /// Returns all the values parsed by provided parsers. Lazy behavior: values
     /// are retrieved from parsers the first time this method is invoked.
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         if( valueMap_.empty() ) AppendValues();
         return valueMap_;
     }
     /// Implementation of IParser::operator[]. Invokes GetValues() first.
     /// @exception std::logic error if key not found.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -228,19 +223,16 @@ public:
 
 private:
     /// Appends values extracted from child parsers to the value map.
-    void AppendValues() const
-    {
+    void AppendValues() const {
         for( Parsers::const_iterator i = parsers_.begin();
              i != parsers_.end();
-             ++i )
-        {
+             ++i ) {
             if( i->GetValues().empty() ) continue;
             valueMap_.insert( i->GetValues().begin(), i->GetValues().end() );
         }
     }
     /// Advance to first non-blank character.
-    void SkipBlanks( InStream& is )
-    {
+    void SkipBlanks( InStream& is ) {
         if( !is.good() ) return;
         Char c = is.get();
         while( is.good() && ::IsSpace( c ) != 0 ) c = is.get();
@@ -250,8 +242,8 @@ private:
     typedef std::list< Parser > Parsers;
     /// Parser list.
     Parsers parsers_;
-    /// Extracted values.@c mutable is required to allow for lazy behavior: the map
-    /// is populated only at first call of MultiMap::GetValues method.
+    /// Extracted values.@c mutable is required to allow for lazy behavior: 
+    /// the map is populated only at first call of MultiMap::GetValues method.
     mutable Values valueMap_;
     /// Skip blanks flag.
     bool skipBlanks_;
@@ -260,62 +252,65 @@ private:
 
 //------------------------------------------------------------------------------
 /// @brief Applies the same parser a fixed number of times or until it fails.
-class MultiParser : public IParser
-{
+class MultiParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Constructor.
     /// @param p parser to execute.
-    /// @param name value identifier. This is the key used to identify the list of parsed values.
+    /// @param name value identifier. This is the key used to identify the 
+    ///         list of parsed values.
     /// @param countMin minimum amount of times the parser is invoked
-    /// @param countMax maximum amount of times the parser is invoked. If a number < 0 is specified
-    ///           the parser is invoked until it fails.
-    MultiParser( const IParser& p, const ValueID& name = ValueID(), int countMin = 1, int countMax = -1 ) 
+    /// @param countMax maximum amount of times the parser is invoked. 
+    ///        If a number < 0 is specifie the parser is invoked until it fails.
+    MultiParser( const IParser& p, const ValueID& name = ValueID(), 
+                 int countMin = 1, int countMax = -1 ) 
         : parser_( p ), countMin_( countMin ), countMax_( countMax ) {}
-    /// Implementation of IParser::Parse. Invokes the contained parser at least MultiParser#countMin_ times,
-    /// and no more than MultiParser#countMax_ times or until parsing fails if  MultiParser#countMax_ < 0.
+    /// Implementation of IParser::Parse. Invokes the contained parser at least 
+    /// MultiParser#countMin_ times, and no more than MultiParser#countMax_ 
+    /// times or until parsing fails if  MultiParser#countMax_ < 0.
     /// @param is input stream.
-    /// @return true if parser invoked at least MultiParser#countMin_ times and no more than
-    /// MultiParser#countMax_ times or invoked at least MultiParser#countMax_ times 
-    /// and MultiParser#countMax_ < 0.
-    bool Parse( InStream& is )
-    {
+    /// @return true if parser invoked at least MultiParser#countMin_ times and 
+    ///    no more than MultiParser#countMax_ times or invoked at least 
+    ///    MultiParser#countMax_ times and MultiParser#countMax_ < 0.
+    bool Parse( InStream& is ) {
         valueMap_.clear();
-        bool ok = false;
-        {
+        bool ok = false; {
         REWIND r( ok, is );
         int counter = 0;
         while( is.good() && 
                ( counter < countMax_ || countMax_ < 0 ) &&
-               parser_.Parse( is ) )
-        { 
+               parser_.Parse( is ) ) {
             ++counter;
             const Values& v = parser_.GetValues();
-            for( Values::const_iterator i = v.begin(); i != v.end(); ++i ) values_.push_back( i->second );
+            for( Values::const_iterator i = v.begin(); i != v.end(); ++i ) {
+                values_.push_back( i->second );
+            }
         }
-        if( counter < countMin_ || ( counter > countMax_ && countMax_ >= 0 ) ) ok = false;
+        if( counter < countMin_ || ( counter > countMax_ && countMax_ >= 0 ) ) {
+            ok = false;    
+        } 
         else ok = true; // counter in [countMin_, countMax_]
         }
         return ok;
     }
-    /// Convenience operator to set the minimum and maximum amount of times the parser should
-    /// be invoked.
+    /// Convenience operator to set the minimum and maximum amount of times the 
+    /// parser should be invoked.
     MultiParser& operator()( int minCount, int maxCount = -1 )
     { countMin_ = minCount; countMax_ = maxCount; return *this; }
-    /// Implementation of IParser::GetValues. Returns a single (key, value) pair where
-    /// the key is the name specified in the constructor and the value is a list of
-    /// parsed values.
+    /// Implementation of IParser::GetValues. Returns a single (key, value) pair
+    /// where the key is the name specified in the constructor and the value is 
+    /// a list of parsed values.
     /// @return (key,value) pair where key == MultiParser::name_.
-    const Values& GetValues() const
-    {
-        if( valueMap_.empty() ) valueMap_.insert( std::make_pair( name_, values_ ) );
+    const Values& GetValues() const {
+        if( valueMap_.empty() ) {
+            valueMap_.insert( std::make_pair( name_, values_ ) );
+        }
         return valueMap_;
     }
     /// Implementation of IParser::operator[].
     /// @exception std::logic_error if key not in map.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -335,12 +330,13 @@ private:
     /// Maximum amount of times to execute parser or < 0 to signal
     /// an indefinite amount.
     int countMax_;
-    /// Value map: one element with key == MultiParser#name_ and value == @c std::list
-    /// of parsed values. @c mutable is required to allow for lazy behavior: the map
-    /// is populated only at first call of MultiMap::GetValues method.
+    /// Value map: one element with key == MultiParser#name_ and 
+    /// value == @c std::list of parsed values. @c mutable is required to allow 
+    /// for lazy behavior: the map is populated only at first call of 
+    /// MultiMap::GetValues method.
     mutable Values valueMap_;
-    /// List of parsed values. Values are appended to list after each invocation of
-    /// MultiParser#parser_.Parse().
+    /// List of parsed values. Values are appended to list after each invocation
+    /// of MultiParser#parser_.Parse().
     std::list< Any > values_;   
 };
 
@@ -350,25 +346,23 @@ MultiParser operator*( const Parser& p ) { return MultiParser( p ); }
 
 
 //-----------------------------------------------------------------------------
-/// @brief Parse method returns the negation of what the contained parser Parse method
-/// returns.
+/// @brief Parse method returns the negation of what the contained parser Parse 
+/// method returns.
 ///
 /// The validated character sequence is stored internally into a string
 /// and can be retrieved through the NotParser::GetValues method.
 /// @tparam Parser type.
-template < class ParserT > class NotParser : public IParser
-{
+template < class ParserT > class NotParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Implementation of IParser::GetValues.
-    /// @return one @c (key,value) pair where @c key is the name specified in the
-    /// constructor or the empty string and @c value is a string containing the
-    /// parsed characters.
+    /// @return one @c (key,value) pair where @c key is the name specified in 
+    /// the constructor or the empty string and @c value is a string containing
+    /// the parsed characters.
     const Values& GetValues() const { return valueMap_; }
     NotParser* Clone() const { return new NotParser< ParserT >( *this ); }
-    bool Parse( InStream& is )
-    {
+    bool Parse( InStream& is ) {
         // if ParserT::Parse returns true
         // the get pointer will point one char
         // past the end of the validated char sequence,
@@ -381,8 +375,7 @@ public:
         String s;
         Char c = 0;
         StreamPos pos = is.tellg();
-        while( is.good() && !parser_.Parse( is ) )
-        {
+        while( is.good() && !parser_.Parse( is ) ) {
             c = is.get();
             if( !is.good() ) break;
             s.push_back( c );
@@ -395,8 +388,7 @@ public:
 
     /// Implementation of IParser::operator[].
     /// @exception std::logic error if key not found.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -405,9 +397,11 @@ public:
     /// (Default) constructor.
     /// @param name key indentifier for parsed text. 
     NotParser( const ValueID& name = ValueID() ) : name_( name ) {}
-    /// Constructor. Allows for construction from any value that can be used to construct
-    /// the contained parser type.
-    template < class T > NotParser( const T& v, const ValueID& name = ValueID() ) : parser_( v ), name_( name ) {}
+    /// Constructor. Allows for construction from any value that can be used to 
+    /// construct the contained parser type.
+    template < class T > NotParser( const T& v, 
+                                    const ValueID& name = ValueID() ) 
+        : parser_( v ), name_( name ) {}
 private:
     /// Contained parser.
     ParserT parser_;
@@ -422,37 +416,37 @@ private:
 /// @brief Parser for optional expressions.
 ///
 /// The Parse method applies the contained parser and always returns true.
-class OptionalParser : public IParser
-{
+class OptionalParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
-    OptionalParser( const Parser& p, const ValueID& name = ValueID() ) : parser_( p ), name_( name ) {}
+    OptionalParser( const Parser& p, const ValueID& name = ValueID() ) 
+        : parser_( p ), name_( name ) {}
     /// Implementation of IParser::GetValues.
-    /// @return one @c (key,value) pair where @c key is the name specified in the
-    /// constructor or the empty string and @c value is a string containing the
-    /// parsed characters.
+    /// @return one @c (key,value) pair where @c key is the name specified in 
+    /// the constructor or the empty string and @c value is a string containing 
+    /// the parsed characters.
     const Values& GetValues() const { return valueMap_; }
     OptionalParser* Clone() const { return new OptionalParser( *this ); }
     /// Implementation of IParser::Parse: apply parser and always returns true.
-    bool Parse( InStream& is )
-    {
+    bool Parse( InStream& is ) {
         valueMap_.clear();
         if( parser_.Parse( is ) ) valueMap_ = parser_.GetValues();
         return true;
     }
     /// Implementation of IParser::operator[].
     /// @exception std::logic error if key not found.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
         return i->second;
     }
-    /// Constructor. Allows for construction from any value that can be used to construct
-    /// the contained parser type.
-    template < class T > OptionalParser( const T& v, const ValueID& name = ValueID() ) : parser_( v ), name_( name ) {}
+    /// Constructor. Allows for construction from any value that can be used
+    /// to construct the contained parser type.
+    template < class T > OptionalParser( const T& v, 
+                                         const ValueID& name = ValueID() ) 
+        : parser_( v ), name_( name ) {}
 
 private:
     /// Contained parser.
@@ -465,12 +459,12 @@ private:
 
 
 //------------------------------------------------------------------------------
-/// @brief Ordered OR parser: invokes the contained parsers until one returns true.
+/// @brief Ordered OR parser: invokes the contained parsers until one returns 
+/// true.
 ///
 /// The values parsed by the first parser that returns true are accessible
 /// through the OrParser::GetValue method.
-class OrParser : public IParser
-{
+class OrParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
@@ -480,28 +474,27 @@ public:
     OrParser& Add( const Parser& p ) { parsers_.push_back( p ); return *this; }
     /// Invokes OrParser::Add(const Parser&).
     OrParser& operator/=( const Parser& p ) { return Add(p); }
-    /// Convenience method to apped a parser non contained into a Parser instance.
+    /// Convenience method to apped a parser non contained into a Parser 
+    /// instance.
     OrParser& operator/=( const IParser& p ) { return Add( p ); }
     /// Default constructor.
     OrParser() : matchedParser_( parsers_.end() ) {}
     /// Copy constructor.
-    OrParser( const OrParser& op ) : parsers_( op.parsers_ ), matchedParser_( parsers_.end() ) {}  
+    OrParser( const OrParser& op ) 
+        : parsers_( op.parsers_ ), matchedParser_( parsers_.end() ) {}  
     /// Implementation of IParser::Parse.
-    /// Iterates of alternative parsers and stops at the first parser that parses the input.
+    /// Iterates of alternative parsers and stops at the first parser that 
+    /// parses the input.
     /// @param is input stream.
     /// @return true if at least one one parser is successful, false otherwise. 
-    bool Parse( InStream& is )
-    {
+    bool Parse( InStream& is ) {
         matchedParser_ = parsers_.end();
-        bool ok = false;
-        {
+        bool ok = false; {
         REWIND r( ok, is );
         Parsers::iterator i = parsers_.begin();
-        for( ; i != parsers_.end(); ++i )
-        {
+        for( ; i != parsers_.end(); ++i ) {
             const StreamPos pos = is.tellg();
-            if( !i->Parse( is ) )
-            {
+            if( !i->Parse( is ) ) {
                 is.seekg( pos );
                 continue;
             }
@@ -514,15 +507,14 @@ public:
     }
     /// Implementation of IParser::GetValues.
     /// @return values parsed by matching parser of emtpy value map.
-    const Values& GetValues() const
-    {
+    const Values& GetValues() const {
         static const Values dummy;
-        return matchedParser_ != parsers_.end() ? matchedParser_->GetValues() : dummy;
+        return matchedParser_ != parsers_.end() ? 
+               matchedParser_->GetValues() : dummy;
     }
     /// Implementation of IParser::operator[].
     /// @throw std::logic_error if key not found.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
@@ -543,64 +535,66 @@ private:
 
 
 //------------------------------------------------------------------------------
-/// @brief Or Parser: applies a set of parsers to the given stream and validates the input
-/// only of at least one of the applied parser validates the input characters.
+/// @brief Or Parser: applies a set of parsers to the given stream and validates
+/// the input only of at least one of the applied parser validates the input 
+/// characters.
 ///
 /// The parser selected as the validating parser is the one that  validates
 /// the maximum number of characters. 
 /// At the end of the parsing operation the get pointer is positioned:
 /// - at the same position where it was before calling the Parser method if
 ///   no parser that validates the input is found
-/// - one character past the last character validated by the parser that validates
-///   the maximum number of characters.
-class GreedyOrParser : public IParser
-{
+/// - one character past the last character validated by the parser that 
+///   validates the maximum number of characters.
+class GreedyOrParser : public IParser {
 public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Default constructor.
     GreedyOrParser() : matchedParser_( parsers_.end() ) {}
     /// Copy constructor.
-    GreedyOrParser( const GreedyOrParser& op ) : parsers_( op.parsers_ ), matchedParser_( parsers_.end() ) {}  
+    GreedyOrParser( const GreedyOrParser& op ) 
+        : parsers_( op.parsers_ ), matchedParser_( parsers_.end() ) {}  
     /// Add parser to the parser list.
     /// @param p parser to append to parser list.
     /// @return reference to @c *this.
-    GreedyOrParser& Add( const Parser& p ) { parsers_.push_back( p ); return *this; }
-    /// Implementation of IParser::Parse method: applies each parser to the input stream
-    /// and selects the parser that parses the most input or returns @c false if no validating
-    /// parser found.
-    bool Parse( InStream& is )
-    {
+    GreedyOrParser& Add( const Parser& p ) { 
+        parsers_.push_back( p ); return *this; 
+    }
+    /// Implementation of IParser::Parse method: applies each parser to the 
+    /// input stream and selects the parser that parses the most input or 
+    /// returns @c false if no validating parser found.
+    bool Parse( InStream& is ) {
         matchedParser_ = parsers_.end();
         matchedParsers_.clear();
-        bool ok = false;
-        {
+        bool ok = false; {
         REWIND r( ok, is );
         Parsers::iterator i = parsers_.begin();
-        for( ; i != parsers_.end(); ++i )
-        {
+        for( ; i != parsers_.end(); ++i ) {
             const StreamOff pos = is.tellg();
-            if( i->Parse( is ) ) matchedParsers_.insert( std::make_pair( is.tellg(), i ) );
+            if( i->Parse( is ) ) { 
+                matchedParsers_.insert( std::make_pair( is.tellg(), i ) );
+            }
             is.seekg( pos );
 
         }
-        matchedParser_ = matchedParsers_.empty() ? parsers_.end() : ( --matchedParsers_.end() )->second;
+        matchedParser_ = matchedParsers_.empty() ? 
+                         parsers_.end() : ( --matchedParsers_.end() )->second;
         ok = i != parsers_.end();
         if( ok ) is.seekg( ( --matchedParsers_.end() )->first );
         }
         return ok; 
     }
-    /// Implementation of IParser::GetValues. Returns the values parsed by the selected
-    /// parser.
-    const Values& GetValues() const
-    {
+    /// Implementation of IParser::GetValues. Returns the values parsed by the 
+    /// selected parser.
+    const Values& GetValues() const {
         static const Values dummy;
-        return matchedParser_ != parsers_.end() ? matchedParser_->GetValues() : dummy;
+        return matchedParser_ != parsers_.end() ? 
+                                 matchedParser_->GetValues() : dummy;
     }
     /// Implementation of IParser::operator[].
     /// @throw std::logic_error if key not found.
-    const ValueType& operator[]( const KeyType& k ) const
-    {
+    const ValueType& operator[]( const KeyType& k ) const {
         const Values& v = GetValues();
         Values::const_iterator i = v.find( k );
         if( i == v.end() ) throw std::logic_error( "Cannot find value" );
