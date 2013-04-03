@@ -26,8 +26,8 @@ struct ITransitionCBack {
     virtual ITransitionCBack* Clone() const = 0;
     virtual ~ITransitionCBack() {}
 #ifdef USE_TRANSITION_CBACKS
-    virtual bool Enabled( const prevValues&, StateID, StateID ) const = 0;
-    virtual bool Validate( const prevValues&,  StateID, StateID ) const = 0;
+    virtual bool Enabled( const Values&, StateID, StateID ) const = 0;
+    virtual bool Validate( const Values&,  StateID, StateID ) const = 0;
     virtual void OnError( StateID, StateID, int lines ) = 0;
 #endif        
 };
@@ -39,17 +39,17 @@ struct ITransitionCBackDefault : ITransitionCBack {
         return new T( *this ); 
     }
 #ifdef USE_TRANSITION_CBACKS
-    virtual bool Enabled( const prevValues&, StateID, StateID ) const {
+    virtual bool Enabled( const Values&, StateID, StateID ) const {
         return true;
     }
-    virtual bool Validate( const prevValues&,  StateID, StateID ) const {
+    virtual bool Validate( const Values&,  StateID, StateID ) const {
         return true;
     }
     virtual void OnError( StateID , StateID cur, int lineno ) {
         std::ostringstream oss;
         oss << "\n\t[" << cur << "] PARSER ERROR AT LINE " 
                   << lineno << std::endl;
-        throw std::logic_error( oss.c_str() );          
+        throw std::logic_error( oss.str() );          
     }
 #endif       
 };
@@ -71,10 +71,10 @@ public:
     }
     TransitionCBack* Clone() const { return new TransitionCBack( *this ); }
 #ifdef USE_TRANSITION_CBACKS
-    bool Enabled( const prevValues& pv, StateID cur, StateID next ) const { 
+    bool Enabled( const Values& pv, StateID cur, StateID next ) const { 
         return pImpl_->Enabled( pv, cur, next ); 
     }
-    bool Validate( const prevValues&,  StateID prev, StateID cur ) const { 
+    bool Validate( const Values& pv,  StateID prev, StateID cur ) const { 
         return pImpl_->Validate( pv, prev, cur ); 
     }
     void OnError( StateID prev, StateID cur, int lines ) { 
@@ -295,7 +295,7 @@ public:
     ///         state reached, @c false otherwise.
     bool Apply( InStream& is, StateID curState
 #ifdef USE_TRANSITION_CBACKS
-        , const Values& prevValues)
+        , const Values& prevValues
 #endif     
         ) {
 #ifndef USE_TRANSITION_CBACKS // use transition cbacks instead of state manager        
