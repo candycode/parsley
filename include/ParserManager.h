@@ -8,6 +8,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <sstream>
 
 #include "types.h"
 
@@ -25,10 +26,32 @@ struct ITransitionCBack {
     virtual ITransitionCBack* Clone() const = 0;
     virtual ~ITransitionCBack() {}
 #ifdef USE_TRANSITION_CBACKS
-    virtual bool Enable( const prevValues&, StateID, StateID ) = 0;
-    virtual bool Validate( const prevValues&,  StateID, StateID ) = 0;
+    virtual bool Enabled( const prevValues&, StateID, StateID ) const = 0;
+    virtual bool Validate( const prevValues&,  StateID, StateID ) const = 0;
     virtual void OnError( StateID, StateID, int lines ) = 0;
 #endif        
+};
+
+template < typename T >
+struct ITransitionCBackDefault : ITransitionCBack {
+    virtual void Apply( const Values&, StateID, StateID ) {}
+    virtual T* Clone() const {
+        return new T( *this ); 
+    }
+#ifdef USE_TRANSITION_CBACKS
+    virtual bool Enabled( const prevValues&, StateID, StateID ) const {
+        return true;
+    }
+    virtual bool Validate( const prevValues&,  StateID, StateID ) const {
+        return true;
+    }
+    virtual void OnError( StateID , StateID cur, int lineno ) {
+        std::ostringstream oss;
+        oss << "\n\t[" << cur << "] PARSER ERROR AT LINE " 
+                  << lineno << std::endl;
+        throw std::logic_error( oss.c_str() );          
+    }
+#endif       
 };
 
 class TransitionCBack : public ITransitionCBack {
@@ -48,10 +71,10 @@ public:
     }
     TransitionCBack* Clone() const { return new TransitionCBack( *this ); }
 #ifdef USE_TRANSITION_CBACKS
-    bool Enable( const prevValues& pv, StateID cur, StateID next ) { 
-        return pImpl_->Enable( pv, cur, next ); 
+    bool Enabled( const prevValues& pv, StateID cur, StateID next ) const { 
+        return pImpl_->Enabled( pv, cur, next ); 
     }
-    bool Validate( const prevValues&,  StateID prev, StateID cur ) { 
+    bool Validate( const prevValues&,  StateID prev, StateID cur ) const { 
         return pImpl_->Validate( pv, prev, cur ); 
     }
     void OnError( StateID prev, StateID cur, int lines ) { 
@@ -117,6 +140,39 @@ public:
                              const TransitionCBack& cback ) {
         transitionCBack_[ prev ][ next ] = cback;
     }
+    /// Set callback to all transitions from any state to target state
+    void SetTargetTransitionCBack( StateID target, 
+                                   const TransitionCBack& cback ) {
+        for( StateMap::const_iterator i = stateMap_.begin(); 
+             i != stateMap_.end(); 
+             ++i ) {
+            for( States::const_iterator s = i->second.begin();
+                 s != i->second.end(); ++s ) {
+                if( *s == target ) {
+                    SetTransitionCBack( i->first, *s, cback );
+                }
+            }
+        }
+    }
+    /// Set callback from all source transitions to any state
+    void SetSourceTransitionCBack( StateID src, 
+                                   const TransitionCBack& cback ) {
+        for( StateMap::const_iterator i = stateMap_.begin(); 
+             i != stateMap_.end(); 
+             ++i ) {
+            if( src != i->first ) continue;
+            for( States::const_iterator s = i->second.begin();
+                 s != i->second.end(); ++s ) {
+                SetTransitionCBack( i->first, *s, cback );
+            }
+        }
+    }
+    /// Set same transition cback to all transitions
+    void SetAllTransitionsCBack( const TransitionCBack& cback ) {
+        for( StateMap::const_iterator i = stateMap_.begin(); 
+             i != stateMap_.end(); 
+             ++i ) SetSourceTransitionCBack( i->first, cback );   
+    }
     /// Adds a transition from a state to another. If the previous state
     /// doesn't exist it is automatically added.
     /// Each state can have an unspecified number of next possible states.
@@ -130,6 +186,21 @@ public:
         stateMap_[ prev ].push_back( next );
         return *this;
     }
+    struct CBackSetter {
+        ParserManager& pm_;
+        CBackSetter( ParserManager& pm ) : pm_( pm ) {}
+        CBackSetter operator()( StateID targetState, 
+                               const TransitionCBack& cback ) {
+            pm_.SetTargetTransitionCBack( targetState, cback );
+            return CBackSetter( *this );
+        }
+        CBackSetter operator()( StateID sourceState, StateID targetState, 
+                                const TransitionCBack& cback ) {
+            pm_.SetTransitionCBack( sourceState, targetState, cback );
+            return CBackSetter( *this );
+        }  
+    };
+    CBackSetter SetCBacks() { return CBackSetter( *this ); }
 private:
     template < StateID invalidState >
     class StateAdder {
@@ -145,6 +216,11 @@ private:
             pm_.AddState( prev, next );
             prevState_ = prev;
             nextState_ = next;
+            return StateAdder( *this );
+        }
+        StateAdder operator()( StateID sid ) {
+            prevState_ = invalidState;
+            nextState_ = sid;
             return StateAdder( *this );
         }
         StateAdder operator()( StateID prev, 
@@ -173,9 +249,11 @@ private:
         StateAdder operator[]( const TransitionCBack& cback ) {
             if( prevState_ != invalidState && nextState_ != invalidState ) {
                 pm_.SetTransitionCBack( prevState_, nextState_, cback );
-                prevState_ = invalidState;
-                nextState_ = invalidState;
+            } else if( nextState_ != invalidState ) {
+                pm_.SetTargetTransitionCBack( nextState_, cback );
             }
+            prevState_ = invalidState;
+            nextState_ = invalidState;
             return StateAdder( *this );
         }
     };
@@ -268,11 +346,6 @@ public:
         return Apply( is, curState );
 #else
 // use transition cbacks instead of state manager 
-       
-        SharedState sstate;
-        TransitionCBack state1ToState2( new S1S2( sstate ) );
-        TransitionCBack state2ToState3( new S1S3( sstate ) );
-
         const States& states = stateMap_[ curState ];
         if( curState == endState_ || states.empty() ) return true;
         const StateID prevState = curState;

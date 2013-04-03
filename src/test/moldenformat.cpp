@@ -32,27 +32,23 @@ enum { START, MOLDEN_FORMAT, TITLE, TITLE_DATA, ATOMS, ATOM_DATA, GTO,
        GTO_ATOM_NUM, GTO_SHELL_INFO, GTO_COEFF_EXP, EOL_, EOF_, SKIP_LINE, 
        INVALID_STATE };
 
-class Print : public IStateManager
-{
-    
+class Print : public IStateManager {
 public:
-    void UpdateState( IStateController& sc, StateID currentState ) const
-    {
-        if( currentState == GTO_SHELL_INFO )
-        {
-            sc.EnableState( GTO_COEFF_EXP );
-            sc.DisableState( GTO_SHELL_INFO );
-            sc.DisableState( GTO_ATOM_NUM );
-            sc.DisableState( EOF_ );
+    void UpdateState( IStateController& sc, StateID currentState ) const {
+        if( currentState == GTO_SHELL_INFO ) {
+            sc.ChangeStates()
+                ( GTO_COEFF_EXP,  true  )
+                ( GTO_SHELL_INFO, false )
+                ( GTO_ATOM_NUM,   false )
+                ( EOF_,           false );
         }
-        else if( currentState == GTO_COEFF_EXP )
-        {
-            if( state_->basisFunctionCounter_ == state_->basisFunctionNum_ )
-            {
-                sc.DisableState( GTO_COEFF_EXP );
-                sc.EnableState( GTO_SHELL_INFO );
-                sc.EnableState( GTO_ATOM_NUM );
-                sc.EnableState( EOF_ );
+        else if( currentState == GTO_COEFF_EXP ) {
+            if( state_->basisFunctionCounter_ == state_->basisFunctionNum_ ) {
+                sc.ChangeStates()
+                    ( GTO_COEFF_EXP,  false )
+                    ( GTO_SHELL_INFO, true  )
+                    ( GTO_ATOM_NUM,   true  )
+                    ( EOF_,           true  );
                 state_->basisFunctionCounter_ = 0;
                 state_->basisFunctionNum_ = 0;
             }
@@ -64,12 +60,10 @@ public:
     void DisableState( const ParserID& ) {}
     void EnableAllStates() {}
     typedef std::map< ValueID, Any > Values;
-    bool HandleValues( StateID sid, const Values& v )
-    {
+    bool HandleValues( StateID sid, const Values& v ) {
         if( sid == EOF_ ) return true;
         //each parser matches one line
-        switch( sid )
-        {
+        switch( sid ) {
         case GTO_SHELL_INFO: 
                              state_->basisFunctionNum_ = 
                                 v.find( "num basis" )->second;
@@ -82,23 +76,20 @@ public:
     
         std::cout << state_->line_ << "> [" << sid << "]: ";
         Values::const_iterator i = v.begin();
-        for( ; i != v.end(); ++i )
-        {
+        for( ; i != v.end(); ++i ) {
             std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
         }
         std::cout << '\n';
         return true;
     }
-    void HandleError( StateID sid, int lineno )
-    {
+    void HandleError( StateID sid, int lineno ) {
         std::cerr << "\n\t[" << sid << "] PARSER ERROR AT LINE " 
                   << lineno << std::endl;
     }
     Print* Clone() const { return new Print( *this ); }
 
     ///Shared state
-    struct State
-    {
+    struct State {
         unsigned basisFunctionNum_;
         unsigned basisFunctionCounter_;
         unsigned line_;
@@ -123,9 +114,7 @@ private:
 // c     2    6 -.21389493998520E+01 0.61566557723072E+00 -.12265666276112E+00 >>>ATOM_DATA
 // ...
 // [GTO] >>> GTO <= STOP HERE 
-void TestMoldenChunk( /*std::istream& is*/ )
-{
-    
+void TestMoldenChunk( /*std::istream& is*/ ) {
     std::cout << "\nPARSER TEST" << std::endl;
     std::cout << "==============" << std::endl;
 
@@ -197,7 +186,7 @@ void TestMoldenChunk( /*std::istream& is*/ )
     
     InStream is1( ifs1 );
     InStream is2( ifs2 );
-
+#ifndef USE_TRANSITION_CBACKS  
     Print::State* state = new Print::State;
 
     StateManager PRINT( ( Print( state ) ) );
@@ -213,7 +202,7 @@ void TestMoldenChunk( /*std::istream& is*/ )
 
     ParserManager pm( PRINT );
     pm.SetBeginEndStates( START, EOF_ );
-    //DEFINE STATE TRANSITIONS
+    //DEFINE STATE TRANSITIONS 
     pm.AddStates< INVALID_STATE >()
        ( START, 
            MOLDEN_FORMAT, SKIP_LINE )
@@ -238,6 +227,100 @@ void TestMoldenChunk( /*std::istream& is*/ )
        ( GTO_COEFF_EXP, /* from */
          /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, 
          /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
+#else
+    ///Shared state
+    struct State {
+        unsigned basisFunctionNum_;
+        unsigned basisFunctionCounter_;
+        unsigned line_;
+        State() : basisFunctionNum_( 0 ), 
+                  basisFunctionCounter_( 0 ), line_( 0 ) {}
+    };
+    struct DefaultCBack : ITransitionCBackDefault< DefaultCBack > {
+        State& state_;
+        DefaultCBack( State& s ) : state( s_ ) {}
+        void Apply( const Values& values, StateID prev, StateID cur ) {
+            std::cout << state_->line_ << "> [" << sid << "]: ";
+            Values::const_iterator i = v.begin();
+            for( ; i != v.end(); ++i ) {
+                std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
+            }
+            std::cout << '\n';
+        }
+    };
+    struct ShellInfoCBack : ITransitionCBackDefault< ShellInfoCBack > {
+        State& state_;
+        ShellInfoCBack( State& s ) : state( s_ ) {}
+        void Apply( const Values& v, StateID prev, StateID cur ) {
+            std::cout << state_->line_ << "> [" << sid << "]: ";
+            Values::const_iterator i = v.begin();
+            for( ; i != v.end(); ++i ) {
+                std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
+            }
+            std::cout << '\n';
+            state_->basisFunctionNum_ = 
+                                v.find( "num basis" )->second;
+            state_->basisFunctionCounter_ = 0;
+        }
+        bool Enabled( const prevValues& , StateID , StateID next ) const {
+            if( next == GTO_SHELL_INFO
+                || next == GTO_ATOM_NUM
+                || next == EOF_ ) return false;
+            return true;    
+        } 
+    };
+    struct CoeffExpCBack : ITransitionCBackDefault< CoeffExpCBack > {
+        State& state_;
+        ShellInfoCBack( State& s ) : state( s_ ) {}
+        void Apply( const Values& v, StateID prev, StateID cur ) {
+            std::cout << state_->line_ << "> [" << sid << "]: ";
+            Values::const_iterator i = v.begin();
+            for( ; i != v.end(); ++i ) {
+                std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
+            }
+            std::cout << '\n';
+            state_->basisFunctionNum_ = 
+                                v.find( "num basis" )->second;
+            state_->basisFunctionCounter_ = 0;
+        }
+        bool Enabled( const prevValues& , StateID , StateID next ) const {
+            if( state_->basisFunctionCounter_ == state_->basisFunctionNum_ ) {
+                && next == GTO_COEFF_EXP ) return false;
+            return true; 
+        } 
+    };
+    ParserManager pm;
+    pm.SetBeginEndStates( START, EOF_ );
+    //DEFINE STATE TRANSITIONS 
+    pm.AddStates< INVALID_STATE >()
+       ( START, 
+           MOLDEN_FORMAT, SKIP_LINE )
+       ( SKIP_LINE,
+           MOLDEN_FORMAT, START )
+       ( MOLDEN_FORMAT,
+           TITLE )
+       ( TITLE, ATOMS, 
+           TITLE_DATA )
+       ( TITLE_DATA, 
+           ATOMS )
+       ( ATOMS, 
+           ATOM_DATA )
+       ( ATOM_DATA, 
+           ATOM_DATA, GTO)
+       ( GTO, 
+           GTO_ATOM_NUM )
+       ( GTO_ATOM_NUM, 
+           GTO_SHELL_INFO )
+       ( GTO_SHELL_INFO, 
+           GTO_COEFF_EXP )
+       ( GTO_COEFF_EXP, /* from */
+         /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, 
+         /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
+    pm.SetAllTransitionsCBack( new DefaultCBack( state ) );   
+    pm.SetCBacks()
+       ( GTO_SHELL_INFO, new ShellInfoCBack( state ) )
+       ( GTO_COEFF_EXP, new CoeffExpCBack( state ) );
+#endif       
     //SPECIFY PER-STATE PARSERS   
     TupleParser<> coord( FloatParser(), "coord", __, _, endl_ );
     pm.SetParsers()
@@ -274,8 +357,7 @@ void TestMoldenChunk( /*std::istream& is*/ )
 }
 
 //------------------------------------------------------------------------------
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     TestMoldenChunk();
     return 0;
 }

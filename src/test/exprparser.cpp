@@ -25,17 +25,14 @@ static const bool SKIP_TO_NEXT_LINE = true;
 static const bool DONT_SKIP_TO_NEXT_LINE = !SKIP_TO_NEXT_LINE;
 
 // TEST PARSER FOR EXPRESSION EVALUATION USING TERM REWRITING
-namespace eval
-{
+namespace eval {
     enum { START, VALUE, OPERATOR, EXPRESSION_BEGIN, EXPRESSION_END, EOF_ };
-    class Print : public IStateManager
-    {
-        struct OP
-        {
+    class Print : public IStateManager {
+        struct OP {
             int code_;
             double value_;
             int level_;
-            bool operator==( const OP& other ) const { 
+            bool operator==( const OP& other ) const {
                 return other.code_  == code_  && 
                        other.value_ == value_ && 
                        other.level_ == level_; 
@@ -48,8 +45,7 @@ namespace eval
         
         enum { VAL, ADD, SUB, MUL, DIV, LEFT_P, RIGHT_P };
     public:
-        void UpdateState( IStateController& sc, StateID currentState ) const
-        {
+        void UpdateState( IStateController& sc, StateID currentState ) const {
         }
 	void EnableState( StateID ) {}
 	void DisableState( StateID ) {}
@@ -57,11 +53,9 @@ namespace eval
 	void DisableState( const ParserID& ) {}
 	void EnableAllStates() {}
 	typedef std::map< ValueID, Any > Values;
-	bool HandleValues( StateID sid, const Values& v )
-	{
+	bool HandleValues( StateID sid, const Values& v ) {
             Program::iterator levelBegin, levelEnd;
-	    switch( sid )
-	    {
+	    switch( sid ) {
 	    case EXPRESSION_BEGIN:
 		 state_->program_.push_back( OP( LEFT_P ) );
 		 levelStack_.push( --( state_->program_.end() ) );
@@ -79,8 +73,7 @@ namespace eval
 	    case VALUE: state_->program_.push_back( 
             OP( VAL, v.find("operand")->second ) ) ;
 			break;
-	    case OPERATOR: 
-		{
+	    case OPERATOR: {
 		    const String op = v.find( "operator" )->second;
 		    if( op == "+" ) state_->program_.push_back( OP( ADD ) );
 		    else if( op == "-" ) state_->program_.push_back( OP( SUB ) );
@@ -98,24 +91,20 @@ namespace eval
 	    default:    break;  
 	    }
 	    Values::const_iterator i;
-	    for( i = v.begin(); i != v.end(); ++i )
-	    {
+	    for( i = v.begin(); i != v.end(); ++i ) {
 		std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
 	    }
 	    std::cout << '\n';
 	    return true;
 	}
-	void HandleError( StateID sid, int /*line*/ )
-	{
+	void HandleError( StateID sid, int /*line*/ ) {
 	    std::cerr << "\n\t[" << sid << "] PARSER ERROR" <<  std::endl;
 	}
 	Print* Clone() const { return new Print( *this ); }
     public: 
-        struct State 
-        {
+        struct State {
             Program program_;
-            double Evaluate( Program::iterator b, Program::iterator e )
-            {
+            double Evaluate( Program::iterator b, Program::iterator e ) {
                 // termination condition  
                 Program::iterator ei = e;
                 if( b == --ei ) return b->value_;  
@@ -159,8 +148,7 @@ namespace eval
     };
 } //namespace eval
 
-void TestExprEval()
-{
+void TestExprEval() {
     std::cout << "EXPRESSION EVALUATOR" << std::endl;
     std::cout << "====================" << std::endl;
 
