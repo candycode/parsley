@@ -1,6 +1,10 @@
 /// @file parsertest.cpp test/sample code.
 /// Implementation of a parser for mathematical expressions.
 
+#ifdef USE_TRANSITION_CBACKS
+#undef USE_TRANSITION_CBACKS
+#endif
+
 #include <iostream>
 #include <cassert>
 #include <sstream>

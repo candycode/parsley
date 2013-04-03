@@ -32,12 +32,8 @@ struct ITransitionCBack {
 #endif        
 };
 
-template < typename T >
 struct ITransitionCBackDefault : ITransitionCBack {
     virtual void Apply( const Values&, StateID, StateID ) {}
-    virtual T* Clone() const {
-        return new T( *this ); 
-    }
 #ifdef USE_TRANSITION_CBACKS
     virtual bool Enabled( const Values&, StateID, StateID ) const {
         return true;
@@ -106,11 +102,13 @@ class ParserManager : public IStateController {
                       std::map< StateID, TransitionCBack > > TransitionCBackMap;
 
 public:
+#ifndef USE_TRANSITION_CBACKS    
     /// Constructor.
     /// @param sm state manager to handle parsed values.
     ParserManager( const StateManager& sm ) : stateManager_( sm ) {}
+#endif    
     /// Default constructor.
-    ParserManager()  {}
+    //ParserManager()  {}
     /// Links a state to a parser.
     /// @param sid state id.
     /// @param p parser.
@@ -295,7 +293,7 @@ public:
     ///         state reached, @c false otherwise.
     bool Apply( InStream& is, StateID curState
 #ifdef USE_TRANSITION_CBACKS
-        , const Values& prevValues
+        , const Values& prevValues = Values()
 #endif     
         ) {
 #ifndef USE_TRANSITION_CBACKS // use transition cbacks instead of state manager        
@@ -350,34 +348,44 @@ public:
         if( curState == endState_ || states.empty() ) return true;
         const StateID prevState = curState;
         States::const_iterator i;
+        bool validated = false;
+        TransitionCBack* tcback;
         for( i = states.begin(); i != states.end(); ++i ) {
             curState = *i;
-            TransitionCBack& tcback = transitionCBack_[ prevState ][ curState ];
-            if( !tback
-                .Enabled( prevValues, prevState, curState ) ) continue;
+            if( !TransitionCBackExists( prevState, curState ) ) {
+                std::ostringstream os;
+                os << "ERROR: No transition between " << prevState  << " and "
+                   << curState; 
+                throw std::logic_error( os.str() );
+            }
+            tcback = &transitionCBack_[ prevState ][ curState ];
+            if( !tcback
+                  ->Enabled( prevValues, prevState, curState ) ) continue;
             Parser& l = stateParserMap_[ curState ];     
             if( l.Parse( is ) ) {
-                if( !tback.Validate( l.GetValues(), prevState, curState ) ) {
+                if( !tcback->Validate( l.GetValues(), prevState, curState ) ) {
                     validated = false;
                     break;
                 }
                 else {
                     validated = true; 
-                    tcback.Apply( l.GetValues(), prevState, curState );                
+                    tcback->Apply( l.GetValues(), prevState, curState );                
                 }
                 break;
             }
         }
         if( i == states.end() || !validated ) {
-            tcback.OnError( prevState, curState, is.get_lines() );
+            tcback->OnError( prevState, curState, is.get_lines() );
             return false;
         }
         return Apply( is, curState, prevValues );
 
 #endif        
     }
+#ifndef USE_TRANSITION_CBACKS    
     /// Set state manger.
     void SetManager( const StateManager& sm ) { stateManager_ = sm; }
+#endif    
     /// IStateController::DisableState implementation.
     /// Adds a state to the set of disabled states which are then not considered
     /// for possible transitions in the ParserManager::Apply method.
@@ -396,7 +404,11 @@ public:
     void EnableAllStates() {
         disabledStates_.clear();
     }
-
+    bool TransitionCBackExists( StateID sid1, StateID sid2 ) {
+        return transitionCBack_.find( sid1 ) != transitionCBack_.end() 
+               && transitionCBack_.find( sid1 )->second.find( sid2 ) !=
+                  transitionCBack_.find( sid2 )->second.end(); 
+    }
 private:
     /// Current State; 0 -> invalid state
     StateID curState_;
