@@ -119,7 +119,7 @@ private:
 // c     2    6 -.21389493998520E+01 0.61566557723072E+00 -.12265666276112E+00 >>>ATOM_DATA
 // ...
 // [GTO] >>> GTO <= STOP HERE 
-void TestMoldenChunk1( /*std::istream& is*/ )
+void TestMoldenChunk( /*std::istream& is*/ )
 {
     
     std::cout << "\nPARSER TEST" << std::endl;
@@ -198,86 +198,66 @@ void TestMoldenChunk1( /*std::istream& is*/ )
 
     StateManager PRINT( ( Print( state ) ) );
     
+    struct tcback : ITransitionCBack {
+        void Apply( const std::map< ValueID, Any >& values, StateID prev, StateID cur ) {
+            std::cout << "\t\t\t TRANSITION: " <<  prev << " -> " << cur << std::endl;
+        }
+        tcback* Clone() const { return new tcback( *this ); }
+    };
+
     ParserManager pm( PRINT );
     pm.SetBeginEndStates( START, EOF_ );
-    // pm.AddState( /*previous*/ START, /*current*/ MOLDEN_FORMAT ).
-    //    AddState( /*previous*/ START, /*current*/ SKIP_LINE ).
-    //    AddState( /*previous*/ SKIP_LINE, /*current*/ MOLDEN_FORMAT ).
-    //    AddState( /*previous*/ SKIP_LINE, /*current*/ START ).
-    //    AddState( /*previous*/ MOLDEN_FORMAT, /* current */ TITLE ).
-    //    AddState( /*previous*/ TITLE, /*current*/ ATOMS ).
-    //    AddState( /*previous*/ TITLE, /*current*/ TITLE_DATA ).
-    //    AddState( /*previous*/ TITLE_DATA, /*current*/ ATOMS ).
-    //    AddState( /*previous*/ ATOMS, /*current*/ ATOM_DATA ).
-    //    AddState( /*previous*/ ATOM_DATA, /*current*/ ATOM_DATA ).
-    //    AddState( /*previous*/ ATOM_DATA, /*current*/ GTO ).
-    //    AddState( /*previous*/ GTO, /*current*/ GTO_ATOM_NUM ).
-    //    AddState( GTO_ATOM_NUM, GTO_SHELL_INFO).
-    //    AddState( GTO_SHELL_INFO, GTO_COEFF_EXP ).
-    //    AddState( GTO_COEFF_EXP, GTO_SHELL_INFO ).
-    //    AddState( GTO_COEFF_EXP, GTO_COEFF_EXP ).
-    //    AddState( GTO_COEFF_EXP, GTO_ATOM_NUM ).
-    //    AddState( GTO_COEFF_EXP, EOF_ ). //end of file
-    //    AddState( GTO_COEFF_EXP, EOL_ ); //end of line: will stop a the end of GTO input, e.g. before [MO] tag
-    // pm.AddStates<-1>()
-    //    ( /*previous*/ START, /*current*/ MOLDEN_FORMAT )
-    //    ( /*previous*/ START, /*current*/ SKIP_LINE )
-    //    ( /*previous*/ SKIP_LINE, /*current*/ MOLDEN_FORMAT )
-    //    ( /*previous*/ SKIP_LINE, /*current*/ START )
-    //    ( /*previous*/ MOLDEN_FORMAT, /* current */ TITLE )
-    //    ( /*previous*/ TITLE, /*current*/ ATOMS )
-    //    ( /*previous*/ TITLE, /*current*/ TITLE_DATA )
-    //    ( /*previous*/ TITLE_DATA, /*current*/ ATOMS )
-    //    ( /*previous*/ ATOMS, /*current*/ ATOM_DATA )
-    //    ( /*previous*/ ATOM_DATA, /*current*/ ATOM_DATA )
-    //    ( /*previous*/ ATOM_DATA, /*current*/ GTO )
-    //    ( /*previous*/ GTO, /*current*/ GTO_ATOM_NUM )
-    //    ( GTO_ATOM_NUM, GTO_SHELL_INFO )
-    //    ( GTO_SHELL_INFO, GTO_COEFF_EXP )
-    //    ( GTO_COEFF_EXP, GTO_SHELL_INFO )
-    //    ( GTO_COEFF_EXP, GTO_COEFF_EXP )
-    //    ( GTO_COEFF_EXP, GTO_ATOM_NUM )
-    //    ( GTO_COEFF_EXP, EOF_ ) //end of file
-    //    ( GTO_COEFF_EXP, EOL_ ); //end of line: will stop a the end of GTO input, e.g. before [MO] tag
+    //DEFINE STATE TRANSITIONS
     pm.AddStates< INVALID_STATE >()
-       ( START, MOLDEN_FORMAT, SKIP_LINE )
-       ( SKIP_LINE, MOLDEN_FORMAT, START )
-       ( MOLDEN_FORMAT, TITLE )
-       ( TITLE, ATOMS, TITLE_DATA )
-       ( TITLE_DATA, ATOMS )
-       ( ATOMS, ATOM_DATA )
-       ( ATOM_DATA, ATOM_DATA, GTO)
-       ( GTO, GTO_ATOM_NUM )
-       ( GTO_ATOM_NUM, GTO_SHELL_INFO )
-       ( GTO_SHELL_INFO, GTO_COEFF_EXP )
-       ( /* from */ GTO_COEFF_EXP, 
-          /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
+       ( START, 
+           MOLDEN_FORMAT, SKIP_LINE )
+       ( SKIP_LINE,
+           MOLDEN_FORMAT, START )
+       ( MOLDEN_FORMAT,
+           TITLE )
+       ( TITLE, ATOMS, 
+           TITLE_DATA )
+       ( TITLE_DATA, 
+           ATOMS )
+       ( ATOMS, 
+           ATOM_DATA )[ new tcback ] // add callback on transition
+       ( ATOM_DATA, 
+           ATOM_DATA, GTO)
+       ( GTO, 
+           GTO_ATOM_NUM )
+       ( GTO_ATOM_NUM, 
+           GTO_SHELL_INFO )
+       ( GTO_SHELL_INFO, 
+           GTO_COEFF_EXP )
+       ( GTO_COEFF_EXP, /* from */
+    /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
+    //SPECIFY PER-STATE PARSERS   
     TupleParser<> coord( FloatParser(), "coord", __, _, endl_ );
-    pm.SetParser( MOLDEN_FORMAT, ( C("[") > C("Molden Format") > C("]") )  );
-    pm.SetParser( START, NotParser< AL >( C("[") > C("Molden Format") > C("]") ) );
-    pm.SetParser( SKIP_LINE, endl_ );
-    pm.SetParser( TITLE, ( C("[") > C("Title") > C("]") ) );
-    pm.SetParser( TITLE_DATA, ( __ > NC("\n") ) );
-    pm.SetParser( ATOMS, AL(DONT_SKIP_BLANKS) >= __ >= C("[") >= __ >= C("Atoms") >= __ >= C("]") >= __ >= A("unit") >= endl_ );
-    //pm.SetParser( ATOM_DATA, Parser( A("name") > U("#") > U("element") > coord, PRINT ) );
+    pm.SetParsers()
+        ( MOLDEN_FORMAT, ( C("[") > C("Molden Format") > C("]") ) )
+        ( START, NotParser< AL >( C("[") > C("Molden Format") > C("]") ) )
+        ( SKIP_LINE, endl_ )
+        ( TITLE, ( C("[") > C("Title") > C("]") ) )
+        ( TITLE_DATA, ( __ > NC("\n") ) )
+        ( ATOMS, AL(DONT_SKIP_BLANKS) >= __ >= C("[") >= __ >= C("Atoms") >= __ >= C("]") >= __ >= A("unit") >= endl_ );
     AL atomDataParser(false);
     atomDataParser >= __ >= A("name") >= _ >= U("#") >= _  >= U("element") >= _ >= F("x") >= _ >= F("y") >= _ >= F("z") >= endl_;
     //atomDataParser >= __ >= A("name") >= _ >= U("#") >= _  >= U("element") >= __ >= coord >= endl_;
-    pm.SetParser( ATOM_DATA, atomDataParser );
-    //GTO
-    pm.SetParser( GTO, ( C("[") > C("GTO") > C("]") ) );
-    
-    //GTO_ATOM_NUM
-    pm.SetParser( GTO_ATOM_NUM, AL( DONT_SKIP_BLANKS ) >= __ >= U("gto atom #") >= endl_  );
-    pm.SetParser( GTO_SHELL_INFO, ( AL( DONT_SKIP_BLANKS ) >= __ >= FA("shell") >= _ >= U("num basis" ) >= endl_ ) );
-    pm.SetParser( GTO_COEFF_EXP, ( AL( DONT_SKIP_BLANKS ) >= __ >= F("exp") >= _ >= F("coeff") >= endl_ ) ); 
-    pm.SetParser( EOF_, ( __ > eof_ ) );
-    pm.SetParser( EOL_, endl_ );
+    pm.SetParsers()
+        ( ATOM_DATA, atomDataParser )
+        ( GTO, ( C("[") > C("GTO") > C("]") ) )
+        ( GTO_ATOM_NUM, AL( DONT_SKIP_BLANKS ) >= __ >= U("gto atom #") >= endl_  )
+        ( GTO_SHELL_INFO, ( AL( DONT_SKIP_BLANKS ) >= __ >= FA("shell") >= _ >= U("num basis" ) >= endl_ ) )
+        ( GTO_COEFF_EXP, ( AL( DONT_SKIP_BLANKS ) >= __ >= F("exp") >= _ >= F("coeff") >= endl_ ) )
+        ( EOF_, ( __ > eof_ ) )
+        ( EOL_, endl_ );
     std::cout << "+++++++++++++++++++++++++++++++++++++++++++++\n";
     std::cout << "++++++++++ UNIX/MacOS X LINE ENDINGS ++++++++\n";
+    //APPLY TO FIRST INPUT
     pm.Apply( is1, START );
     std::cout << "+++++++++++++++++++++++++++++++++++++\n";
     std::cout << "++++++++ WINDOWS LINE ENDINGS +++++++\n";
+    //APPLY TO SECOND INPUT
     pm.Apply( is2, START );
 
 }
@@ -285,7 +265,7 @@ void TestMoldenChunk1( /*std::istream& is*/ )
 //------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    TestMoldenChunk1();
+    TestMoldenChunk();
     return 0;
 }
 

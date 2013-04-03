@@ -31,6 +31,8 @@ public:
     TransitionCBack() {}
     TransitionCBack( const TransitionCBack& other ) : pImpl_( other.pImpl_ ? other.pImpl_->Clone() : 0 ) {}
     TransitionCBack( ITransitionCBack* ptr ) : pImpl_( ptr ) {}
+    TransitionCBack& Swap( TransitionCBack& v ) { ::Swap( pImpl_, v.pImpl_ ); return *this; } 
+    TransitionCBack& operator=( const TransitionCBack& v ) { TransitionCBack( v ).Swap( *this ); return *this;  }
     void Apply( const Values& v, StateID from, StateID to) { 
         if( pImpl_ ) pImpl_->Apply( v, from, to );
     }
@@ -69,6 +71,17 @@ public:
     /// @param sid state id.
     /// @param p parser.
     void SetParser( StateID sid, const Parser& p ) { stateParserMap_[ sid ] = p; }
+
+    class ParserAdder {
+        ParserManager& pm_;
+    public:          
+        ParserAdder( ParserManager& pm ) : pm_( pm ) {}
+        ParserAdder operator()( StateID state, const Parser& p ) {
+            pm_.SetParser( state, p );
+            return ParserAdder( *this );
+        }
+    };
+    ParserAdder SetParsers() { return ParserAdder( *this ); }
     /// Adds a new state.
     /// @param s state id.
     void AddState( StateID s )
@@ -108,27 +121,38 @@ private:
             pm_.AddState( prev, next );
             prevState_ = prev;
             nextState_ = next;
-            return StateAdder( pm_ );
+            return StateAdder( *this );
         }
         StateAdder operator()( StateID prev, 
                                StateID next1, 
                                StateID next2,
-                               StateID next3 = invalidState,
-                               StateID next4 = invalidState,
-                               StateID next5 = invalidState,
-                               StateID next6 = invalidState ) {
+                               StateID next3  = invalidState,
+                               StateID next4  = invalidState,
+                               StateID next5  = invalidState,
+                               StateID next6  = invalidState,
+                               StateID next7  = invalidState,
+                               StateID next8  = invalidState,
+                               StateID next9  = invalidState,
+                               StateID next10 = invalidState ) {
             pm_.AddState( prev, next1 );
             pm_.AddState( prev, next2 );
-            if( next3 != invalidState ) pm_.AddState( prev, next3 );
-            if( next4 != invalidState ) pm_.AddState( prev, next4 );
-            if( next5 != invalidState ) pm_.AddState( prev, next5 );
-            if( next6 != invalidState ) pm_.AddState( prev, next6 );
-            return StateAdder( pm_ );
+            if( next3  != invalidState ) pm_.AddState( prev, next3 );
+            if( next4  != invalidState ) pm_.AddState( prev, next4 );
+            if( next5  != invalidState ) pm_.AddState( prev, next5 );
+            if( next6  != invalidState ) pm_.AddState( prev, next6 );
+            if( next7  != invalidState ) pm_.AddState( prev, next6 );
+            if( next8  != invalidState ) pm_.AddState( prev, next6 );
+            if( next9  != invalidState ) pm_.AddState( prev, next6 );
+            if( next10 != invalidState ) pm_.AddState( prev, next6 );
+            return StateAdder( *this );
         }
         StateAdder operator[]( const TransitionCBack& cback ) {
             if( prevState_ != invalidState && nextState_ != invalidState ) {
-                pm_.SetTransitionCBack( prevState_, nextState_, cback ); 
+                pm_.SetTransitionCBack( prevState_, nextState_, cback );
+                prevState_ = invalidState;
+                nextState_ = invalidState;
             }
+            return StateAdder( *this );
         }
     };
 public:
@@ -198,7 +222,11 @@ public:
                 {
                     validated = true;
                     stateManager_.UpdateState( *this, curState  );
-                    transitionCBack_[ prevState ][ curState ]( l.GetValues(), prevState, curState );
+                    if( transitionCBack_.find( prevState ) != transitionCBack_.end() ) {
+                        if( transitionCBack_[ prevState ].find( curState ) != transitionCBack_[ prevState ].end() ) {
+                            transitionCBack_[ prevState ][ curState ].Apply( l.GetValues(), prevState, curState );
+                        }
+                    }
                     break;
                 }
             }
