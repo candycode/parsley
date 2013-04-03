@@ -267,8 +267,14 @@ void TestMoldenChunk( /*std::istream& is*/ ) {
             state_->basisFunctionCounter_ = 0;
         }
         bool Enabled( const Values& , StateID prev, StateID next ) const {
-            std::cout <<  "\t\t\t\t ShellInfoCBack" << prev << ' ' << next << '\n';
-            if( next == GTO_COEFF_EXP ) return true;
+            if( prev == GTO_ATOM_NUM ) return true;
+            if( prev == GTO_COEFF_EXP 
+                && state_->basisFunctionCounter_ 
+                   == state_->basisFunctionNum_ ) {
+              state_->basisFunctionCounter_ = 0;
+              state_->basisFunctionNum_ = 0;
+              return true;
+            }
             return false;    
         } 
         ShellInfoCBack* Clone() const { return new ShellInfoCBack( *this ); }
@@ -283,20 +289,15 @@ void TestMoldenChunk( /*std::istream& is*/ ) {
                 std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
             }
             std::cout << '\n';
-            state_->basisFunctionNum_ = 
-                                v.find( "num basis" )->second;
             state_->basisFunctionCounter_ = 0;
         }
         bool Enabled( const Values& , StateID prev, StateID next ) const {
-            std::cout <<  "\t\t\t\t" << prev << ' ' << next << '\n';
-            if( state_->basisFunctionCounter_ == state_->basisFunctionNum_ 
-                && next == GTO_COEFF_EXP ) {
-                state_->basisFunctionCounter_ = 0;
-                state_->basisFunctionNum_ = 0;
-                return false;
+            if( prev == GTO_SHELL_INFO ) return true;
+            if( prev == GTO_COEFF_EXP 
+                && state_->basisFunctionCounter_ < state_->basisFunctionNum_ ) {
+                return true;
             }
-
-            return true; 
+            return false; 
         }
         CoeffExpCBack* Clone() const { return new CoeffExpCBack( *this ); } 
     };
@@ -325,7 +326,7 @@ void TestMoldenChunk( /*std::istream& is*/ ) {
            GTO_COEFF_EXP )
        ( GTO_COEFF_EXP, /* from */
          /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, 
-         /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
+         /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, EOL_ );
     pM.SetAllTransitionsCBack( new DefaultCBack( &state ) );   
     pM.SetCBacks()
        ( GTO_SHELL_INFO, new ShellInfoCBack( &state ) )
