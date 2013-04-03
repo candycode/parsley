@@ -7,7 +7,9 @@
 #include <iosfwd>
 #include <string>
 #include <cctype>
+#include <map>
 #include "InStream.h"
+#include "Any.h"
 
 typedef std::string String;
 typedef InChStream< std::istream > InStream;
@@ -17,7 +19,8 @@ typedef InStream::char_type Char;
 typedef String ValueID;
 typedef int StateID;
 typedef String ParserID;
-enum {EMPTY_STATE = -1};
+typedef std::map< ValueID, Any > Values;
+
 
 // wrappers useful for future unicode support
 inline double ToFloat( const char* str ) { return ::atof( str ); }

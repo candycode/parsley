@@ -19,7 +19,6 @@ class RefParser : public IParser
 {
 public:
     typedef IParser* IParserPtr; //smart pointers ?
-    typedef IParser::Values Values;
     RefParser() : ref_( 0 ), memStartPos_( 0 ), memEndPos_( 0 ) {}
     RefParser( IParser& ip ) : ref_( &ip ), memStartPos_( 0 ), memEndPos_( 0 ) {}
     const Values& GetValues() const { return values_; }
@@ -62,7 +61,6 @@ template < class CBackT, class ParserT >
 class CBackParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef CBackT CallBackType;
     typedef ParserT ParserType;
     CBackParser( const ParserType& p, const CallBackType& cback ) : p_( p ), cback_( cback ) {}
@@ -75,7 +73,7 @@ private:
     CallBackType cback_;
 };
 
-bool CBack( const IParser::Values& v )
+bool CBack( const Values& v )
 {
     return true;
     std::cout << *v.begin() << std::endl;
@@ -91,7 +89,7 @@ CBackParser< CB, P > MakeCBackParser( const CB& cb, const P& p )
 
 void TestRecursiveParser()
 {
-    typedef bool (*CBackType)(const IParser::Values& );
+    typedef bool (*CBackType)(const Values& );
     typedef CBackParser< CBackType, Parser > CBP;
     Parser expr;
     Parser rexpr = RefParser( expr );

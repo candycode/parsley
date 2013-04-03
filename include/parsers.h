@@ -23,7 +23,6 @@ typedef std::string String;
 class NextLineParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     const Values& GetValues() const
@@ -62,7 +61,6 @@ private:
 class SkipBlankParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     const Values& GetValues() const
@@ -97,7 +95,6 @@ private:
 class SkipToNextLineParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     const Values& GetValues() const
@@ -128,7 +125,6 @@ public:
 class BlankParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     const Values& GetValues() const
@@ -164,8 +160,7 @@ private:
 /// @ingroup BlankParsers
 class EofParser : public IParser
 {
-public:
-    typedef IParser::Values Values;
+public: 
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     const Values& GetValues() const
@@ -192,7 +187,6 @@ public:
 class UIntParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     typedef InStream::char_type Char;
@@ -277,8 +271,7 @@ private:
 /// @ingroup NumberParsers
 class IntParser : public IParser
 {
-public:
-    typedef IParser::Values Values;
+public: 
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     typedef InStream::char_type Char;
@@ -364,7 +357,6 @@ private:
 class FloatParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     FloatParser( const FloatParser& p ) : name_( p.name_ ), valueMap_( p.valueMap_ ) {}
@@ -604,7 +596,6 @@ template < class ValidatorT = AlphaNumValidator >
 class SequenceParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     typedef InStream::char_type Char;
@@ -717,8 +708,7 @@ private:
 /// @ingroup StringParsers
 class FirstAlphaNumParser : public IParser
 {
-public:
-    typedef IParser::Values Values;
+public:  
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Cosntructor.
@@ -774,8 +764,7 @@ private:
 template < int SIZE = -1 > // 
 class TupleParser : public IParser
 {
-public:
-    typedef IParser::Values Values;
+public:  
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     typedef InStream::char_type Char;

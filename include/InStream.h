@@ -199,7 +199,7 @@ private:
     }
     /// Pointer to input stream. Life cycle is handled outside this class.
     IT* isp_;
-    /// Number of line separator read.
+    /// Number of line separators read.
     int lines_;
     /// Number of characters read in current line.
     int lineChars_;

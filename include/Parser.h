@@ -13,8 +13,6 @@
 /// @interface IParser Parser.h Public interface for parsers.
 struct IParser
 {
-    /// Type used to store values extracted from input stream.
-    typedef std::map< ValueID, Any > Values;
     /// Value type in map.
     typedef Values::value_type::second_type ValueType;
     /// Key type in map.
@@ -49,7 +47,6 @@ struct IParser
 class Parser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     typedef InCharStream InStream;
@@ -167,7 +164,6 @@ typedef RewindManager< InStream > REWIND;
 class AndParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Default constructor; enables skipping of leading blanks.
@@ -267,7 +263,6 @@ private:
 class MultiParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Constructor.
@@ -364,7 +359,6 @@ MultiParser operator*( const Parser& p ) { return MultiParser( p ); }
 template < class ParserT > class NotParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Implementation of IParser::GetValues.
@@ -431,7 +425,6 @@ private:
 class OptionalParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     OptionalParser( const Parser& p, const ValueID& name = ValueID() ) : parser_( p ), name_( name ) {}
@@ -479,7 +472,6 @@ private:
 class OrParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Append new parser to parser list.
@@ -564,7 +556,6 @@ private:
 class GreedyOrParser : public IParser
 {
 public:
-    typedef IParser::Values Values;
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     /// Default constructor.

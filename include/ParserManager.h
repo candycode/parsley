@@ -19,11 +19,15 @@
 #include "StateManager.h"
 
 struct ITransitionCBack {
-    typedef std::map< ValueID, Any > Values;
     void operator()( const Values& v, StateID from, StateID to ) { Apply( v, from, to ); }
     virtual void Apply( const Values&, StateID, StateID ) = 0;
     virtual ITransitionCBack* Clone() const = 0;
     virtual ~ITransitionCBack() {}
+#ifdef USE_TRANSITION_CBACKS
+    virtual bool Enable( const prevValues&, StateID, StateID ) = 0;
+    virtual bool Validate( const prevValues&,  StateID, StateID ) = 0;
+    virtual void OnError( StateID, StateID, int lines ) = 0;
+#endif        
 };
 
 class TransitionCBack : public ITransitionCBack {
@@ -37,6 +41,11 @@ public:
         if( pImpl_ ) pImpl_->Apply( v, from, to );
     }
     TransitionCBack* Clone() const { return new TransitionCBack( *this ); }
+#ifdef USE_TRANSITION_CBACKS
+    bool Enable( const prevValues& pv, StateID cur, StateID next ) { return pImpl_->Enable( pv, cur, next ); }
+    bool Validate( const prevValues&,  StateID prev, StateID cur ) { return pImpl_->Validate( pv, prev, cur ); }
+    void OnError( StateID prev, StateID cur, int lines ) { pImpl_->OnError( prev, cur, lines ); }
+#endif        
 private:
     SmartPtr< ITransitionCBack > pImpl_;
 };
@@ -59,7 +68,8 @@ class ParserManager : public IStateController
     typedef std::map< StateID, Parser > StateParserMap;
     typedef std::map< ParserID, StateID > ParserStateMap;
     typedef std::set< StateID > DisabledStates;
-    typedef std::map< StateID, std::map< StateID, TransitionCBack > > TransitionCBackMap;
+    typedef std::map< StateID, 
+                      std::map< StateID, TransitionCBack > > TransitionCBackMap;
 
 public:
     /// Constructor.
@@ -190,11 +200,15 @@ public:
     /// @param curState current state.
     /// @return @c true if a new state has been selected or the termination state reached,
     ///         @c false otherwise.
-    bool Apply( InStream& is, StateID curState )
+    bool Apply( InStream& is, StateID curState
+#ifdef USE_TRANSITION_CBACKS
+        , const Values& prevValues)
+#endif     
+        )
     {
+#ifndef USE_TRANSITION_CBACKS // use transition cbacks instead of state manager        
         //if( is.fail() || is.bad() ) return false;
         const States& states = stateMap_[ curState ];
-        const StateID prevState = curState;
         ///@todo investigate the option of supporting hierarchical state controllers
         ///allowing to assign state conteollers to specific states instead of parsers
         /// e.g. 
@@ -204,6 +218,7 @@ public:
         ///   controller.Apply( is, curstate );
         /// </code> 
         if( curState == endState_ || states.empty() ) return true;
+        const StateID prevState = curState;
         States::const_iterator i;
         bool validated = false;
         for( i = states.begin(); i != states.end(); ++i )
@@ -222,7 +237,8 @@ public:
                 {
                     validated = true;
                     stateManager_.UpdateState( *this, curState  );
-                    if( transitionCBack_.find( prevState ) != transitionCBack_.end() ) {
+                    if( !transitionCBack_.empty() 
+                        && transitionCBack_.find( prevState ) != transitionCBack_.end() ) {
                         if( transitionCBack_[ prevState ].find( curState ) != transitionCBack_[ prevState ].end() ) {
                             transitionCBack_[ prevState ][ curState ].Apply( l.GetValues(), prevState, curState );
                         }
@@ -236,8 +252,48 @@ public:
             stateManager_.HandleError( curState, is.get_lines() );
             return false;
         }
-        /*if( !is.fail() && !is.bad() )*/ return Apply( is, curState );
-        //else return false;
+        return Apply( is, curState );
+#else
+// use transition cbacks instead of state manager 
+       
+        SharedState sstate;
+        TransitionCBack state1ToState2( new S1S2( sstate ) );
+        TransitionCBack state2ToState3( new S1S3( sstate ) );
+
+        const States& states = stateMap_[ curState ];
+        if( curState == endState_ || states.empty() ) return true;
+        const StateID prevState = curState;
+        States::const_iterator i;
+        for( i = states.begin(); i != states.end(); ++i )
+        {
+            curState = *i;
+            TransitionCBack& tcback = transitionCBack_[ prevState ][ curState ];
+            if( !tback
+                .Enabled( prevValues, prevState, curState ) ) continue;
+            Parser& l = stateParserMap_[ curState ];     
+            if( l.Parse( is ) )
+            {   
+                if( !tback.Validate( l.GetValues(), prevState, curState ) )
+                {
+                    validated = false;
+                    break;
+                }
+                else 
+                {
+                    validated = true; 
+                    tcback.Apply( l.GetValues(), prevState, curState );                
+                }
+                break;
+            }
+        }
+        if( i == states.end() || !validated )
+        {
+            tcback.OnError( prevState, curState, is.get_lines() );
+            return false;
+        }
+        return Apply( is, curState, prevValues );
+
+#endif        
     }
     /// Set state manger.
     void SetManager( const StateManager& sm ) { stateManager_ = sm; }
@@ -278,10 +334,12 @@ private:
     DisabledStates disabledStates_;
     /// End state
     StateID endState_;
+#ifndef USE_TRANSITION_CBACKS    
     /// State manager. Its methods are invoked from withing the
     /// ParserManager::Apply method to handle parsed values and enable/disable
     /// states depending on specific state and state values.
     StateManager stateManager_;
+#endif    
     /// Transition callback
     TransitionCBackMap transitionCBack_;
 };
