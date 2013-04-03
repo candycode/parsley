@@ -29,7 +29,8 @@ const bool DONT_SKIP_TO_NEXT_LINE = !SKIP_TO_NEXT_LINE;
 
 
 enum { START, MOLDEN_FORMAT, TITLE, TITLE_DATA, ATOMS, ATOM_DATA, GTO,
-       GTO_ATOM_NUM, GTO_SHELL_INFO, GTO_COEFF_EXP, EOL_, EOF_, SKIP_LINE, INVALID_STATE };
+       GTO_ATOM_NUM, GTO_SHELL_INFO, GTO_COEFF_EXP, EOL_, EOF_, SKIP_LINE, 
+       INVALID_STATE };
 
 class Print : public IStateManager
 {
@@ -70,7 +71,8 @@ public:
         switch( sid )
         {
         case GTO_SHELL_INFO: 
-                             state_->basisFunctionNum_ = v.find( "num basis" )->second;
+                             state_->basisFunctionNum_ = 
+                                v.find( "num basis" )->second;
                              state_->basisFunctionCounter_ = 0;
                              break;
         case GTO_COEFF_EXP:  ++state_->basisFunctionCounter_;
@@ -89,7 +91,8 @@ public:
     }
     void HandleError( StateID sid, int lineno )
     {
-        std::cerr << "\n\t[" << sid << "] PARSER ERROR AT LINE " << lineno << std::endl;
+        std::cerr << "\n\t[" << sid << "] PARSER ERROR AT LINE " 
+                  << lineno << std::endl;
     }
     Print* Clone() const { return new Print( *this ); }
 
@@ -99,7 +102,8 @@ public:
         unsigned basisFunctionNum_;
         unsigned basisFunctionCounter_;
         unsigned line_;
-        State() : basisFunctionNum_( 0 ), basisFunctionCounter_( 0 ), line_( 0 ) {}
+        State() : basisFunctionNum_( 0 ), 
+                  basisFunctionCounter_( 0 ), line_( 0 ) {}
     };
 
     Print( State* s ) : state_( s ) {}
@@ -199,8 +203,10 @@ void TestMoldenChunk( /*std::istream& is*/ )
     StateManager PRINT( ( Print( state ) ) );
     
     struct tcback : ITransitionCBack {
-        void Apply( const std::map< ValueID, Any >& values, StateID prev, StateID cur ) {
-            std::cout << "\t\t\t TRANSITION: " <<  prev << " -> " << cur << std::endl;
+        void Apply( const std::map< ValueID, 
+                    Any >& values, StateID prev, StateID cur ) {
+                std::cout << "\t\t\t TRANSITION: " <<  prev << " -> " 
+                          << cur << std::endl;
         }
         tcback* Clone() const { return new tcback( *this ); }
     };
@@ -230,7 +236,8 @@ void TestMoldenChunk( /*std::istream& is*/ )
        ( GTO_SHELL_INFO, 
            GTO_COEFF_EXP )
        ( GTO_COEFF_EXP, /* from */
-    /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
+         /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, 
+         /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, /*or*/ EOL_ );
     //SPECIFY PER-STATE PARSERS   
     TupleParser<> coord( FloatParser(), "coord", __, _, endl_ );
     pm.SetParsers()
@@ -239,16 +246,20 @@ void TestMoldenChunk( /*std::istream& is*/ )
         ( SKIP_LINE, endl_ )
         ( TITLE, ( C("[") > C("Title") > C("]") ) )
         ( TITLE_DATA, ( __ > NC("\n") ) )
-        ( ATOMS, AL(DONT_SKIP_BLANKS) >= __ >= C("[") >= __ >= C("Atoms") >= __ >= C("]") >= __ >= A("unit") >= endl_ );
+        ( ATOMS, AL(DONT_SKIP_BLANKS) >= __ >= C("[") >= __ >= C("Atoms") 
+            >= __ >= C("]") >= __ >= A("unit") >= endl_ );
     AL atomDataParser(false);
-    atomDataParser >= __ >= A("name") >= _ >= U("#") >= _  >= U("element") >= _ >= F("x") >= _ >= F("y") >= _ >= F("z") >= endl_;
-    //atomDataParser >= __ >= A("name") >= _ >= U("#") >= _  >= U("element") >= __ >= coord >= endl_;
+    atomDataParser >= __ >= A("name") >= _ >= U("#") >= _  >= U("element") 
+                   >= _ >= F("x") >= _ >= F("y") >= _ >= F("z") >= endl_;
     pm.SetParsers()
         ( ATOM_DATA, atomDataParser )
         ( GTO, ( C("[") > C("GTO") > C("]") ) )
-        ( GTO_ATOM_NUM, AL( DONT_SKIP_BLANKS ) >= __ >= U("gto atom #") >= endl_  )
-        ( GTO_SHELL_INFO, ( AL( DONT_SKIP_BLANKS ) >= __ >= FA("shell") >= _ >= U("num basis" ) >= endl_ ) )
-        ( GTO_COEFF_EXP, ( AL( DONT_SKIP_BLANKS ) >= __ >= F("exp") >= _ >= F("coeff") >= endl_ ) )
+        ( GTO_ATOM_NUM, AL( DONT_SKIP_BLANKS ) >= __ 
+                        >= U("gto atom #") >= endl_  )
+        ( GTO_SHELL_INFO, ( AL( DONT_SKIP_BLANKS ) >= __ 
+                           >= FA("shell") >= _ >= U("num basis" ) >= endl_ ) )
+        ( GTO_COEFF_EXP, ( AL( DONT_SKIP_BLANKS ) >= __ >= F("exp") 
+                           >= _ >= F("coeff") >= endl_ ) )
         ( EOF_, ( __ > eof_ ) )
         ( EOL_, endl_ );
     std::cout << "+++++++++++++++++++++++++++++++++++++++++++++\n";

@@ -1,5 +1,4 @@
-#ifndef PARSER_OPERATORS_H_
-#define PARSER_OPERATORS_H_
+#pragma once
 
 /// @file parser_operators.h
 /// Contains the implementation of a number of convenience operators that
@@ -77,5 +76,3 @@ inline OrParser operator/( const Parser& al1, const Parser& al2 ) {
     al.Add( al1 ).Add( al2 );
     return al;
 }
-
-#endif //PARSER_OPERATORS_H_

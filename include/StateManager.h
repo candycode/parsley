@@ -1,5 +1,4 @@
-#ifndef STATE_MANAGER_H_
-#define STATE_MANAGER_H_
+#pragma once
 
 /// @file StateManager 
 
@@ -22,52 +21,63 @@ struct IStateManager {
     /// or @c false accordingly.
     /// @param sid state id of the current parsing state.
     /// @param values extracted values.
-    /// @return @c true if values validated, @c false otherwise. The return value of this method
-    /// is used by ParserManager::Apply to decide if parsing should stop or continue.
+    /// @return @c true if values validated, @c false otherwise. The return 
+    ///         value of this method s used by ParserManager::Apply to decide 
+    ///         if parsing should stop or continue.
     virtual bool HandleValues( StateID sid, const Values& values ) = 0;
-    /// Handle error condition. This method is called when an error condition is detected
-    /// by ParserManager::Apply.
-    /// @param sid state identifier of state in which error condition found. Note that
-    /// when using implementations of this interface with ParserManager the state id
-    /// passed to this function is the identifier of the last state that was parsed correctly.
+    /// Handle error condition. This method is called when an error condition 
+    /// is detected by ParserManager::Apply.
+    /// @param sid state identifier of state in which error condition found. 
+    ///        Note that when using implementations of this interface with 
+    ///        ParserManager the state id passed to this function is the 
+    ///        identifier of the last state that was parsed correctly.
     /// @param lineNum line number at which parsed stopped.
     virtual void HandleError( StateID sid, int lineNum ) = 0;
     /// Returns copy of current object.
     virtual IStateManager* Clone() const = 0;
-    /// Updates states to enable/disable specific transitions. Invoked by ParserManager::Apply after
-    /// a parser is found and successfully applied to a specific state.
+    /// Updates states to enable/disable specific transitions. 
+    /// Invoked by ParserManager::Apply after a parser is found and successfully
+    /// applied to a specific state.
     /// @param sc state controller reference.
     /// @param curState state identifier of current parsing state.
-    virtual void UpdateState( IStateController& sc, StateID curState ) const = 0;
+    virtual void UpdateState( IStateController& sc, 
+                              StateID curState ) const = 0;
     /// (Required) virtual destructor.
     virtual ~IStateManager() {}
 };
 
 //------------------------------------------------------------------------------
-/// @brief Implementation of IStateManager interface to support polymorphic value semantics
-/// through pImpl idiom.
+/// @brief Implementation of IStateManager interface to support polymorphic 
+/// value semantics through pImpl idiom.
 /// @ingroup MainClasses
 class StateManager : public IStateManager {
 public:
     /// Default constructor.
     StateManager() {}
     /// Copy constructor: builds new copy of contained implementation.
-    StateManager( const StateManager& v ) : pImpl_( v.pImpl_ ? v.pImpl_->Clone() : 0 ) {}
+    StateManager( const StateManager& v ) 
+        : pImpl_( v.pImpl_ ? v.pImpl_->Clone() : 0 ) {}
     /// Swap.
-    StateManager& Swap( StateManager& v ) { ::Swap( pImpl_, v.pImpl_ ); return *this; } 
+    StateManager& Swap( StateManager& v ) { 
+        ::Swap( pImpl_, v.pImpl_ ); return *this; 
+    } 
     /// Assignment from StateManager.
-    StateManager& operator=( const StateManager& v ) { StateManager( v ).Swap( *this ); return *this;  }
+    StateManager& operator=( const StateManager& v ) { 
+        StateManager( v ).Swap( *this ); return *this;  
+    }
     /// Assignment from IStateManager.
     StateManager( const IStateManager& v ) : pImpl_( v.Clone() ) {}
     /// Implementation of IStateManager::HandleValues.
     bool HandleValues( StateID sid,  const Values& v ) {
         CheckPointer();
-        return pImpl_->HandleValues( sid, v ); //will fail in release mode if NULL pointer exceptions off
+        //will fail in release mode if NULL pointer exceptions off
+        return pImpl_->HandleValues( sid, v ); 
     }
     /// Implementation of IStateManager::HandleError.
     void HandleError( StateID sid, int line ) {
         CheckPointer();
-        pImpl_->HandleError( sid, line ); //will fail in release mode if NULL pointer exceptions off
+        //will fail in release mode if NULL pointer exceptions off
+        pImpl_->HandleError( sid, line ); 
     }
     /// Implementation of IStateManager::Clone.
     StateManager* Clone() const { return new StateManager( *this ); }
@@ -117,7 +127,4 @@ private:
 //      return replaced;
 //  }
 //};
-
-
-#endif //STATE_MANAGER_H_
 

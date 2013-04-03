@@ -1,7 +1,7 @@
-#ifndef SMART_PTR_
-#define SMART_PTR_
+#pragma once
 
-/// @file SmartPtr.h Implementaion of smart pointer class for automatic memory management.
+/// @file SmartPtr.h Implementaion of smart pointer class for automatic memory 
+/// management.
 
 #include <memory>
 #include <cassert>
@@ -68,13 +68,16 @@ public:
     /// counter if ref count == 0;
     ~SmartPtr() { Release(); }
     /// Conversion operator: returns address of member function for further
-    /// conversion to e.g. bool. Intended for use in conditional expressions such
-    /// as testing for @c NULL pointers.
-    operator BoolType() const { return rawPtr_ != 0 ? &SmartPtr::BoolTypeImpl : 0; }
+    /// conversion to e.g. bool. Intended for use in conditional expressions 
+    /// such as testing for @c NULL pointers.
+    operator BoolType() const { 
+        return rawPtr_ != 0 ? &SmartPtr::BoolTypeImpl : 0; 
+    }
 private:
     /// Returns raw pointer.
     template < class P >
-    friend  typename SmartPtr< P >::PointerType GetPointer( const SmartPtr<P>& ); 
+    friend  typename SmartPtr< P >::PointerType 
+        GetPointer( const SmartPtr<P>& ); 
     /// Returns pointer to reference counter.
     template < class P >
     friend RefCounter* GetCounter( const SmartPtr<P>& );
@@ -113,7 +116,8 @@ private:
 
 
 template < class P >
-inline typename SmartPtr< P >::PointerType GetPointer( const SmartPtr<P>& sp ) { return sp.rawPtr_; } 
+inline typename SmartPtr< P >::PointerType 
+    GetPointer( const SmartPtr<P>& sp ) { return sp.rawPtr_; } 
 
 template < class P >
 inline RefCounter* GetCounter( const SmartPtr<P>& sp ) { return sp.count_; }
@@ -129,6 +133,4 @@ inline void Swap( SmartPtr< P >& p1, SmartPtr< P >& p2 ) {
     std::swap( p1.rawPtr_, p2.rawPtr_ );
     std::swap( p1.count_,  p2.count_ );
 }   
-
-#endif // SMART_PTR_
 

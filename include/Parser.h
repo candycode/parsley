@@ -1,5 +1,4 @@
-#ifndef PARSER_H_
-#define PARSER_H_
+#pragma once
 
 /// @file Parser.h Definition of Parser interface and implementation of basic
 /// parser classes.
@@ -612,5 +611,3 @@ private:
     Parsers::const_iterator matchedParser_;
     std::map< StreamOff, Parsers::const_iterator > matchedParsers_;
 };
-#endif //LEXER_H_
-

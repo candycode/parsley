@@ -1,5 +1,4 @@
-#ifndef ISTATE_CONTROLLER_H_
-#define ISTATE_CONTROLLER_H_
+#pragma once
 
 /// @file IStateController.h interface for activating/de-activating states.
 
@@ -13,6 +12,4 @@ struct IStateController {
     virtual void EnableAllStates() = 0;
     virtual ~IStateController() {}
 };
-
-#endif //ISTATE_CONTROLLER_H_
 

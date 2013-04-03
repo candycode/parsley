@@ -1,7 +1,7 @@
-#ifndef SCOPED_PTR_
-#define SCOPED_PTR_
+#pragma once
 
-/// @file ScopedPtr.h Implementaion of scoped smart pointer class for automatic memory management.
+/// @file ScopedPtr.h Implementaion of scoped smart pointer class for automatic 
+/// memory management.
 
 #include <memory>
 #include <cassert>
@@ -50,13 +50,16 @@ public:
     /// counter if ref count == 0;
     ~ScopedPtr() { Release(); }
     /// Conversion operator: returns address of member function for further
-    /// conversion to e.g. bool. Intended for use in conditional expressions such
-    /// as testing for @c NULL pointers.
-    operator BoolType() const { return rawPtr_ != 0 ? &ScopedPtr::BoolTypeImpl : 0; }
+    /// conversion to e.g. bool. Intended for use in conditional expressions 
+    /// such as testing for @c NULL pointers.
+    operator BoolType() const { 
+        return rawPtr_ != 0 ? &ScopedPtr::BoolTypeImpl : 0; 
+    }
 private:
     /// Returns raw pointer.
     template < class P >
-    friend  typename ScopedPtr< P >::PointerType GetPointer( const ScopedPtr<P>& ); 
+    friend  typename ScopedPtr< P >::PointerType 
+        GetPointer( const ScopedPtr<P>& ); 
     /// Swaps two smart pointers.
     template < class P >
     friend void Swap( ScopedPtr<P>&, ScopedPtr<P>& );
@@ -74,7 +77,8 @@ private:
 
 
 template < class P >
-inline typename ScopedPtr< P >::PointerType GetPointer( const ScopedPtr<P>& sp ) { return sp.rawPtr_; } 
+inline typename ScopedPtr< P >::PointerType 
+    GetPointer( const ScopedPtr<P>& sp ) { return sp.rawPtr_; } 
 
 template < class P >
 inline void Release( const SmartPtr<P>& sp ) { sp.Release(); }
@@ -91,5 +95,4 @@ inline void Swap( ScopedPtr< P >& p1, ScopedPtr< P >& p2 ) {
     std::swap( p1.count_,  p2.count_ );
 }   
 
-#endif // SCOPED_PTR_
 

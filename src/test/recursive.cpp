@@ -20,9 +20,12 @@ class RefParser : public IParser
 public:
     typedef IParser* IParserPtr; //smart pointers ?
     RefParser() : ref_( 0 ), memStartPos_( 0 ), memEndPos_( 0 ) {}
-    RefParser( IParser& ip ) : ref_( &ip ), memStartPos_( 0 ), memEndPos_( 0 ) {}
+    RefParser( IParser& ip ) : ref_( &ip ), memStartPos_( 0 ), 
+                               memEndPos_( 0 ) {}
     const Values& GetValues() const { return values_; }
-    const ValueType& operator[]( const KeyType& k ) const { return ref_->operator[]( k ); }
+    const ValueType& operator[]( const KeyType& k ) const { 
+        return ref_->operator[]( k ); 
+    }
     bool Parse( InStream& is )
     {
         assert( ref_ && "NULL PARSER REFERENCE" );
@@ -41,11 +44,6 @@ public:
             memStartPos_ = p;
             memEndPos_ = is.tellg();
             values_ = ref_->GetValues();
-            //for( Values::const_iterator i = values_.begin(); i != values_.end(); ++i )
-            //{
-            //  std::cout << i->second << ' ';
-            //}
-            //std::cout << std::endl;
         }
         return ok;
     }
@@ -63,10 +61,15 @@ class CBackParser : public IParser
 public:
     typedef CBackT CallBackType;
     typedef ParserT ParserType;
-    CBackParser( const ParserType& p, const CallBackType& cback ) : p_( p ), cback_( cback ) {}
+    CBackParser( const ParserType& p, const CallBackType& cback )   
+        : p_( p ), cback_( cback ) {}
     const Values& GetValues() const { return p_.GetValues(); }
-    const ValueType& operator[]( const KeyType& k ) const { return p_.operator[]( k ); }
-    bool Parse( InStream& is ) { if( p_.Parse( is ) ) return cback_( p_.GetValues() ); return false; }
+    const ValueType& operator[]( const KeyType& k ) const { 
+        return p_.operator[]( k ); 
+    }
+    bool Parse( InStream& is ) { 
+        if( p_.Parse( is ) ) return cback_( p_.GetValues() ); return false; 
+    }
     CBackParser* Clone() const { return new CBackParser( *this ); }
 private:
     ParserType p_;
@@ -94,7 +97,8 @@ void TestRecursiveParser()
     Parser expr;
     Parser rexpr = RefParser( expr );
     Parser value = ( C("("), rexpr ,C(")") ) / F();
-    expr = ( RefParser( value ), ( C("+") / C("-") ), RefParser( expr ) ) / RefParser( value );
+    expr = ( RefParser( value ), ( C("+") / C("-") ), 
+             RefParser( expr ) ) / RefParser( value );
     std::istringstream iss( "1+(2+3)-1-(23+23.5)" );
     InStream is( iss );
     if( !expr.Parse( is ) || !is.eof() )

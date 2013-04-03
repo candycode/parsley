@@ -1,5 +1,4 @@
-#ifndef INSTREAM_H_
-#define INSTREAM_H_
+#pragma once
 
 /// @file InStream.h Implementation of input stream wrapper; required to perform
 ///       additional operations such as keeping the number of read lines.
@@ -208,5 +207,4 @@ private:
 /// @ingroup utility
 typedef InChStream< std::istream > InCharStream;
 
-#endif //INSTREAM_H_
 

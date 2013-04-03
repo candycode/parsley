@@ -1,5 +1,4 @@
-#ifndef TYPES_H_
-#define TYPES_H_
+#pragma once
 
 /// @file types.h Common types and wrappers.
 
@@ -30,5 +29,4 @@ inline int IsAlpha( int c ) { return ::isalpha( c ); }
 inline int IsAlnum( int c ) { return ::isalnum( c ); }
 inline int IsDigit( int c ) { return ::isdigit( c ); }
 
-#endif
 

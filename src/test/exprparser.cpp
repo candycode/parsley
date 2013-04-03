@@ -41,7 +41,8 @@ namespace eval
                        other.level_ == level_; 
             }
             OP() : code_( -1 ), value_( 0.0 ), level_( 0 ) {}
-            OP( int code, double value = 0.0, int level = 0 ) : code_( code ), value_( value ), level_( level ) {}
+            OP( int code, double value = 0.0, int level = 0 ) 
+                : code_( code ), value_( value ), level_( level ) {}
         };
         typedef std::list< OP > Program;
         
@@ -75,7 +76,8 @@ namespace eval
 		     state_->program_.push_back( OP( VAL, V ) );    
 		     break;
 		 } 
-	    case VALUE: state_->program_.push_back( OP( VAL, v.find("operand")->second ) ) ;
+	    case VALUE: state_->program_.push_back( 
+            OP( VAL, v.find("operand")->second ) ) ;
 			break;
 	    case OPERATOR: 
 		{
@@ -90,7 +92,8 @@ namespace eval
 			    throw std::logic_error( "Unmatched parenthesis" );
 			    return false; //in case no exception handling enabled
 			}  
-			std::cout << state_->Evaluate( state_->program_.begin(), state_->program_.end() );
+			std::cout << state_->Evaluate( 
+                state_->program_.begin(), state_->program_.end() );
 			break;
 	    default:    break;  
 	    }
@@ -142,7 +145,8 @@ namespace eval
                 if( i != e ) {
                     l = i;
                     r = i;
-                    return Evaluate( b, l ) / Evaluate( ++r, e ); // could catch division by zero exception
+                    // could catch division by zero exception
+                    return Evaluate( b, l ) / Evaluate( ++r, e ); 
                 }
                 throw std::logic_error( "Invalid expression" ); 
             }
@@ -161,7 +165,8 @@ void TestExprEval()
     std::cout << "====================" << std::endl;
 
     const String EXPR  = "1+3*(4-(2-1/3.3))"; 
-    std::cout << "Expression: " << EXPR << " = " << 1+3*(4-(2-1/3.3)) << std::endl;
+    std::cout << "Expression: " << EXPR << " = " << 1+3*(4-(2-1/3.3)) 
+              << std::endl;
     std::istringstream iss( EXPR );
     InStream is( iss );
     SmartPtr< eval::Print::State > state( new eval::Print::State );
@@ -176,15 +181,19 @@ void TestExprEval()
     pm.AddState( eval::EXPRESSION_END, eval::EXPRESSION_END );
     pm.AddState( eval::EXPRESSION_END, eval::EOF_ );
     pm.AddState( eval::EXPRESSION_END, eval::OPERATOR );
-    pm.AddState( eval::VALUE, eval::OPERATOR ).AddState( eval::VALUE, eval::EOF_ );
+    pm.AddState( eval::VALUE, eval::OPERATOR )
+        .AddState( eval::VALUE, eval::EOF_ );
     pm.AddState( eval::OPERATOR, eval::EXPRESSION_BEGIN );
     pm.AddState( eval::OPERATOR, eval::VALUE );
     
-    pm.SetParser( eval::VALUE, ( AL( DONT_SKIP_BLANKS ) >= __ >= F("operand") ) );
-    pm.SetParser( eval::OPERATOR,  ( AL( DONT_SKIP_BLANKS ) >= __ >= ( C("+","operator") /
-                                                                       C("-","operator") /
-                                                                       C("/","operator") /
-                                                                       C("*","operator") ) ) );
+    pm.SetParser( eval::VALUE, 
+                  ( AL( DONT_SKIP_BLANKS ) >= __ >= F("operand") ) );
+    pm.SetParser( eval::OPERATOR, 
+                  ( AL( DONT_SKIP_BLANKS ) >= __ >= 
+                    ( C("+","operator") /
+                                           C("-","operator") /
+                                           C("/","operator") /
+                                           C("*","operator") ) ) );
     pm.SetParser( eval::EXPRESSION_BEGIN, ( __ > C("(","open") ) );
     pm.SetParser( eval::EXPRESSION_END,   ( __ > C(")","closed") ) );
     pm.SetParser( eval::EOF_, ( eof_ ) );

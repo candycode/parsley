@@ -1,5 +1,4 @@
-#ifndef ANY_H_
-#define ANY_H_
+#pragma once
 
 /// @file Any.h Implementation of class to hold instances of any type.
 
@@ -118,8 +117,4 @@ std::ostream& operator<<( std::ostream& os, const std::vector< Any >& av ) {
     return os;
 }
 
-
-
-
-#endif // ANY_H_
 

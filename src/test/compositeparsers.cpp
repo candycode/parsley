@@ -53,7 +53,8 @@ void TestCompositeParsers() {
     TupleParser<> tl2( FloatParser(), "coord" );
     assert( tl2.Parse( is3 ) );
     std::vector< Any > v2 = tl2[ "coord" ];
-    assert( v2[ 0 ] == 2.1 && v2[ 1 ] == 2.2 && v2[ 2 ] == 2.3 && v2[ 3 ] == 4.0 );
+    assert( v2[ 0 ] == 2.1 && v2[ 1 ] == 2.2 
+            && v2[ 2 ] == 2.3 && v2[ 3 ] == 4.0 );
     std::cout << ++count << ' ';
     //4 TUPLE
     std::istringstream iss4( " string1 |  string2  | string3 | string4" );
@@ -69,16 +70,19 @@ void TestCompositeParsers() {
          && *( vs.rbegin() ) == S("string4" ) );
     std::cout << ++count << ' ';
     //5 TUPLE
-    std::istringstream iss5( "| string 1 |  string 2 | string 3 | string 4 |  gfdgfd" );
+    std::istringstream 
+        iss5( "| string 1 |  string 2 | string 3 | string 4 |  gfdgfd" );
     InStream is5( iss5 );
     AndParser separator(DONT_SKIP_BLANKS ); 
     separator >= __ >= C( "|" ) ;
     TupleParser<> tl4( NotParser<OrParser>( separator / NextLineParser() ), 
-                       "strings", separator > __, separator, PassThruParser(), SKIP_BLANKS );
+                       "strings", separator > __, separator, 
+                       PassThruParser(), SKIP_BLANKS );
     assert( tl4.Parse( is5 ) );
     std::vector< Any > vs2 = tl4[ "strings" ];
     assert( vs2.size() == 5 );
-    //using a pass-through as the end lexer means we always get something added as the last element
+    //using a pass-through as the end lexer means we always get something added 
+    //as the last element
     assert( vs2[ 0 ] == S("string 1") );
     assert( vs2[ 1 ] == S("string 2") );
     assert( vs2[ 2 ] == S("string 3") );
