@@ -50,6 +50,7 @@
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
@@ -66,79 +67,46 @@
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2><a name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">interface &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_i_parser.html">IParser</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">interface for parsers.  <a href="struct_i_parser.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_parser.html">Parser</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implementation of <a class="el" href="struct_i_parser.html" title="interface for parsers.">IParser</a> interface.  <a href="class_parser.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_rewind_manager.html">RewindManager&lt; IstreamT &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Utility class used to rewind an input stream if a monitored values is <code>false</code>.  <a href="class_rewind_manager.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_and_parser.html">AndParser</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a sequence of parsers to the input stream in the order supplied by the client code, optionally skipping leading blanks.  <a href="class_and_parser.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_multi_parser.html">MultiParser</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies the same parser a fixed number of times or until it fails.  <a href="class_multi_parser.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_not_parser.html">NotParser&lt; ParserT &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse method returns the negation of what the contained parser Parse method returns.  <a href="class_not_parser.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_optional_parser.html">OptionalParser</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="class_parser.html" title="Implementation of IParser interface.">Parser</a> for optional expressions.  <a href="class_optional_parser.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_or_parser.html">OrParser</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ordered OR parser: invokes the contained parsers until one returns true.  <a href="class_or_parser.html#details">More...</a><br/></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_greedy_or_parser.html">GreedyOrParser</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Or <a class="el" href="class_parser.html" title="Implementation of IParser interface.">Parser</a>: applies a set of parsers to the given stream and validates the input only of at least one of the applied parser validates the input characters.  <a href="class_greedy_or_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">interface &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structparsley_1_1_i_parser.html">parsley::IParser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">interface for parsers.  <a href="structparsley_1_1_i_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_parser.html">parsley::Parser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implementation of <a class="el" href="structparsley_1_1_i_parser.html" title="interface for parsers.">IParser</a> interface.  <a href="classparsley_1_1_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_rewind_manager.html">parsley::RewindManager&lt; IstreamT &gt;</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Utility class used to rewind an input stream if a monitored values is <code>false</code>.  <a href="classparsley_1_1_rewind_manager.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_and_parser.html">parsley::AndParser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a sequence of parsers to the input stream in the order supplied by the client code, optionally skipping leading blanks.  <a href="classparsley_1_1_and_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_multi_parser.html">parsley::MultiParser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies the same parser a fixed number of times or until it fails.  <a href="classparsley_1_1_multi_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_not_parser.html">parsley::NotParser&lt; ParserT &gt;</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse method returns the negation of what the contained parser Parse method returns.  <a href="classparsley_1_1_not_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_optional_parser.html">parsley::OptionalParser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classparsley_1_1_parser.html" title="Implementation of IParser interface.">Parser</a> for optional expressions.  <a href="classparsley_1_1_optional_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_or_parser.html">parsley::OrParser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ordered OR parser: invokes the contained parsers until one returns true.  <a href="classparsley_1_1_or_parser.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classparsley_1_1_greedy_or_parser.html">parsley::GreedyOrParser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Or <a class="el" href="classparsley_1_1_parser.html" title="Implementation of IParser interface.">Parser</a>: applies a set of parsers to the given stream and validates the input only of at least one of the applied parser validates the input characters.  <a href="classparsley_1_1_greedy_or_parser.html#details">More...</a><br/></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2><a name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespaceparsley"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceparsley.html">parsley</a></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ababb1eaef69b11f0c885eaec72a368ec"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="class_rewind_manager.html">RewindManager</a>&lt; <a class="el" href="types_8h.html#a31c1a03c5c64b1c43cb777b140a3b97b">InStream</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_parser_8h.html#ababb1eaef69b11f0c885eaec72a368ec">REWIND</a></td></tr>
-<tr class="memdesc:ababb1eaef69b11f0c885eaec72a368ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convenience typedef.  <a href="#ababb1eaef69b11f0c885eaec72a368ec"></a><br/></td></tr>
+<tr class="memitem:a57ba3e2b446fd8126218415cd0695c1b"><td class="memItemLeft" align="right" valign="top">typedef RewindManager&lt; InStream &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceparsley.html#a57ba3e2b446fd8126218415cd0695c1b">parsley::REWIND</a></td></tr>
+<tr class="memdesc:a57ba3e2b446fd8126218415cd0695c1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convenience typedef.  <a href="#a57ba3e2b446fd8126218415cd0695c1b"></a><br/></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aa916be08a74b101ed0057c19ef02d4f9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_multi_parser.html">MultiParser</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_parser_8h.html#aa916be08a74b101ed0057c19ef02d4f9">operator*</a> (const <a class="el" href="class_parser.html">Parser</a> &amp;p)</td></tr>
+<tr class="memitem:ad4cb541bd63ee06a95ea276fa95c4cc7"><td class="memItemLeft" align="right" valign="top">MultiParser&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceparsley.html#ad4cb541bd63ee06a95ea276fa95c4cc7">parsley::operator*</a> (const Parser &amp;p)</td></tr>
 </table>
 <a name="details" id="details"></a><h2>Detailed Description</h2>
-<div class="textblock"><p>Definition of <a class="el" href="class_parser.html" title="Implementation of IParser interface.">Parser</a> interface and implementation of basic parser classes. </p>
+<div class="textblock"><p>Definition of Parser interface and implementation of basic parser classes. </p>
 
 <p>Definition in file <a class="el" href="_parser_8h_source.html">Parser.h</a>.</p>
-</div><h2>Typedef Documentation</h2>
-<a class="anchor" id="ababb1eaef69b11f0c885eaec72a368ec"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">typedef <a class="el" href="class_rewind_manager.html">RewindManager</a>&lt; <a class="el" href="types_8h.html#a31c1a03c5c64b1c43cb777b140a3b97b">InStream</a> &gt; <a class="el" href="_parser_8h.html#ababb1eaef69b11f0c885eaec72a368ec">REWIND</a></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Convenience typedef. </p>
-
-<p>Definition at line <a class="el" href="_parser_8h_source.html#l00181">181</a> of file <a class="el" href="_parser_8h_source.html">Parser.h</a>.</p>
-
-</div>
-</div>
-<h2>Function Documentation</h2>
-<a class="anchor" id="aa916be08a74b101ed0057c19ef02d4f9"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="class_multi_parser.html">MultiParser</a> operator* </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="class_parser.html">Parser</a> &amp;&#160;</td>
-          <td class="paramname"><em>p</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convenience operator to mimic regex syntax and generate a multiparser that applies multiple times a given parser. </p>
-
-<p>Definition at line <a class="el" href="_parser_8h_source.html#l00370">370</a> of file <a class="el" href="_parser_8h_source.html">Parser.h</a>.</p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Apr 4 2013 16:45:02 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Apr 4 2013 19:06:47 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.1.2
 </small></address>

@@ -51,9 +51,9 @@ Sample usage</h1>
 Integer parser</h2>
 <div class="fragment"><div class="line"><span class="comment">// 1) create input stream to read from</span></div>
 <div class="line">std::istringstream iss( <span class="stringliteral">&quot;-123&quot;</span> );</div>
-<div class="line"><a class="code" href="class_in_ch_stream.html" title="Input character stream class featuring automatic tracking of current line and char.">InStream</a> is( iss );</div>
+<div class="line"><a class="code" href="namespaceparsley.html#a23db97fdd2a32c010348da430c1c494b">InStream</a> is( iss );</div>
 <div class="line"><span class="comment">// 2) create parser and set the name for the returned values to &#39;number&#39;</span></div>
-<div class="line"><a class="code" href="class_int_parser.html" title="Parse signed integer values.">IntParser</a> il( <span class="stringliteral">&quot;number&quot;</span> );</div>
+<div class="line">IntParser il( <span class="stringliteral">&quot;number&quot;</span> );</div>
 <div class="line"><span class="comment">// 3) apply parser: returns true on success</span></div>
 <div class="line">assert( il.Parse( is ) );</div>
 <div class="line"><span class="comment">// 4) extract parsed value by name; returned values</span></div>
@@ -71,7 +71,7 @@ Building</h2>
 </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Apr 4 2013 16:45:02 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Apr 4 2013 19:06:47 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.1.2
 </small></address>
