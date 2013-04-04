@@ -32,6 +32,8 @@
 #include <memory>
 #include <cassert>
 
+namespace parsley {
+
 //------------------------------------------------------------------------------
 /// @brief Scoped pointer implementation; uses default memory de-allocator.
 /// @ingroup utility
@@ -121,4 +123,4 @@ inline void Swap( ScopedPtr< P >& p1, ScopedPtr< P >& p2 ) {
     std::swap( p1.count_,  p2.count_ );
 }   
 
-
+} //namespace

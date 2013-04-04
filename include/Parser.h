@@ -35,6 +35,8 @@
 #include "Any.h"
 #include "SmartPtr.h"
 
+namespace parsley {
+
 /// @interface IParser Parser.h Public interface for parsers.
 struct IParser {
     /// Value type in map.
@@ -84,7 +86,10 @@ public:
     Parser( const Parser& l ) : pImpl_( l.pImpl_ ? l.pImpl_->Clone() : 0 ) {}
     /// Swap: swap internal pointers to IParser implementations.
     /// @return reference to @c *this after swap.
-    Parser& Swap( Parser& l ) { ::Swap( pImpl_, l.pImpl_ ); return *this; } 
+    Parser& Swap( Parser& l ) { 
+        parsley::Swap( pImpl_, l.pImpl_ ); 
+        return *this; 
+    } 
     /// Assignment operator from other parser.
     Parser& operator=( const Parser& l ) { 
         Parser( l ).Swap( *this ); return *this;  
@@ -260,7 +265,7 @@ private:
     void SkipBlanks( InStream& is ) {
         if( !is.good() ) return;
         Char c = is.get();
-        while( is.good() && ::IsSpace( c ) != 0 ) c = is.get();
+        while( is.good() && parsley::IsSpace( c ) != 0 ) c = is.get();
         if( is.good() ) is.unget();
     }
     /// Parser list type.
@@ -637,3 +642,5 @@ private:
     Parsers::const_iterator matchedParser_;
     std::map< StreamOff, Parsers::const_iterator > matchedParsers_;
 };
+
+} //namespace

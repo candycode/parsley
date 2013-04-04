@@ -44,6 +44,8 @@
 
 #include "StateManager.h"
 
+namespace parsley {
+
 /// @brief Interface for transition callbacks functors invoked each time
 /// a transition takes place. 
 /// In case @c USE_TRANSITION_CBACKS is @c #defined then transition 
@@ -121,7 +123,7 @@ public:
         : pImpl_( other.pImpl_ ? other.pImpl_->Clone() : 0 ) {}
     TransitionCBack( ITransitionCBack* ptr ) : pImpl_( ptr ) {}
     TransitionCBack& Swap( TransitionCBack& v ) { 
-        ::Swap( pImpl_, v.pImpl_ ); return *this; 
+        parsley::Swap( pImpl_, v.pImpl_ ); return *this; 
     } 
     TransitionCBack& operator=( const TransitionCBack& v ) { 
         TransitionCBack( v ).Swap( *this ); return *this;  
@@ -584,3 +586,4 @@ private:
     TransitionCBackMap transitionCBack_;
 };
 
+} //namespace

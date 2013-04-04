@@ -38,12 +38,12 @@
 #include <stdexcept>
 #include <locale>
 
-//this required if InChStream is used with std::istream and 
+//this is required if InChStream is used with std::istream and 
 //included before iostream to properly resolve typedef typename IT::* types 
 //(on gcc).
 //#include <iostream>
 
-
+namespace parsley {
 /// @brief Input character stream class featuring automatic tracking of current 
 /// line and char.
 ///
@@ -233,4 +233,4 @@ private:
 /// @ingroup utility
 typedef InChStream< std::istream > InCharStream;
 
-
+} //namespace

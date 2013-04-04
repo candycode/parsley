@@ -38,6 +38,8 @@
 
 typedef std::string String;
 
+namespace parsley {
+
 /// @file parsers.h
 /// Implementation of many common parsers to perform parsing and validation of
 /// nuumbers, alphanumeric strings and tuples.
@@ -69,7 +71,7 @@ public:
     NextLineParser* Clone() const { return new NextLineParser( *this ); }
 private:
     bool IsBlank( Char c ) const {
-        return ::IsSpace( c ) != 0 && c != '\n';
+        return parsley::IsSpace( c ) != 0 && c != '\n';
     }
     Char Eol() const { return '\n'; }
 };
@@ -100,7 +102,7 @@ public:
     SkipBlankParser* Clone() const { return new SkipBlankParser( *this ); }
 private:
     bool IsBlank( Char c ) const {
-        return ::IsSpace( c ) != 0;
+        return parsley::IsSpace( c ) != 0;
     }
 };
 
@@ -159,7 +161,7 @@ public:
     BlankParser* Clone() const { return new BlankParser( *this ); }
 private:
     bool IsBlank( Char c ) const {
-        return ::IsSpace( c ) != 0;
+        return parsley::IsSpace( c ) != 0;
     }
 };
 
@@ -206,7 +208,7 @@ public:
         if( !is.good() ) return false;
         Char c = is.get();
         if( !is.good() ) return false;
-        if( ::IsDigit( c ) == 0 ) {
+        if( parsley::IsDigit( c ) == 0 ) {
             is.unget();
             return false;
         }
@@ -223,7 +225,7 @@ public:
         if( valueMap_.empty() && !token_.empty() ) {
             valueMap_.insert( 
                 std::make_pair( 
-                    name_, unsigned( ::ToInt( token_.c_str() ) ) ) );
+                    name_, unsigned( parsley::ToInt( token_.c_str() ) ) ) );
         }
         return valueMap_;
     }
@@ -248,7 +250,7 @@ private:
         if( !is.good() ) return;
         Char c = is.get();
         if( !is.good() ) return;
-        while( is.good() && ::IsDigit( c ) != 0 ) {
+        while( is.good() && parsley::IsDigit( c ) != 0 ) {
             token_.push_back( c );
             c = is.get();
         }
@@ -314,7 +316,7 @@ public:
         if( valueMap_.empty() && !token_.empty() ) {
             valueMap_.insert( 
                 std::make_pair( 
-                    name_, int( ::ToInt( token_.c_str() ) ) ) );
+                    name_, int( parsley::ToInt( token_.c_str() ) ) ) );
         }
         return valueMap_;
     }
@@ -388,7 +390,7 @@ public:
                 token_ = c + token_;
             }
         }
-        else if( ::IsDigit( c ) != 0 ) {
+        else if( parsley::IsDigit( c ) != 0 ) {
             is.unget();
             Apply( &FloatParser::MatchUnsigned, is, 0 );
         }
@@ -405,7 +407,7 @@ public:
         if( valueMap_.empty() && !token_.empty() ) {
             valueMap_.insert( 
                 std::make_pair( 
-                    name_, ::ToFloat( token_.c_str() ) ) );
+                    name_, parsley::ToFloat( token_.c_str() ) ) );
         }
         return valueMap_;
     }
@@ -447,7 +449,7 @@ private:
         if( !is.good() ) return false;
         const Char c = is.get();
         if( !is.good() ) return false;
-        if( ::IsDigit( c ) != 0 ) { 
+        if( parsley::IsDigit( c ) != 0 ) { 
             token_.push_back( c ); 
             Apply( &FloatParser::MatchUnsigned, is, 0 ); 
             return true; 
@@ -464,7 +466,7 @@ private:
         if( !is.good() ) return false;
         const Char c = is.get();
         if( !is.good() ) return false;
-        if( ::IsDigit( c ) ) {
+        if( parsley::IsDigit( c ) ) {
             token_.push_back( c ); 
             Apply( &FloatParser::MatchFractional, is, 0 );
             return true;
@@ -488,7 +490,7 @@ private:
             token_.push_back( c ); 
             return Apply( &FloatParser::MatchExponent, is, c );
         }
-        else if( ::IsDigit( c ) ) {
+        else if( parsley::IsDigit( c ) ) {
             token_.push_back( c ); 
             Apply( &FloatParser::MatchExponent, is,  0 ); 
             return true;
@@ -513,7 +515,7 @@ private:
 struct AlphaNumValidator {
     /// Validates any alphanumeric value
     bool Validate( const String&, Char newChar ) const {
-        return ::IsAlnum( newChar ) != 0;
+        return parsley::IsAlnum( newChar ) != 0;
     }
     
     void Reset() {}
@@ -531,9 +533,11 @@ struct FirstAlphaNumValidator {
     /// the first character to be parsed.
     bool Validate( const String& s, Char newChar ) const {
         return s.empty() ? 
-               ::IsAlpha( newChar ) != 0 || ::IsDigit( newChar ) != 0
-            : ::IsAlpha( *s.begin() ) != 0 && 
-              ( ::IsAlpha( newChar ) != 0 || ::IsDigit( newChar ) != 0 );
+               parsley::IsAlpha( newChar ) != 0 
+                                 || parsley::IsDigit( newChar ) != 0
+            : parsley::IsAlpha( *s.begin() ) != 0 && 
+              ( parsley::IsAlpha( newChar ) != 0 
+                || parsley::IsDigit( newChar ) != 0 );
     }
     
     void Reset() {}
@@ -569,7 +573,8 @@ public:
     bool Validate( const String& , Char newChar ) const {
         if( count_ >= value_.length() ) return false;
         if( ignoreCase_ ) {
-            return ::ToLower( value_[ count_++ ] ) == ::ToLower( newChar );
+            return parsley::ToLower( value_[ count_++ ] ) 
+                        == parsley::ToLower( newChar );
         }
         return value_[ count_++ ] == newChar;
     }
@@ -725,7 +730,7 @@ public:
         valueMap_.clear();
         if( !is.good() ) return false;
         Char c = is.get();
-        if( ::IsAlpha( c ) != 0 ) {
+        if( parsley::IsAlpha( c ) != 0 ) {
             token_ += c;
             if( anl_.Parse( is ) ) {
                 token_ += anl_.GetText();
@@ -867,7 +872,7 @@ private:
     void SkipBlanks( InStream& is ) {
         if( is.good() ) {
             Char c = is.get();
-            while( is.good() && ::IsSpace( c ) != 0  ) c = is.get();
+            while( is.good() && parsley::IsSpace( c ) != 0  ) c = is.get();
             if( is.good() ) is.unget();
         }
     }
@@ -932,3 +937,4 @@ public:
     PassThruParser* Clone() const { return new PassThruParser( *this ); }   
 };
 
+} //namespace

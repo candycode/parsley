@@ -38,6 +38,8 @@
 #include "ParserManager.h"
 #include "typedefs.h"
 
+using namespace parsley;
+
 //==============================================================================
 // RECURSIVE & CALLBACK PARSERS
 //==============================================================================

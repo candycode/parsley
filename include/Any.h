@@ -31,6 +31,7 @@
 #include <vector>
 #include <iterator>
 
+namespace parsley {
 //------------------------------------------------------------------------------
 /// @brief Minimal implementation of a class that can hold instances of any 
 /// type.
@@ -142,4 +143,4 @@ std::ostream& operator<<( std::ostream& os, const std::vector< Any >& av ) {
     return os;
 }
 
-
+} //namespace

@@ -36,6 +36,8 @@
 #include "InStream.h"
 #include "Any.h"
 
+namespace parsley {
+
 typedef std::string String;
 typedef InChStream< std::istream > InStream;
 typedef InStream::streampos StreamPos;
@@ -55,4 +57,4 @@ inline int IsAlpha( int c ) { return ::isalpha( c ); }
 inline int IsAlnum( int c ) { return ::isalnum( c ); }
 inline int IsDigit( int c ) { return ::isdigit( c ); }
 
-
+} //namespace

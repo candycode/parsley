@@ -30,6 +30,8 @@
 
 #include "types.h"
 
+namespace parsley {
+
 ///@interface IStateController IStateController.h. 
 ///@brief  Defines the actions available to enable/disable states.
 struct IStateController {
@@ -63,3 +65,4 @@ struct IStateController {
     virtual ~IStateController() {}
 };
 
+} //namespace

@@ -34,6 +34,7 @@
 
 #include "types.h"
 
+namespace parsley {
 //------------------------------------------------------------------------------
 /// @interface IStateManager StateManager.h State manager interface: handles 
 /// parsed values, errors and enable/disable states of an IStateController 
@@ -85,7 +86,7 @@ public:
         : pImpl_( v.pImpl_ ? v.pImpl_->Clone() : 0 ) {}
     /// Swap.
     StateManager& Swap( StateManager& v ) { 
-        ::Swap( pImpl_, v.pImpl_ ); return *this; 
+        parsley::Swap( pImpl_, v.pImpl_ ); return *this; 
     } 
     /// Assignment from StateManager.
     StateManager& operator=( const StateManager& v ) { 
@@ -124,33 +125,4 @@ private:
     SmartPtr< IStateManager > pImpl_;
 };
 
-//template < class DerivedT >
-//class TableStateManager : public IStateManager
-// {
-//public:
-//  typedef bool ( DerivedT::*StateManagerMethod )( StateID, const Values& );
-//  typedef bool ( DerivedT::*ErrorHandlerMethod )( StateID );
-//  bool HandleValues( StateID id, const Values& v )
-// {
-//      return ( this->* )valueHandlers_[ id ]( id, v );
-//  }
-//  bool HandleError( StateID id )
-// {
-//      return ( this->* )errorHandlers_[ id ]( id );
-//  }
-//  bool SetStateManagerMethod( StateID id, StateManagerMethod hm )
-// {
-//      bool replaced = false;
-//      if( valueHandlers_.find( id ) != valueHandlers_.end() ) replaced = true;
-//      valueHandlers_[ id ] = hm;
-//      return replaced;
-//  }
-//  bool SetErrorHandlerMethod( StateID id, ErrorHandlerMethod hm )
-// {
-//      bool replaced = false;
-//      if( errorHandlers_.find( id ) != errorHandlers_.end() ) replaced = true;
-//      errorHandlers_[ id ] = hm;
-//      return replaced;
-//  }
-//};
-
+} //namespace

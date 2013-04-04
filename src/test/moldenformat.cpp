@@ -40,6 +40,7 @@
 #include "ParserManager.h"
 #include "typedefs.h"
 
+using namespace parsley;
 
 static SkipBlankParser __;
 static BlankParser _;

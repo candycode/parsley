@@ -47,6 +47,8 @@
 #include "typedefs.h"
 #include "parser_operators.h"
 
+using namespace parsley;
+
 static SkipBlankParser __; // skip blanks static BlankParser _; // parse blank
 static SkipToNextLineParser endl_; // skip to next line
 static EofParser eof_; // parse EOF

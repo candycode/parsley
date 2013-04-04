@@ -26,6 +26,8 @@
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ////////////////////////////////////////////////////////////////////////////////
 
+using namespace parsley;
+
 ///@file typedefs.h various typedefs used throughout the examples/tests.
 typedef AlphaNumParser A; ///< "12abc"
 typedef FirstAlphaNumParser FA; ///< "A123"

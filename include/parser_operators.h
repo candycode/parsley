@@ -34,6 +34,8 @@
 /// @defgroup AndParserOperators AndParser operators
 /// @ingroup operators
 
+namespace parsley {
+ 
 /// @ingroup AndParserOperators
 inline AndParser operator,( AndParser al1, const Parser& al2 ) {
     al1.Add( al2 );
@@ -102,3 +104,5 @@ inline OrParser operator/( const Parser& al1, const Parser& al2 ) {
     al.Add( al1 ).Add( al2 );
     return al;
 }
+
+} //namespace

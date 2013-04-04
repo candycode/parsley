@@ -32,6 +32,8 @@
 #include <memory>
 #include <cassert>
 
+namespace parsley {
+
 ///@brief Reference counter
 class RefCounter {
 public:
@@ -160,3 +162,4 @@ inline void Swap( SmartPtr< P >& p1, SmartPtr< P >& p2 ) {
     std::swap( p1.count_,  p2.count_ );
 }   
 
+} //namespace

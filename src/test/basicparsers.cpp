@@ -39,6 +39,8 @@
 #include "parser_operators.h"
 #include "ParserManager.h"
 
+using namespace parsley;
+
 // TEST BASIC PARSERS
 void TestBasicParsers() {
     std::cout << "BASIC PARSERS TEST" << std::endl;
