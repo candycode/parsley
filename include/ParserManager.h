@@ -350,6 +350,7 @@ private:
             if( next10 != invalidState ) pm_.AddState( prev, next6 );
             return StateAdder( *this );
         }
+        /// Add transition callback while adding state
         StateAdder operator[]( const TransitionCBack& cback ) {
             if( prevState_ != invalidState && nextState_ != invalidState ) {
                 pm_.SetTransitionCBack( prevState_, nextState_, cback );
@@ -528,7 +529,7 @@ public:
                   transitionCBack_.find( sid2 )->second.end(); 
     }
 private:
-    /// Current State; 0 -> invalid state
+    /// Current State
     StateID curState_;
     /// Maps state to list of possible next states
     StateMap stateMap_;
