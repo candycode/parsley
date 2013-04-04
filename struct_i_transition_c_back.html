@@ -53,6 +53,9 @@
 </div><!--header-->
 <div class="contents">
 
+<p>Interface for transition callbacks functors invoked each time a transition takes place. In case <code>USE_TRANSITION_CBACKS</code> is <code>#defined</code> then transition callbacks are used to validate and enable/disable transitions in place of <a class="el" href="struct_i_state_manager.html">IStateManager</a>.  
+ <a href="struct_i_transition_c_back.html#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for ITransitionCBack:</div>
@@ -60,7 +63,7 @@ Inheritance diagram for ITransitionCBack:</div>
  <div class="center">
   <img src="struct_i_transition_c_back.png" usemap="#ITransitionCBack_map" alt=""/>
   <map id="ITransitionCBack_map" name="ITransitionCBack_map">
-<area href="class_transition_c_back.html" alt="TransitionCBack" shape="rect" coords="0,56,144,80"/>
+<area href="class_transition_c_back.html" title="Value semantics through pImpl idiom. Instances of this class hold a reference to an ITransitionCBack ..." alt="TransitionCBack" shape="rect" coords="0,56,144,80"/>
 <area href="struct_transition_c_back_default.html" title="Convenience class with default implementations of virtual methods." alt="TransitionCBackDefault" shape="rect" coords="154,56,298,80"/>
 </map>
  </div></div>
@@ -76,9 +79,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:ac1097eb02297563a32cfdf3960e1d59d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Virtual destructor to allow overrides.  <a href="#ac1097eb02297563a32cfdf3960e1d59d"></a><br/></td></tr>
 </table>
 <a name="details" id="details"></a><h2>Detailed Description</h2>
-<div class="textblock"><p>Interface for transition callbacks functors invoked each time a transition take place. In case <code>USE_TRANSITION_CBACKS</code> is <code>#defined</code> then transition callbacks are used to validate and enable/disable transitions in place of <a class="el" href="struct_i_state_controller.html">IStateController</a> </p>
+<div class="textblock"><p>Interface for transition callbacks functors invoked each time a transition takes place. In case <code>USE_TRANSITION_CBACKS</code> is <code>#defined</code> then transition callbacks are used to validate and enable/disable transitions in place of <a class="el" href="struct_i_state_manager.html">IStateManager</a>. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00025">25</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00026">26</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 </div><h2>Constructor &amp; Destructor Documentation</h2>
 <a class="anchor" id="ac1097eb02297563a32cfdf3960e1d59d"></a>
 <div class="memitem">
@@ -103,7 +106,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Virtual destructor to allow overrides. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00038">38</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00039">39</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -226,7 +229,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Invoke Apply method. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00027">27</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00028">28</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -236,7 +239,7 @@ Public Member Functions</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Apr 4 2013 16:11:12 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Apr 4 2013 16:22:29 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.1.2
 </small></address>

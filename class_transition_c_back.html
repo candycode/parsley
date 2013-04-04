@@ -54,6 +54,9 @@
 </div><!--header-->
 <div class="contents">
 
+<p>Value semantics through pImpl idiom. Instances of this class hold a reference to an <a class="el" href="struct_i_transition_c_back.html" title="Interface for transition callbacks functors invoked each time a transition takes place. In case USE_TRANSITION_CBACKS is #defined then transition callbacks are used to validate and enable/disable transitions in place of IStateManager.">ITransitionCBack</a> implementation to which methodds are forwarded. Copy and assignment operators are supported through the <a class="el" href="class_transition_c_back.html#af374ddb3e89cf0df7025c7c5c6b490a1" title="Crete copy of current instance.">Clone()</a> method.  
+ <a href="class_transition_c_back.html#details">More...</a></p>
+
 <p><code>#include &lt;<a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for TransitionCBack:</div>
@@ -61,7 +64,7 @@ Inheritance diagram for TransitionCBack:</div>
  <div class="center">
   <img src="class_transition_c_back.png" usemap="#TransitionCBack_map" alt=""/>
   <map id="TransitionCBack_map" name="TransitionCBack_map">
-<area href="struct_i_transition_c_back.html" alt="ITransitionCBack" shape="rect" coords="0,0,107,24"/>
+<area href="struct_i_transition_c_back.html" title="Interface for transition callbacks functors invoked each time a transition takes place. In case USE_TRANSITION_CBACKS is #defined then transition callbacks are used to validate and enable/disable transitions in place of IStateManager." alt="ITransitionCBack" shape="rect" coords="0,0,107,24"/>
 </map>
  </div></div>
 <table class="memberdecls">
@@ -86,9 +89,9 @@ Private Attributes</h2></td></tr>
 <tr class="memitem:af15b1560d5640cd24b81779c813f339c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_smart_ptr.html">SmartPtr</a>&lt; <a class="el" href="struct_i_transition_c_back.html">ITransitionCBack</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_transition_c_back.html#af15b1560d5640cd24b81779c813f339c">pImpl_</a></td></tr>
 </table>
 <a name="details" id="details"></a><h2>Detailed Description</h2>
-<div class="textblock"><p>Value semantics through pImpl idiom: instances of this class hold a reference to an <a class="el" href="struct_i_transition_c_back.html">ITransitionCBack</a> implementation to which methodds are forwarded. Copy and assignment operators are supported through the <a class="el" href="class_transition_c_back.html#af374ddb3e89cf0df7025c7c5c6b490a1" title="Crete copy of current instance.">Clone()</a> method. </p>
+<div class="textblock"><p>Value semantics through pImpl idiom. Instances of this class hold a reference to an <a class="el" href="struct_i_transition_c_back.html" title="Interface for transition callbacks functors invoked each time a transition takes place. In case USE_TRANSITION_CBACKS is #defined then transition callbacks are used to validate and enable/disable transitions in place of IStateManager.">ITransitionCBack</a> implementation to which methodds are forwarded. Copy and assignment operators are supported through the <a class="el" href="class_transition_c_back.html#af374ddb3e89cf0df7025c7c5c6b490a1" title="Crete copy of current instance.">Clone()</a> method. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00087">87</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00089">89</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 </div><h2>Constructor &amp; Destructor Documentation</h2>
 <a class="anchor" id="acb8d39f57decacbe850ef995ed446d12"></a>
 <div class="memitem">
@@ -112,7 +115,7 @@ Private Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Default constructor; required to initialize data inside STL data structures. </p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00091">91</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00093">93</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -138,7 +141,7 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00092">92</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00094">94</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -164,7 +167,7 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00094">94</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00096">96</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -218,7 +221,7 @@ Private Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_i_transition_c_back.html#ad24c513526a82ebe24a5436ffb7e8c46">ITransitionCBack</a>.</p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00101">101</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00103">103</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -247,7 +250,7 @@ Private Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="struct_i_transition_c_back.html#abdb48c367e0991f84aabeb56347e510d">ITransitionCBack</a>.</p>
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00104">104</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00106">106</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -273,7 +276,7 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00098">98</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00100">100</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -299,7 +302,7 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00095">95</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00097">97</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -322,7 +325,7 @@ Private Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00117">117</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
+<p>Definition at line <a class="el" href="_parser_manager_8h_source.html#l00119">119</a> of file <a class="el" href="_parser_manager_8h_source.html">ParserManager.h</a>.</p>
 
 </div>
 </div>
@@ -332,7 +335,7 @@ Private Attributes</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Apr 4 2013 16:11:12 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Apr 4 2013 16:22:29 for Parsley by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.1.2
 </small></address>
