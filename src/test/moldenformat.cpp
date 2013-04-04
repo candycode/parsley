@@ -235,11 +235,16 @@ void TestMoldenChunk( /*std::istream& is*/ ) {
         unsigned basisFunctionNum_;
         unsigned basisFunctionCounter_;
         unsigned line_;
+        unsigned atoms_;
+        unsigned shells_;
         State() : basisFunctionNum_( 0 ), 
-                  basisFunctionCounter_( 0 ), line_( 0 ) {}
+                  basisFunctionCounter_( 0 ), 
+                  line_( 0 ),
+                  atoms_( 0 ),
+                  shells_( 0 ) {}
     } state;
 
-    struct DefaultCBack : ITransitionCBackDefault {
+    struct DefaultCBack : TransitionCBackDefault {
         State* state_;
         DefaultCBack( State* s ) : state_( s ) {}
         void Apply( const Values& v, StateID prev, StateID cur ) {
@@ -252,52 +257,38 @@ void TestMoldenChunk( /*std::istream& is*/ ) {
         }
         DefaultCBack* Clone() const { return new DefaultCBack( *this ); }
     };
-    struct ShellInfoCBack : ITransitionCBackDefault {
-        State* state_;
-        ShellInfoCBack( State* s ) : state_( s ) {}
+    struct AtomDataCBack : DefaultCBack {
+        AtomDataCBack( State* s ) : DefaultCBack( s ) {}
         void Apply( const Values& v, StateID prev, StateID cur ) {
-            std::cout << state_->line_ << "> [" << cur << "]: ";
-            Values::const_iterator i = v.begin();
-            for( ; i != v.end(); ++i ) {
-                std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
-            }
-            std::cout << '\n';
-            state_->basisFunctionNum_ = 
-                                v.find( "num basis" )->second;
-            state_->basisFunctionCounter_ = 0;
+            DefaultCBack::Apply( v, prev, cur );
+            ++state_->atoms_;
         }
-        bool Enabled( const Values& , StateID prev, StateID next ) const {
-            if( prev == GTO_ATOM_NUM ) return true;
-            if( prev == GTO_COEFF_EXP 
-                && state_->basisFunctionCounter_ 
-                   == state_->basisFunctionNum_ ) {
-              state_->basisFunctionCounter_ = 0;
-              state_->basisFunctionNum_ = 0;
-              return true;
-            }
-            return false;    
-        } 
-        ShellInfoCBack* Clone() const { return new ShellInfoCBack( *this ); }
+        AtomDataCBack* Clone() const { return new AtomDataCBack( *this ); }
     };
-    struct CoeffExpCBack : ITransitionCBackDefault {
-        mutable State* state_;
-        CoeffExpCBack( State* s ) : state_( s ) {}
+    struct AtomNumCBack : DefaultCBack {
+        AtomNumCBack( State* s ) : DefaultCBack( s ) {}
         void Apply( const Values& v, StateID prev, StateID cur ) {
-            std::cout << state_->line_ << "> [" << cur << "]: ";
-            Values::const_iterator i = v.begin();
-            for( ; i != v.end(); ++i ) {
-                std::cout << '(' << i->first << " = " << i->second << ')' << ' ';
-            }
-            std::cout << '\n';
-            state_->basisFunctionCounter_ = 0;
+            DefaultCBack::Apply( v, prev, cur );
+            ++state_->shells_;
+        }
+        bool Enabled(  const Values&, StateID prev, StateID next ) {
+            if( state_->atoms_ == state_->shells_ ) return false;
+            return true; 
+        }
+        AtomNumCBack* Clone() const { return new AtomNumCBack( *this ); }
+    };
+    struct CoeffExpCBack : DefaultCBack { 
+        CoeffExpCBack( State* s ) : DefaultCBack( s ) {}
+        void Apply( const Values& v, StateID prev, StateID cur ) {
+            DefaultCBack::Apply( v, prev, cur );
+            ++state_->basisFunctionCounter_;
         }
         bool Enabled( const Values& , StateID prev, StateID next ) const {
-            if( prev == GTO_SHELL_INFO ) return true;
             if( prev == GTO_COEFF_EXP 
-                && state_->basisFunctionCounter_ < state_->basisFunctionNum_ ) {
-                return true;
+                && state_->basisFunctionCounter_ == state_->basisFunctionNum_ ) {
+                return false;
             }
-            return false; 
+            return true; 
         }
         CoeffExpCBack* Clone() const { return new CoeffExpCBack( *this ); } 
     };
@@ -327,9 +318,9 @@ void TestMoldenChunk( /*std::istream& is*/ ) {
        ( GTO_COEFF_EXP, /* from */
          /*to*/ GTO_SHELL_INFO, /*or*/ GTO_COEFF_EXP, 
          /*or*/ GTO_ATOM_NUM, /*or*/ EOF_, EOL_ );
-    pM.SetAllTransitionsCBack( new DefaultCBack( &state ) );   
+    pM.SetAllTransitionsCBack( new DefaultCBack( &state ) );
+    // assign cback to *ALL* transitions whose target is GTO_COEFF_EXP   
     pM.SetCBacks()
-       ( GTO_SHELL_INFO, new ShellInfoCBack( &state ) )
        ( GTO_COEFF_EXP, new CoeffExpCBack( &state ) );
 #endif       
     //SPECIFY PER-STATE PARSERS   
