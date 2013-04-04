@@ -18,10 +18,11 @@
 
 #include "StateManager.h"
 
-/// Interface for transition callbacks functors invoked each time
-/// a transition take place. In case @c USE_TRANSITION_CBACKS is
-/// @c #defined then transition callbacks are used to validate
-/// and enable/disable transitions in place of IStateController
+/// @brief Interface for transition callbacks functors invoked each time
+/// a transition takes place. 
+/// In case @c USE_TRANSITION_CBACKS is @c #defined then transition 
+/// callbacks are used to validate and enable/disable transitions 
+/// in place of IStateManager
 struct ITransitionCBack {
     /// Invoke Apply method
     void operator()( const Values& v, StateID prev, StateID cur ) { 
@@ -60,7 +61,7 @@ struct ITransitionCBack {
 #endif        
 };
 
-/// Convenience class with default implementations of virtual methods
+/// @brief Convenience class with default implementations of virtual methods
 struct TransitionCBackDefault : ITransitionCBack {
     virtual void Apply( const Values&, StateID, StateID ) {}
 #ifdef USE_TRANSITION_CBACKS
@@ -80,7 +81,8 @@ struct TransitionCBackDefault : ITransitionCBack {
 #endif       
 };
 
-/// Value semantics through pImpl idiom: instances of this class
+/// @brief Value semantics through pImpl idiom. 
+/// Instances of this class
 /// hold a reference to an ITransitionCBack implementation to which
 /// methodds are forwarded. Copy and assignment operators are supported
 /// through the Clone() method.
@@ -254,8 +256,8 @@ public:
         return *this;
     }
 private:    
-    /// Utility class to make adding transition callbacks easier and make code
-    /// easier to understand
+    /// @brief Utility class to make adding transition callbacks easier and 
+    /// make code easier to understand.
     class CBackSetter {
         ParserManager& pm_;
     public:
@@ -295,7 +297,7 @@ public:
     /// @return CBackSetter instance
     CBackSetter SetCBacks() { return CBackSetter( *this ); }
 private:
-    /// Utility class to make adding states easier and code easier to
+    /// @brief Utility class to make adding states easier and code easier to
     /// understand.
     /// @tparam invalidState invalid state id
     template < StateID invalidState >
@@ -523,10 +525,13 @@ public:
     void EnableAllStates() {
         disabledStates_.clear();
     }
-    bool TransitionCBackExists( StateID sid1, StateID sid2 ) {
-        return transitionCBack_.find( sid1 ) != transitionCBack_.end() 
-               && transitionCBack_.find( sid1 )->second.find( sid2 ) !=
-                  transitionCBack_.find( sid2 )->second.end(); 
+    /// Check if transition between two states exists.
+    /// @param from source state
+    /// @param to target state
+    bool TransitionCBackExists( StateID from, StateID to ) {
+        return transitionCBack_.find( from ) != transitionCBack_.end() 
+               && transitionCBack_.find( from )->second.find( to ) !=
+                  transitionCBack_.find( to )->second.end(); 
     }
 private:
     /// Current State
