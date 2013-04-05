@@ -283,6 +283,22 @@ public:
         stateMap_[ prev ].push_back( next );
         return *this;
     }
+    // void MoveTo( InStream& is,  StateID sid, bool rewind = false ) {
+    //     if( rewind ) is.seekg( 0 );
+    //     streampos spos = is.tellg();
+    //     while( !is.eof() && !Apply( is, sid ) ) {
+    //         spos = is.tellg();
+    //         is.get();
+    //     }
+    //     if( !is.eof() && is.good() ) {
+    //         is.seekg( 0 );
+    //         is.seekg( spos );
+    //     }
+    // }
+    // void MoveTo( InStream& is, const Parser& p, bool rewind = false ) {
+    //     if( rewind ) is.seekg( 0 );
+    //     while( !is.eof() && ! p.Parse( is ) ) is.get();
+    // }
 private:    
     /// @brief Utility class to make adding transition callbacks easier and 
     /// make code easier to understand.
