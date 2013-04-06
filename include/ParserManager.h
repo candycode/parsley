@@ -297,7 +297,7 @@ public:
     // }
     // void MoveTo( InStream& is, const Parser& p, bool rewind = false ) {
     //     if( rewind ) is.seekg( 0 );
-    //     while( !is.eof() && ! p.Parse( is ) ) is.get();
+    //     while( !is.eof() && !p.Parse( is ) ) is.get();
     // }
 private:    
     /// @brief Utility class to make adding transition callbacks easier and 
