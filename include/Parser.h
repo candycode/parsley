@@ -114,6 +114,8 @@ public:
     }
     /// Implementation of IParser::Clone.
     Parser* Clone() const { return new Parser( *this ); }
+    /// Returns @c true if pImpl_ non-null
+    bool Valid() const { return pImpl_; }
 
 private:
     /// Check internal pointer to owned IParser instance.
@@ -566,7 +568,7 @@ private:
 
 //------------------------------------------------------------------------------
 /// @brief Or Parser: applies a set of parsers to the given stream and validates
-/// the input only of at least one of the applied parser validates the input 
+/// the input only if at least one of the applied parser validates the input 
 /// characters.
 ///
 /// The parser selected as the validating parser is the one that  validates
@@ -641,6 +643,59 @@ private:
     /// parser found.
     Parsers::const_iterator matchedParser_;
     std::map< StreamOff, Parsers::const_iterator > matchedParsers_;
+};
+
+//------------------------------------------------------------------------------
+/// @brief Applies a parser until it validates, eof is reached or a terminal
+/// condition parser validates.
+class GreedyParser : public IParser {
+public:
+    typedef Values::value_type::second_type ValueType;
+    typedef Values::key_type KeyType;
+    /// Copy constructor.
+    GreedyParser( const GreedyParser& p ) 
+        : parser_( p.parser_ ), terminalParser_( p.terminalParser_ ) {}
+    /// Constructor.
+    /// @param p parser to apply
+    /// @param term parser validating terminal condition
+    GreedyParser( const Parser& p, const Parser& term = Parser() ) 
+        : parser_( p ), terminalParser_( term ) {}
+    void SetParser( const Parser& p ) : parser_( p ) {}
+    /// Implementation of IParser::Parse. Returns @c true if and only if all 
+    /// the parsers in the sequnce return true; @c false otherwise.
+    bool Parse( InStream& is ) {
+        bool ok = !( terminalParser.Valid() && terminalParser_.Parse( is ) )
+                  && !parser.Parser( is );
+        REWIND r( ok, is ); 
+        while( !ok && !is.eof() ) {
+            is.get();
+            ok = !( terminalParser.Valid() && terminalParser_.Parse( is ) )
+                  && !parser.Parser( is );
+        }
+        return ok;
+    }
+    /// Implementation of IParser::GetValues.
+    /// Returns all the values parsed by provided parsers. Lazy behavior: values
+    /// are retrieved from parsers the first time this method is invoked.
+    const Values& GetValues() const {
+        return parser_.GetValues();
+    }
+    /// Implementation of IParser::operator[]. Invokes GetValues() first.
+    /// @exception std::logic error if key not found.
+    const ValueType& operator[]( const KeyType& k ) const {
+        const Values& v = GetValues();
+        Values::const_iterator i = v.find( k );
+        if( i == v.end() ) throw std::logic_error( "Cannot find value" );
+        return i->second;
+    }
+    
+    /// Implementation of IParser::Clone.
+    GreedyParser* Clone() const { return new GreedyParser( *this ); }
+
+private:
+    /// Parser list.
+    Parser parser_;
+    Parser terminalParser_;
 };
 
 } //namespace
