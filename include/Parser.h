@@ -660,17 +660,17 @@ public:
     /// @param term parser validating terminal condition
     GreedyParser( const Parser& p, const Parser& term = Parser() ) 
         : parser_( p ), terminalParser_( term ) {}
-    void SetParser( const Parser& p ) : parser_( p ) {}
+    void SetParser( const Parser& p ) { parser_ = p; }
     /// Implementation of IParser::Parse. Returns @c true if and only if all 
     /// the parsers in the sequnce return true; @c false otherwise.
     bool Parse( InStream& is ) {
-        bool ok = !( terminalParser.Valid() && terminalParser_.Parse( is ) )
-                  && !parser.Parser( is );
+        bool ok = !( terminalParser_.Valid() && terminalParser_.Parse( is ) )
+                  && !parser_.Parse( is );
         REWIND r( ok, is ); 
         while( !ok && !is.eof() ) {
             is.get();
-            ok = !( terminalParser.Valid() && terminalParser_.Parse( is ) )
-                  && !parser.Parser( is );
+            ok = !( terminalParser_.Valid() && terminalParser_.Parse( is ) )
+                  && !parser_.Parse( is );
         }
         return ok;
     }

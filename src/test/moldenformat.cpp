@@ -228,7 +228,7 @@ void TestMoldenChunk( /*std::istream& is*/ ) {
         tcback* Clone() const { return new tcback( *this ); }
     };
 
-    ParserManager pm( PRINT );
+    ParserManager pM( PRINT );
     pM.SetBeginEndStates( START, EOF_ );
     //DEFINE STATE TRANSITIONS 
     pM.AddStates< INVALID_STATE >()
