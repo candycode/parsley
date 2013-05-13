@@ -5,7 +5,14 @@ struct StateInfo {
   }
   StateInfo( const StateInfo& s1,
              const StateInfo& s2,
-             const StateInfo& s3 = StateInfo() ) : src( s1.src ) {
+             const StateInfo& s3 = StateInfo(),
+             const StateInfo& s4 = StateInfo(),
+             const StateInfo& s5 = StateInfo(),
+             const StateInfo& s6 = StateInfo(),
+             const StateInfo& s7 = StateInfo(),
+             const StateInfo& s8 = StateInfo(),
+             const StateInfo& s9 = StateInfo(),
+             const StateInfo& s10 = StateInfo() ) : src( s1.src ) {
     empty =false;
     src = s1.src;
     targets.push_back( s2 );
@@ -28,17 +35,6 @@ struct StateInfo {
   }
   StateID src;
   std::vector< StateInfo > targets;
-
-  void SetStates( StateMap& sm, Queue q = Queue() ) {
-    for( std::vector< StateInfo >::iterator i = targets.begin(),
-         i != targets.end();
-         ++i ) {
-        sm[ src ].push_back( i->src );
-    }
-    
-  }
-
-
 };
 
 
@@ -64,22 +60,22 @@ void UpdateStates( StateMap& sm ) {
 }
 
 
-StateInfo operator( StateID s1, StateID s2 ) {
+StateInfo operator,( StateID s1, StateID s2 ) {
   return StateInfo( s1, s2 );
 }
 StateInfo operator,(StateID sid, const StateInfo& si ) {
   return StateInfo( sid, si );
 }
+//make operator right associative
 StateInfo operator,( const StateInfo& si1, const StateInfo& si2 ) {
   StateInfo si( si1 );
-  si.targets.push_back( si2.src );
-  std::back_insert_iterator< std::vector< StateInfo > > bi(si.targets);
-  std::copy( si2.targets.begin(), si2.targets.end(), bi );
+  si.targets.push_back( si2 );
   return si;
 }
 StateInfo operator( const StateInfo& si, StateID sid ) {
   StateInfo sir( si );
-  si.targets.push_back( sid );
+  sir.targets.push_back( sid );
+  return sir;
 }
 
 
