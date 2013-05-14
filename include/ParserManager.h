@@ -35,14 +35,13 @@
 #include <stdexcept>
 #include <string>
 #include <sstream>
+#include <queue>
 
 #include "types.h"
-
 #include "Parser.h"
-
 #include "IStateController.h"
-
 #include "StateManager.h"
+#include "StateInfo.h"
 
 namespace parsley {
 
@@ -443,6 +442,16 @@ public:
         SetInitialState( begin );
         SetEndState( end );
     }
+    ///
+    template < typename S >
+    void AddStates( const StateInfo< S >& si, bool clear = true ) {
+        stateMap_.clear();
+        std::queue< StateInfo< S >* > q;
+        AddStatesImpl( q );
+    }
+  
+
+
     /// Given a current state, it iterates over the list of possivle subsequent 
     /// states and applies the corresponding parsers until a validating parser
     /// is found or returns @c false if no parser/state found.
@@ -578,6 +587,21 @@ public:
                   transitionCBack_.find( to )->second.end(); 
     }
 private:
+    template < typename S >
+    void AddStatesImpl( std::queue< StateInfo< S >* >& q) {
+        if( q.empty() ) return;
+        StateInfo< S >* si = q.front();
+        q.pop();
+        for( typename std::vector< StateInfo< S > >::iterator 
+                i = si->targets.begin();
+                i != si->targets.end();
+             ++i ) {
+            stateMap_[ si->src ].push_back( (*i)->src );
+            q.push( &(*i) ); 
+        }
+        AddStatesImpl( q );
+    }    
+private:
     /// Current State
     StateID curState_;
     /// Maps state to list of possible next states
@@ -601,5 +625,16 @@ private:
     /// Transition callback
     TransitionCBackMap transitionCBack_;
 };
+
+#ifdef PARSLEY_STATES_BEGIN
+#error "Macro PARSLEY_STATES_BEGIN already defined"
+#endif
+#define PARSLEY_BEGIN_STATES( parserManager, SID ) \
+    parserManager.AddStates( StateInfo< SID >(
+#ifdef PARSLEY_STATES_END
+#error "Macro PARSLEY_STATES_END already defined"
+#endif     
+#define PARSLEY_END_STATES() )        
+
 
 } //namespace
