@@ -658,19 +658,25 @@ public:
     /// Constructor.
     /// @param p parser to apply
     /// @param term parser validating terminal condition
-    GreedyParser( const Parser& p, const Parser& term = Parser() ) 
-        : parser_( p ), terminalParser_( term ) {}
+    GreedyParser( const Parser& p,
+                  bool skipBlanks = true,
+                  const Parser& term = Parser() ) 
+        : parser_( p ), terminalParser_( term ), skipBlanks_( skipBlanks ) {}
     void SetParser( const Parser& p ) { parser_ = p; }
     /// Implementation of IParser::Parse. Returns @c true if and only if all 
     /// the parsers in the sequnce return true; @c false otherwise.
     bool Parse( InStream& is ) {
         bool ok = !( terminalParser_.Valid() && terminalParser_.Parse( is ) )
-                  && !parser_.Parse( is );
+                  && parser_.Parse( is );
         REWIND r( ok, is ); 
         while( !ok && !is.eof() ) {
-            is.get();
+            if( skipBlanks_ ) {
+                char_type c = is.get();
+                while( IsSpace( c ) && !is.eof() ) c = is.get();
+                if( !is.eof() ) is.unget();
+            }
             ok = !( terminalParser_.Valid() && terminalParser_.Parse( is ) )
-                  && !parser_.Parse( is );
+                  && parser_.Parse( is );
         }
         return ok;
     }
