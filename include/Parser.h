@@ -671,7 +671,7 @@ public:
         REWIND r( ok, is ); 
         while( !ok && !is.eof() ) {
             if( skipBlanks_ ) {
-                char_type c = is.get();
+                InStream::char_type c = is.get();
                 while( IsSpace( c ) && !is.eof() ) c = is.get();
                 if( !is.eof() ) is.unget();
             }
@@ -702,6 +702,7 @@ private:
     /// Parser list.
     Parser parser_;
     Parser terminalParser_;
+    bool skipBlanks_;
 };
 
 } //namespace
