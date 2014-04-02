@@ -12,10 +12,6 @@ the contained data.
 It is also possible to use this library to create Parsing Expression Grammar based
 parsers or parse simple languages.
 
-Some additions/changes which will likely happen in the near future:
-* recursive `ParserManager`
-* actual `Tuple` class, the current version requires all the elements to be of
-  the same kind
 
 [(Preliminary public docs)](http://candycode.github.com/parsley)
 
@@ -26,7 +22,7 @@ _Parsley_ is distributes under the terms of the _New BSD License_
 
 ---
 
-Copyright (c) 2010, Ugo Varetto
+Copyright (c) 2010-2013, Ugo Varetto
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
