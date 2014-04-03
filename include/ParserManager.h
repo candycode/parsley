@@ -473,7 +473,7 @@ public:
         //if( is.fail() || is.bad() ) return false;
         const States& states = stateMap_[ curState ];
         ///@todo investigate the option of supporting hierarchical state 
-        ///controllers allowing to assign state conteollers to specific states 
+        ///controllers allowing to assign state controllers to specific states 
         ///instead of parsers
         /// e.g. 
         /// <code>
@@ -526,6 +526,8 @@ public:
         StateID nextState = curState;
         for( i = states.begin(); i != states.end(); ++i ) {
             nextState = *i;
+            ///@warning review: why not just continue in case a transition
+            ///callback is not available instead of returning an error ?
             if( !TransitionCBackExists( prevState, nextState ) ) {
                 std::ostringstream os;
                 os << "ERROR: No transition between " << prevState  << " and "
