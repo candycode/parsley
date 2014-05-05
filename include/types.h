@@ -46,7 +46,6 @@ typedef InStream::streampos StreamPos;
 typedef InStream::streamoff StreamOff;
 typedef InStream::char_type Char;
 typedef String ValueID;
-typedef int StateID;
 typedef String ParserID;
 typedef std::map< ValueID, Any > Values;
 

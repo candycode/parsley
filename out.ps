@@ -1,0 +1,3060 @@
+%!PS-Adobe-3.0
+%%Title: include/Parser.h
+%%For: ugo
+%%Creator: VIM - Vi IMproved 7.4 (2013 Aug 10)
+%%CreationDate: Mon May  5 16:02:46 2014
+%%DocumentData: Clean8Bit
+%%Orientation: Portrait
+%%Pages: (atend)
+%%PageOrder: Ascend
+%%BoundingBox: 59 49 564 800
+%%DocumentMedia: A4 595 842 0 () ()
+%%DocumentNeededResources: font Courier
+%%+ font Courier-Bold
+%%+ font Courier-Oblique
+%%+ font Courier-BoldOblique
+%%DocumentSuppliedResources: procset VIM-Prolog 1.4 1
+%%+ encoding VIM-latin1 1.0 0
+%%Requirements: duplex collate color
+%%EndComments
+%%BeginDefaults
+%%PageResources: font Courier
+%%+ font Courier-Bold
+%%+ font Courier-Oblique
+%%+ font Courier-BoldOblique
+%%PageMedia: A4
+%%EndDefaults
+%%BeginProlog
+%%BeginResource: procset VIM-Prolog
+%%BeginDocument: /usr/share/vim/vim74/print/prolog.ps
+%!PS-Adobe-3.0 Resource-ProcSet
+%%Title: VIM-Prolog
+%%Version: 1.4 1
+%%EndComments
+% Editing of this file is NOT RECOMMENDED.  You run a very good risk of causing
+% all PostScript printing from VIM failing if you do.  PostScript is not called
+% a write-only language for nothing!
+/packedarray where not{userdict begin/setpacking/pop load def/currentpacking
+false def end}{pop}ifelse/CP currentpacking def true setpacking
+/bd{bind def}bind def/ld{load def}bd/ed{exch def}bd/d/def ld
+/db{dict begin}bd/cde{currentdict end}bd
+/T true d/F false d
+/SO null d/sv{/SO save d}bd/re{SO restore}bd
+/L2 systemdict/languagelevel 2 copy known{get exec}{pop pop 1}ifelse 2 ge d
+/m/moveto ld/s/show ld /ms{m s}bd /g/setgray ld/r/setrgbcolor ld/sp{showpage}bd
+/gs/gsave ld/gr/grestore ld/cp/currentpoint ld
+/ul{gs UW setlinewidth cp UO add 2 copy newpath m 3 1 roll add exch lineto
+stroke gr}bd
+/bg{gs r cp BO add 4 -2 roll rectfill gr}bd
+/sl{90 rotate 0 exch translate}bd
+L2{
+/sspd{mark exch{setpagedevice}stopped cleartomark}bd
+/nc{1 db/NumCopies ed cde sspd}bd
+/sps{3 db/Orientation ed[3 1 roll]/PageSize ed/ImagingBBox null d cde sspd}bd
+/dt{2 db/Tumble ed/Duplex ed cde sspd}bd
+/c{1 db/Collate ed cde sspd}bd
+}{
+/nc{/#copies ed}bd
+/sps{statusdict/setpage get exec}bd
+/dt{statusdict/settumble 2 copy known{get exec}{pop pop pop}ifelse
+statusdict/setduplexmode 2 copy known{get exec}{pop pop pop}ifelse}bd
+/c{pop}bd
+}ifelse
+/ffs{findfont exch scalefont d}bd/sf{setfont}bd
+/ref{1 db findfont dup maxlength dict/NFD ed{exch dup/FID ne{exch NFD 3 1 roll
+put}{pop pop}ifelse}forall/Encoding findresource dup length 256 eq{NFD/Encoding
+3 -1 roll put}{pop}ifelse NFD dup/FontType get 3 ne{/CharStrings}{/CharProcs}
+ifelse 2 copy known{2 copy get dup maxlength dict copy[/questiondown/space]{2
+copy known{2 copy get 2 index/.notdef 3 -1 roll put pop exit}if pop}forall put
+}{pop pop}ifelse dup NFD/FontName 3 -1 roll put NFD definefont pop end}bd
+CP setpacking
+(\004)cvn{}bd
+% vim:ff=unix:
+%%EOF
+%%EndDocument
+%%EndResource
+%%BeginResource: encoding VIM-latin1
+%%BeginDocument: /usr/share/vim/vim74/print/latin1.ps
+%!PS-Adobe-3.0 Resource-Encoding
+%%Title: VIM-latin1
+%%Version: 1.0 0
+%%EndComments
+/VIM-latin1[
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/space /exclam /quotedbl /numbersign /dollar /percent /ampersand /quotesingle
+/parenleft /parenright /asterisk /plus /comma /minus /period /slash
+/zero /one /two /three /four /five /six /seven
+/eight /nine /colon /semicolon /less /equal /greater /question
+/at /A /B /C /D /E /F /G
+/H /I /J /K /L /M /N /O
+/P /Q /R /S /T /U /V /W
+/X /Y /Z /bracketleft /backslash /bracketright /asciicircum /underscore
+/grave /a /b /c /d /e /f /g
+/h /i /j /k /l /m /n /o
+/p /q /r /s /t /u /v /w
+/x /y /z /braceleft /bar /braceright /asciitilde /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/space /exclamdown /cent /sterling /currency /yen /brokenbar /section
+/dieresis /copyright /ordfeminine /guillemotleft /logicalnot /hyphen /registered /macron
+/degree /plusminus /twosuperior /threesuperior /acute /mu /paragraph /periodcentered
+/cedilla /onesuperior /ordmasculine /guillemotright /onequarter /onehalf /threequarters /questiondown
+/Agrave /Aacute /Acircumflex /Atilde /Adieresis /Aring /AE /Ccedilla
+/Egrave /Eacute /Ecircumflex /Edieresis /Igrave /Iacute /Icircumflex /Idieresis
+/Eth /Ntilde /Ograve /Oacute /Ocircumflex /Otilde /Odieresis /multiply
+/Oslash /Ugrave /Uacute /Ucircumflex /Udieresis /Yacute /Thorn /germandbls
+/agrave /aacute /acircumflex /atilde /adieresis /aring /ae /ccedilla
+/egrave /eacute /ecircumflex /edieresis /igrave /iacute /icircumflex /idieresis
+/eth /ntilde /ograve /oacute /ocircumflex /otilde /odieresis /divide
+/oslash /ugrave /uacute /ucircumflex /udieresis /yacute /thorn /ydieresis]
+/Encoding defineresource pop
+% vim:ff=unix:
+%%EOF
+%%EndDocument
+%%EndResource
+%%EndProlog
+%%BeginSetup
+595 842 0 sps
+1 nc
+T F dt
+T c
+%%IncludeResource: font Courier
+/_F0 /VIM-latin1 /Courier ref
+/F0 10 /_F0 ffs
+%%IncludeResource: font Courier-Bold
+/_F1 /VIM-latin1 /Courier-Bold ref
+/F1 10 /_F1 ffs
+%%IncludeResource: font Courier-Oblique
+/_F2 /VIM-latin1 /Courier-Oblique ref
+/F2 10 /_F2 ffs
+%%IncludeResource: font Courier-BoldOblique
+/_F3 /VIM-latin1 /Courier-BoldOblique ref
+/F3 10 /_F3 ffs
+/UO -1 d
+/UW 0.5 d
+/BO -2.5 d
+%%EndSetup
+%%Page: 1 1
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+0 g
+(include/Parser.h                                                              Page 1)59.5 792.4 ms
+F0 sf
+0.498 0 0.498 r
+(#pragma once)59.5 772.4 ms
+0.498 0 0 r
+(////////////////////////////////////////////////////////////////////////////////)59.5 762.4 ms
+(//Copyright \(c\) 2010-2013, Ugo Varetto)59.5 752.4 ms
+(//All rights reserved.)59.5 742.4 ms
+(//)59.5 732.4 ms
+(//Redistribution and use in source and binary forms, with or without)59.5 722.4 ms
+(//modification, are permitted provided that the following conditions are met:)59.5 712.4 ms
+(//    * Redistributions of source code must retain the above copyright)59.5 702.4 ms
+(//      notice, this list of conditions and the following disclaimer.)59.5 692.4 ms
+(//    * Redistributions in binary form must reproduce the above copyright)59.5 682.4 ms
+(//      notice, this list of conditions and the following disclaimer in the)59.5 672.4 ms
+(//      documentation and/or other materials provided with the distribution.)59.5 662.4 ms
+(//    * Neither the name of the copyright holder nor the)59.5 652.4 ms
+(//      names of its contributors may be used to endorse or promote products)59.5 642.4 ms
+(//      derived from this software without specific prior written permission.)59.5 632.4 ms
+(//)59.5 622.4 ms
+(//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND)59.5 612.4 ms
+(//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED)59.5 602.4 ms
+(//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE)59.5 592.4 ms
+(//DISCLAIMED. IN NO EVENT SHALL UGO VARETTO BE LIABLE FOR ANY)59.5 582.4 ms
+(//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES)59.5 572.4 ms
+(//\(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;)59.5 562.4 ms
+(//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION\) HOWEVER CAUSED AND)59.5 552.4 ms
+(//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT)59.5 542.4 ms
+(//\(INCLUDING NEGLIGENCE OR OTHERWISE\) ARISING IN ANY WAY OUT OF THE USE OF THIS)59.5 532.4 ms
+(//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.)59.5 522.4 ms
+(////////////////////////////////////////////////////////////////////////////////)59.5 512.4 ms
+(/// @file Parser.h Definition of Parser interface and implementation of basic)59.5 492.4 ms
+(/// parser classes.)59.5 482.4 ms
+0.498 0 0.498 r
+(#include <list>)59.5 462.4 ms
+(#include <map>)59.5 452.4 ms
+(#include <memory>)59.5 442.4 ms
+(#include "types.h")59.5 432.4 ms
+(#include "Any.h")59.5 422.4 ms
+0 0.498 0 r
+(namespace)59.5 402.4 ms
+0 g
+( parsley {)s
+0.498 0 0 r
+(/// @interface IParser Parser.h Public interface for parsers.)59.5 382.4 ms
+0 0.498 0 r
+(struct)59.5 372.4 ms
+0 g
+( IParser {)s
+(    )59.5 362.4 ms
+0.498 0 0 r
+(/// Value type in map.)s
+0 g
+(    )59.5 352.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 342.4 ms
+0.498 0 0 r
+(/// Key type in map.)s
+0 g
+(    )59.5 332.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    )59.5 322.4 ms
+0.498 0 0 r
+(/// Returns extracted values if any.)s
+0 g
+(    )59.5 312.4 ms
+0.498 0 0 r
+(/// @return constant reference to extracted values.)s
+0 g
+(    )59.5 302.4 ms
+0 0.498 0 r
+(virtual)s
+0 g
+( )s
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( = )s
+0.498 0 0.498 r
+(0)s
+0 g
+(;)s
+(    )59.5 292.4 ms
+0.498 0 0 r
+(/// Returns value identified by specific key. This method should throw an)s
+0 g
+(    )59.5 282.4 ms
+0.498 0 0 r
+(/// @c std::logic_error exception if key not found.)s
+0 g
+(    )59.5 272.4 ms
+0.498 0 0 r
+(/// @return constant reference to values from key.)s
+0 g
+(    )59.5 262.4 ms
+0.498 0 0 r
+(/// @exception std::logic error)s
+0 g
+(    )59.5 252.4 ms
+0 0.498 0 r
+(virtual)s
+0 g
+( )s
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( = )s
+0.498 0 0.498 r
+(0)s
+0 g
+(;)s
+(    )59.5 242.4 ms
+0.498 0 0 r
+(/// Performs parsing on input stream.)s
+0 g
+(    )59.5 232.4 ms
+0 0.498 0 r
+(virtual)s
+0 g
+( )s
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& \) = )s
+0.498 0 0.498 r
+(0)s
+0 g
+(;)s
+(    )59.5 222.4 ms
+0.498 0 0 r
+(/// Returns copy of current instance.)s
+0 g
+(    )59.5 212.4 ms
+0.498 0 0 r
+(/// @return pointer to newly created instance.)s
+0 g
+(    )59.5 202.4 ms
+0 0.498 0 r
+(virtual)s
+0 g
+( IParser* Clone\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( = )s
+0.498 0 0.498 r
+(0)s
+0 g
+(;)s
+(    )59.5 192.4 ms
+0 0.498 0 r
+(virtual)s
+0 g
+( ~IParser\(\) {})s
+(};)59.5 182.4 ms
+0.498 0 0 r
+(//------------------------------------------------------------------------------)59.5 162.4 ms
+(/// @brief Implementation of IParser interface.)59.5 152.4 ms
+(///)59.5 142.4 ms
+(/// Allows value semantics with polymorphic types through the @c pImpl idiom:)59.5 132.4 ms
+(/// - an implementation of IParser is stored internally)59.5 122.4 ms
+(/// - all calls to IParser methods are forwarded to the containted IParser )59.5 112.4 ms
+(///   implementation)59.5 102.4 ms
+(/// the contained IParser instance is owned my Parser objects and deleted when )59.5 92.4 ms
+(/// Parser deleted.)59.5 82.4 ms
+(/// Note that contained parsers are never shared: new copies are created during )59.5 72.4 ms
+(/// construction and assignment.)59.5 62.4 ms
+(/// @ingroup MainClasses)59.5 52.4 ms
+re sp
+%%PageTrailer
+%%Page: 2 2
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 2)59.5 792.4 ms
+F0 sf
+0 0.498 0 r
+(class)59.5 772.4 ms
+0 g
+( Parser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 762.4 ms
+0 g
+(:)s
+(    )59.5 752.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 742.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    )59.5 732.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( InCharStream InStream;)s
+(    )59.5 722.4 ms
+0.498 0 0 r
+(/// Returns @c false if no contained implementation available, true otherwise.)s
+0 g
+(    )59.5 712.4 ms
+0.498 0 0 r
+(/// @return @c false if internal pointer to IParser instance is @c NULL )s
+0 g
+(    )59.5 702.4 ms
+0.498 0 0 r
+(///         @c true otherwise.)s
+0 g
+(    )59.5 692.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Empty\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( pImpl_ == )s
+0.498 0 0.498 r
+(0)s
+0 g
+(; })s
+(    )59.5 682.4 ms
+0.498 0 0 r
+(/// Default constructor.)s
+0 g
+(    Parser\(\) {})59.5 672.4 ms
+(    )59.5 662.4 ms
+0.498 0 0 r
+(/// Copy constructor.)s
+0 g
+(    Parser\( )59.5 652.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& l \) : pImpl_\( l.pImpl_ ? l.pImpl_->Clone\(\) : )s
+0.498 0 0.498 r
+(0)s
+0 g
+( \) {})s
+(    )59.5 642.4 ms
+0.498 0 0 r
+(/// Swap: swap internal pointers to IParser implementations.)s
+0 g
+(    )59.5 632.4 ms
+0.498 0 0 r
+(/// @return reference to @c *this after swap.)s
+0 g
+(    Parser& Swap\( Parser& l \) { )59.5 622.4 ms
+(        std::swap\( pImpl_, l.pImpl_ \); )59.5 612.4 ms
+(        )59.5 602.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+(; )s
+(    } )59.5 592.4 ms
+(    )59.5 582.4 ms
+0.498 0 0 r
+(/// Assignment operator from other parser.)s
+0 g
+(    Parser& )59.5 572.4 ms
+0.498 0.498 0 r
+(operator)s
+0 g
+(=\( )s
+0 0.498 0 r
+(const)s
+0 g
+( Parser& l \) { )s
+(        Parser\( l \).Swap\( *)59.5 562.4 ms
+0.498 0.498 0 r
+(this)s
+0 g
+( \); )s
+0.498 0.498 0 r
+(return)s
+0 g
+( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+(;)s
+(    })59.5 552.4 ms
+(    )59.5 542.4 ms
+0.498 0 0 r
+(/// Constructor from IParser implementation.)s
+0 g
+(    Parser\( )59.5 532.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( IParser& l \) : pImpl_\( l.Clone\(\) \) {})s
+(    )59.5 522.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues.)s
+0 g
+(    )59.5 512.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        CheckPointer\(\);)59.5 502.4 ms
+(        )59.5 492.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( pImpl_->GetValues\(\);)s
+(    })59.5 482.4 ms
+(    )59.5 472.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[])s
+0 g
+(    )59.5 462.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        CheckPointer\(\);)59.5 452.4 ms
+(        )59.5 442.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( pImpl_->)s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( k \);)s
+(    })59.5 432.4 ms
+(    )59.5 422.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Parse.)s
+0 g
+(    )59.5 412.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        CheckPointer\(\);)59.5 402.4 ms
+(        )59.5 392.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !pImpl_ \) )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0 0.498 r
+(false)s
+0 g
+(;)s
+(        )59.5 382.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( pImpl_->Parse\( is \);)s
+(    })59.5 372.4 ms
+(    )59.5 362.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Clone.)s
+0 g
+(    Parser* Clone\(\) )59.5 352.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( Parser\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+(    )59.5 342.4 ms
+0.498 0 0 r
+(/// Returns @c true if pImpl_ non-null)s
+0 g
+(    )59.5 332.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Valid\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( pImpl_.get\(\) != )s
+0.498 0 0.498 r
+(0)s
+0 g
+(; })s
+0.498 0.498 0 r
+(private)59.5 312.4 ms
+0 g
+(:)s
+(    )59.5 302.4 ms
+0.498 0 0 r
+(/// Check internal pointer to owned IParser instance.)s
+0 g
+(    )59.5 292.4 ms
+0.498 0 0 r
+(/// @return @c true if internal pointer not @c NULL, @c false otherwise.)s
+0 g
+(    )59.5 282.4 ms
+0.498 0 0 r
+(/// @exception std::runtime_error if pointer @c NULL.)s
+0 g
+(    )59.5 272.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( CheckPointer\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        assert\( pImpl_ \);)59.5 262.4 ms
+(        )59.5 252.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !pImpl_ \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::runtime_error\( )s
+0.498 0 0.498 r
+("NULL Parser pointer")s
+0 g
+( \);)s
+(        )59.5 242.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !pImpl_ \) )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0 0.498 r
+(false)s
+0 g
+(; )s
+0.498 0 0 r
+(//release mode, no exceptions)s
+0 g
+(        )59.5 232.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0 0.498 r
+(true)s
+0 g
+(;)s
+(    })59.5 222.4 ms
+(    )59.5 212.4 ms
+0.498 0 0 r
+(/// Owned instance of IParser to which all IParser method calls are )s
+0 g
+(    )59.5 202.4 ms
+0.498 0 0 r
+(/// forwarded.)s
+0 g
+(    std::unique_ptr< IParser > pImpl_;)59.5 192.4 ms
+(};)59.5 182.4 ms
+0.498 0 0 r
+(//-----------------------------------------------------------------------------)59.5 162.4 ms
+(/// @brief Utility class used to rewind an input stream if a monitored values )59.5 152.4 ms
+(/// is @c false.)59.5 142.4 ms
+(/// )59.5 132.4 ms
+(/// The input stream get pointer position is recorded in the constructor and r)59.5 122.4 ms
+(/// reset in the destructor if the condition value is @c false.)59.5 112.4 ms
+(/// @tparam IstreamT input stream type e.g. @c std::istream.)59.5 102.4 ms
+(///)59.5 92.4 ms
+(/// Usage:)59.5 82.4 ms
+(/// @code)59.5 72.4 ms
+(/// std::ifstream ifs\("file.txt"\);)59.5 62.4 ms
+(/// bool ok = false;)59.5 52.4 ms
+re sp
+%%PageTrailer
+%%Page: 3 3
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 3)59.5 792.4 ms
+F0 sf
+0.498 0 0 r
+(/// ...)59.5 772.4 ms
+(/// {)59.5 762.4 ms
+(/// // record position)59.5 752.4 ms
+(/// RewindManager< std::istream > RM\( ok, ifs \);)59.5 742.4 ms
+(/// //read operations; set ok to false if input not validated.)59.5 732.4 ms
+(/// ...)59.5 722.4 ms
+(/// })59.5 712.4 ms
+(/// //rewind if condition not met)59.5 702.4 ms
+(/// @endcode)59.5 692.4 ms
+0 0.498 0 r
+(template)59.5 682.4 ms
+0 g
+(< )s
+0 0.498 0 r
+(class)s
+0 g
+( IstreamT > )s
+0 0.498 0 r
+(class)s
+0 g
+( RewindManager {)s
+(    )59.5 672.4 ms
+0.498 0 0 r
+(/// Position in stream.)s
+0 g
+(    )59.5 662.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( )s
+0 0.498 0 r
+(typename)s
+0 g
+( IstreamT::streampos StreamPos;)s
+0.498 0.498 0 r
+(public)59.5 652.4 ms
+0 g
+(:)s
+(    )59.5 642.4 ms
+0.498 0 0 r
+(/// Constructor. The current input stream position is recorded.)s
+0 g
+(    )59.5 632.4 ms
+0.498 0 0 r
+(/// @param flag monitored value.)s
+0 g
+(    )59.5 622.4 ms
+0.498 0 0 r
+(/// @param is input stream reference to act on.)s
+0 g
+(    RewindManager\( )59.5 612.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+(& flag, IstreamT& is \) )s
+(        : pos_\( is.tellg\(\) \), flag_\( flag \), is_\( is \) {})59.5 602.4 ms
+(    )59.5 592.4 ms
+0.498 0 0 r
+(/// Destructor.)s
+0 g
+(    )59.5 582.4 ms
+0.498 0 0 r
+(/// When object goes out of scope the monitored value is checked:)s
+0 g
+(    )59.5 572.4 ms
+0.498 0 0 r
+(/// if the condition value is @c false the input stream get pointer)s
+0 g
+(    )59.5 562.4 ms
+0.498 0 0 r
+(/// is rewound to the initial position recorded in the constructor.)s
+0 g
+(    ~RewindManager\(\) {)59.5 552.4 ms
+(        )59.5 542.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !flag_ \) {)s
+0.498 0 0 r
+(//#ifdef __GNUC__ // note: gcc requires eof flag not set for seekg to work)59.5 532.4 ms
+0 g
+(                  )59.5 522.4 ms
+0.498 0 0 r
+(//       doesn't arm to force a clear on vc++ either )s
+0 g
+(            is_.clear\(\);)59.5 512.4 ms
+0.498 0 0 r
+(//#endif)59.5 502.4 ms
+0 g
+(            is_.seekg\( pos_ \);)59.5 492.4 ms
+(        })59.5 482.4 ms
+(    } )59.5 472.4 ms
+0.498 0 0 r
+(//rewind if condition not met)s
+0.498 0.498 0 r
+(private)59.5 462.4 ms
+0 g
+(:)s
+(    )59.5 452.4 ms
+0.498 0 0 r
+(/// Stream get pointer position.)s
+0 g
+(    )59.5 442.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( StreamPos pos_;)s
+(    )59.5 432.4 ms
+0.498 0 0 r
+(/// Condition flag reference.)s
+0 g
+(    )59.5 422.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( )s
+0 0.498 0 r
+(bool)s
+0 g
+(& flag_;)s
+(    )59.5 412.4 ms
+0.498 0 0 r
+(/// Input stream reference.)s
+0 g
+(    IstreamT& is_;)59.5 402.4 ms
+(};)59.5 392.4 ms
+0.498 0 0 r
+(/// Convenience typedef.)59.5 372.4 ms
+0 0.498 0 r
+(typedef)59.5 362.4 ms
+0 g
+( RewindManager< InStream > REWIND;)s
+0.498 0 0 r
+(//------------------------------------------------------------------------------)59.5 342.4 ms
+(/// @brief Applies a sequence of parsers to the input stream in the order )59.5 332.4 ms
+(/// supplied by the client code, optionally skipping leading blanks.)59.5 322.4 ms
+0 0.498 0 r
+(class)59.5 312.4 ms
+0 g
+( AndParser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 302.4 ms
+0 g
+(:)s
+(    )59.5 292.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 282.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    )59.5 272.4 ms
+0.498 0 0 r
+(/// Default constructor; enables skipping of leading blanks.)s
+0 g
+(    AndParser\(\) : skipBlanks_\( )59.5 262.4 ms
+0.498 0 0.498 r
+(true)s
+0 g
+( \) {})s
+(    )59.5 252.4 ms
+0.498 0 0 r
+(/// Copy constructor.)s
+0 g
+(    AndParser\( )59.5 242.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( AndParser& p \) )s
+(        : parsers_\( p.parsers_ \), valueMap_\( p.valueMap_ \), )59.5 232.4 ms
+(          skipBlanks_\( p.skipBlanks_ \) {})59.5 222.4 ms
+(    )59.5 212.4 ms
+0.498 0 0 r
+(/// Constructor.)s
+0 g
+(    )59.5 202.4 ms
+0.498 0 0 r
+(/// @param b enable skipping of trailing blanks flag.)s
+0 g
+(    AndParser\( )59.5 192.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( b \) : skipBlanks_\( b \) {})s
+(    )59.5 182.4 ms
+0.498 0 0 r
+(/// Add new parser as the first element in the sequence of parsers to apply.)s
+0 g
+(    )59.5 172.4 ms
+0.498 0 0 r
+(/// @param p parser to insert.)s
+0 g
+(    )59.5 162.4 ms
+0.498 0 0 r
+(/// @return reference to @c *this.)s
+0 g
+(    AndParser& AddFront\( )59.5 152.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { )s
+(        parsers_.push_front\( p \);  )59.5 142.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+(; )s
+(    })59.5 132.4 ms
+(    )59.5 122.4 ms
+0.498 0 0 r
+(/// Append parser to parser sequence.)s
+0 g
+(    )59.5 112.4 ms
+0.498 0 0 r
+(/// @param p parser to append.)s
+0 g
+(    )59.5 102.4 ms
+0.498 0 0 r
+(/// @return reference to @c *this.)s
+0 g
+(    AndParser& Add\( )59.5 92.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { )s
+(        parsers_.push_back\( p \);  )59.5 82.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+(; )s
+(    })59.5 72.4 ms
+(    )59.5 62.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Parse. Returns @c true if and only if all )s
+0 g
+(    )59.5 52.4 ms
+0.498 0 0 r
+(/// the parsers in the sequnce return true; @c false otherwise.)s
+re sp
+%%PageTrailer
+%%Page: 4 4
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 4)59.5 792.4 ms
+F0 sf
+(    )59.5 772.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        valueMap_.clear\(\);)59.5 762.4 ms
+(        )59.5 752.4 ms
+0.498 0 0 r
+(//if\( !is.good\(\) \) return false;)s
+0 g
+(        )59.5 742.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( ok = )s
+0.498 0 0.498 r
+(false)s
+0 g
+(; {)s
+(        REWIND r\( ok, is \);)59.5 732.4 ms
+(        )59.5 722.4 ms
+0.498 0.498 0 r
+(for)s
+0 g
+(\( Parsers::iterator i = parsers_.begin\(\);)s
+(             i != parsers_.end\(\);)59.5 712.4 ms
+(             ++i \) {)59.5 702.4 ms
+(            )59.5 692.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( skipBlanks_\) SkipBlanks\( is \);)s
+(            )59.5 682.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !i->Parse\( is \) \) )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0 0.498 r
+(false)s
+0 g
+(;)s
+(        })59.5 672.4 ms
+(        ok = )59.5 662.4 ms
+0.498 0 0.498 r
+(true)s
+0 g
+(;)s
+(        })59.5 652.4 ms
+(        )59.5 642.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( ok;)s
+(    })59.5 632.4 ms
+(    )59.5 622.4 ms
+0.498 0 0 r
+(/// Used to chain parsers.)s
+0 g
+(    AndParser& )59.5 612.4 ms
+0.498 0.498 0 r
+(operator)s
+0 g
+( >=\( )s
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( Add\( p \); } )s
+(    )59.5 602.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues.)s
+0 g
+(    )59.5 592.4 ms
+0.498 0 0 r
+(/// Returns all the values parsed by provided parsers. Lazy behavior: values)s
+0 g
+(    )59.5 582.4 ms
+0.498 0 0 r
+(/// are retrieved from parsers the first time this method is invoked.)s
+0 g
+(    )59.5 572.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 562.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( valueMap_.empty\(\) \) AppendValues\(\);)s
+(        )59.5 552.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( valueMap_;)s
+(    })59.5 542.4 ms
+(    )59.5 532.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[]. Invokes GetValues\(\) first.)s
+0 g
+(    )59.5 522.4 ms
+0.498 0 0 r
+(/// @exception std::logic error if key not found.)s
+0 g
+(    )59.5 512.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 502.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = GetValues\(\);)s
+(        Values::const_iterator i = v.find\( k \);)59.5 492.4 ms
+(        )59.5 482.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i == v.end\(\) \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::logic_error\( )s
+0.498 0 0.498 r
+("Cannot find value")s
+0 g
+( \);)s
+(        )59.5 472.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( i->second;)s
+(    })59.5 462.4 ms
+(    )59.5 452.4 ms
+(    )59.5 442.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Clone.)s
+0 g
+(    AndParser* Clone\(\) )59.5 432.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( AndParser\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+0.498 0.498 0 r
+(private)59.5 412.4 ms
+0 g
+(:)s
+(    )59.5 402.4 ms
+0.498 0 0 r
+(/// Appends values extracted from child parsers to the value map.)s
+0 g
+(    )59.5 392.4 ms
+0 0.498 0 r
+(void)s
+0 g
+( AppendValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 382.4 ms
+0.498 0.498 0 r
+(for)s
+0 g
+(\( Parsers::const_iterator i = parsers_.begin\(\);)s
+(             i != parsers_.end\(\);)59.5 372.4 ms
+(             ++i \) {)59.5 362.4 ms
+(            )59.5 352.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i->GetValues\(\).empty\(\) \) )s
+0.498 0.498 0 r
+(continue)s
+0 g
+(;)s
+(            valueMap_.insert\( i->GetValues\(\).begin\(\), i->GetValues\(\).end\(\) \);)59.5 342.4 ms
+(        })59.5 332.4 ms
+(    })59.5 322.4 ms
+(    )59.5 312.4 ms
+0.498 0 0 r
+(/// Advance to first non-blank character.)s
+0 g
+(    )59.5 302.4 ms
+0 0.498 0 r
+(void)s
+0 g
+( SkipBlanks\( InStream& is \) {)s
+(        )59.5 292.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !is.good\(\) \) )s
+0.498 0.498 0 r
+(return)s
+0 g
+(;)s
+(        Char c = is.get\(\);)59.5 282.4 ms
+(        )59.5 272.4 ms
+0.498 0.498 0 r
+(while)s
+0 g
+(\( is.good\(\) && parsley::IsSpace\( c \) != )s
+0.498 0 0.498 r
+(0)s
+0 g
+( \) c = is.get\(\);)s
+(        )59.5 262.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( is.good\(\) \) is.unget\(\);)s
+(    })59.5 252.4 ms
+(    )59.5 242.4 ms
+0.498 0 0 r
+(/// Parser list type.)s
+0 g
+(    )59.5 232.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( std::list< Parser > Parsers;)s
+(    )59.5 222.4 ms
+0.498 0 0 r
+(/// Parser list.)s
+0 g
+(    Parsers parsers_;)59.5 212.4 ms
+(    )59.5 202.4 ms
+0.498 0 0 r
+(/// Extracted values.@c mutable is required to allow for lazy behavior: )s
+0 g
+(    )59.5 192.4 ms
+0.498 0 0 r
+(/// the map is populated only at first call of MultiMap::GetValues method.)s
+0 g
+(    )59.5 182.4 ms
+0 0.498 0 r
+(mutable)s
+0 g
+( Values valueMap_;)s
+(    )59.5 172.4 ms
+0.498 0 0 r
+(/// Skip blanks flag.)s
+0 g
+(    )59.5 162.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( skipBlanks_;)s
+(};)59.5 152.4 ms
+0.498 0 0 r
+(//------------------------------------------------------------------------------)59.5 122.4 ms
+(/// @brief Applies the same parser a fixed number of times or until it fails.)59.5 112.4 ms
+0 0.498 0 r
+(class)59.5 102.4 ms
+0 g
+( MultiParser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 92.4 ms
+0 g
+(:)s
+(    )59.5 82.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 72.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    )59.5 62.4 ms
+0.498 0 0 r
+(/// Constructor.)s
+0 g
+(    )59.5 52.4 ms
+0.498 0 0 r
+(/// @param p parser to execute.)s
+re sp
+%%PageTrailer
+%%Page: 5 5
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 5)59.5 792.4 ms
+F0 sf
+(    )59.5 772.4 ms
+0.498 0 0 r
+(/// @param name value identifier. This is the key used to identify the )s
+0 g
+(    )59.5 762.4 ms
+0.498 0 0 r
+(///         list of parsed values.)s
+0 g
+(    )59.5 752.4 ms
+0.498 0 0 r
+(/// @param countMin minimum amount of times the parser is invoked)s
+0 g
+(    )59.5 742.4 ms
+0.498 0 0 r
+(/// @param countMax maximum amount of times the parser is invoked. )s
+0 g
+(    )59.5 732.4 ms
+0.498 0 0 r
+(///        If a number < 0 is specifie the parser is invoked until it fails.)s
+0 g
+(    MultiParser\( )59.5 722.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( IParser& p, )s
+0 0.498 0 r
+(const)s
+0 g
+( ValueID& name = ValueID\(\), )s
+(                 )59.5 712.4 ms
+0 0.498 0 r
+(int)s
+0 g
+( countMin = )s
+0.498 0 0.498 r
+(1)s
+0 g
+(, )s
+0 0.498 0 r
+(int)s
+0 g
+( countMax = -)s
+0.498 0 0.498 r
+(1)s
+0 g
+( \) )s
+(        : parser_\( p \), countMin_\( countMin \), countMax_\( countMax \) {})59.5 702.4 ms
+(    )59.5 692.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Parse. Invokes the contained parser at least )s
+0 g
+(    )59.5 682.4 ms
+0.498 0 0 r
+(/// MultiParser#countMin_ times, and no more than MultiParser#countMax_ )s
+0 g
+(    )59.5 672.4 ms
+0.498 0 0 r
+(/// times or until parsing fails if  MultiParser#countMax_ < 0.)s
+0 g
+(    )59.5 662.4 ms
+0.498 0 0 r
+(/// @param is input stream.)s
+0 g
+(    )59.5 652.4 ms
+0.498 0 0 r
+(/// @return true if parser invoked at least MultiParser#countMin_ times and )s
+0 g
+(    )59.5 642.4 ms
+0.498 0 0 r
+(///    no more than MultiParser#countMax_ times or invoked at least )s
+0 g
+(    )59.5 632.4 ms
+0.498 0 0 r
+(///    MultiParser#countMax_ times and MultiParser#countMax_ < 0.)s
+0 g
+(    )59.5 622.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        valueMap_.clear\(\);)59.5 612.4 ms
+(        )59.5 602.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( ok = )s
+0.498 0 0.498 r
+(false)s
+0 g
+(; {)s
+(        REWIND r\( ok, is \);)59.5 592.4 ms
+(        )59.5 582.4 ms
+0 0.498 0 r
+(int)s
+0 g
+( counter = )s
+0.498 0 0.498 r
+(0)s
+0 g
+(;)s
+(        )59.5 572.4 ms
+0.498 0.498 0 r
+(while)s
+0 g
+(\( is.good\(\) && )s
+(               \( counter < countMax_ || countMax_ < )59.5 562.4 ms
+0.498 0 0.498 r
+(0)s
+0 g
+( \) &&)s
+(               parser_.Parse\( is \) \) {)59.5 552.4 ms
+(            ++counter;)59.5 542.4 ms
+(            )59.5 532.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = parser_.GetValues\(\);)s
+(            )59.5 522.4 ms
+0.498 0.498 0 r
+(for)s
+0 g
+(\( Values::const_iterator i = v.begin\(\); i != v.end\(\); ++i \) {)s
+(                values_.push_back\( i->second \);)59.5 512.4 ms
+(            })59.5 502.4 ms
+(        })59.5 492.4 ms
+(        )59.5 482.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( counter < countMin_ || \( counter > countMax_ && countMax_ >= )s
+0.498 0 0.498 r
+(0)s
+0 g
+( \) \) {)s
+(            ok = )59.5 472.4 ms
+0.498 0 0.498 r
+(false)s
+0 g
+(;    )s
+(        } )59.5 462.4 ms
+(        )59.5 452.4 ms
+0.498 0.498 0 r
+(else)s
+0 g
+( ok = )s
+0.498 0 0.498 r
+(true)s
+0 g
+(; )s
+0.498 0 0 r
+(// counter in [countMin_, countMax_])s
+0 g
+(        })59.5 442.4 ms
+(        )59.5 432.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( ok;)s
+(    })59.5 422.4 ms
+(    )59.5 412.4 ms
+0.498 0 0 r
+(/// Convenience operator to set the minimum and maximum amount of times the )s
+0 g
+(    )59.5 402.4 ms
+0.498 0 0 r
+(/// parser should be invoked.)s
+0 g
+(    MultiParser& )59.5 392.4 ms
+0.498 0.498 0 r
+(operator)s
+0 g
+(\(\)\( )s
+0 0.498 0 r
+(int)s
+0 g
+( minCount, )s
+0 0.498 0 r
+(int)s
+0 g
+( maxCount = -)s
+0.498 0 0.498 r
+(1)s
+0 g
+( \))s
+(    { countMin_ = minCount; countMax_ = maxCount; )59.5 382.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+(; })s
+(    )59.5 372.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues. Returns a single \(key, value\) pair)s
+0 g
+(    )59.5 362.4 ms
+0.498 0 0 r
+(/// where the key is the name specified in the constructor and the value is )s
+0 g
+(    )59.5 352.4 ms
+0.498 0 0 r
+(/// a list of parsed values.)s
+0 g
+(    )59.5 342.4 ms
+0.498 0 0 r
+(/// @return \(key,value\) pair where key == MultiParser::name_.)s
+0 g
+(    )59.5 332.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 322.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( valueMap_.empty\(\) \) {)s
+(            valueMap_.insert\( std::make_pair\( name_, values_ \) \);)59.5 312.4 ms
+(        })59.5 302.4 ms
+(        )59.5 292.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( valueMap_;)s
+(    })59.5 282.4 ms
+(    )59.5 272.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[].)s
+0 g
+(    )59.5 262.4 ms
+0.498 0 0 r
+(/// @exception std::logic_error if key not in map.)s
+0 g
+(    )59.5 252.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 242.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = GetValues\(\);)s
+(        Values::const_iterator i = v.find\( k \);)59.5 232.4 ms
+(        )59.5 222.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i == v.end\(\) \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::logic_error\( )s
+0.498 0 0.498 r
+("Cannot find value")s
+0 g
+( \);)s
+(        )59.5 212.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( i->second;)s
+(    })59.5 202.4 ms
+( )59.5 192.4 ms
+(    )59.5 182.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Clone.)s
+0 g
+(    MultiParser* Clone\(\) )59.5 172.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( MultiParser\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+0.498 0.498 0 r
+(private)59.5 152.4 ms
+0 g
+(:)s
+(    )59.5 142.4 ms
+0.498 0 0 r
+(/// Identifier for parsed value list in returned value map.)s
+0 g
+(    ValueID name_;)59.5 132.4 ms
+(    )59.5 122.4 ms
+0.498 0 0 r
+(/// Parser to apply.)s
+0 g
+(    Parser parser_;)59.5 112.4 ms
+(    )59.5 102.4 ms
+0.498 0 0 r
+(/// Minimum amount of times to execute parser.)s
+0 g
+(    )59.5 92.4 ms
+0 0.498 0 r
+(int)s
+0 g
+( countMin_;)s
+(    )59.5 82.4 ms
+0.498 0 0 r
+(/// Maximum amount of times to execute parser or < 0 to signal)s
+0 g
+(    )59.5 72.4 ms
+0.498 0 0 r
+(/// an indefinite amount.)s
+0 g
+(    )59.5 62.4 ms
+0 0.498 0 r
+(int)s
+0 g
+( countMax_;)s
+(    )59.5 52.4 ms
+0.498 0 0 r
+(/// Value map: one element with key == MultiParser#name_ and )s
+re sp
+%%PageTrailer
+%%Page: 6 6
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 6)59.5 792.4 ms
+F0 sf
+(    )59.5 772.4 ms
+0.498 0 0 r
+(/// value == @c std::list of parsed values. @c mutable is required to allow )s
+0 g
+(    )59.5 762.4 ms
+0.498 0 0 r
+(/// for lazy behavior: the map is populated only at first call of )s
+0 g
+(    )59.5 752.4 ms
+0.498 0 0 r
+(/// MultiMap::GetValues method.)s
+0 g
+(    )59.5 742.4 ms
+0 0.498 0 r
+(mutable)s
+0 g
+( Values valueMap_;)s
+(    )59.5 732.4 ms
+0.498 0 0 r
+(/// List of parsed values. Values are appended to list after each invocation)s
+0 g
+(    )59.5 722.4 ms
+0.498 0 0 r
+(/// of MultiParser#parser_.Parse\(\).)s
+0 g
+(    std::list< Any > values_;   )59.5 712.4 ms
+(};)59.5 702.4 ms
+0.498 0 0 r
+(/// Convenience operator to mimic regex syntax and generate a multiparser)59.5 682.4 ms
+(/// that applies multiple times a given parser.)59.5 672.4 ms
+0 g
+(MultiParser )59.5 662.4 ms
+0.498 0.498 0 r
+(operator)s
+0 g
+(*\( )s
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( MultiParser\( p \); } )s
+0.498 0 0 r
+(//-----------------------------------------------------------------------------)59.5 632.4 ms
+(/// @brief Parse method returns the negation of what the contained parser Parse )59.5 622.4 ms
+(/// method returns.)59.5 612.4 ms
+(///)59.5 602.4 ms
+(/// The validated character sequence is stored internally into a string)59.5 592.4 ms
+(/// and can be retrieved through the NotParser::GetValues method.)59.5 582.4 ms
+(/// @tparam Parser type.)59.5 572.4 ms
+0 0.498 0 r
+(template)59.5 562.4 ms
+0 g
+( < )s
+0 0.498 0 r
+(class)s
+0 g
+( ParserT > )s
+0 0.498 0 r
+(class)s
+0 g
+( NotParser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 552.4 ms
+0 g
+(:)s
+(    )59.5 542.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 532.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    )59.5 522.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues.)s
+0 g
+(    )59.5 512.4 ms
+0.498 0 0 r
+(/// @return one @c \(key,value\) pair where @c key is the name specified in )s
+0 g
+(    )59.5 502.4 ms
+0.498 0 0 r
+(/// the constructor or the empty string and @c value is a string containing)s
+0 g
+(    )59.5 492.4 ms
+0.498 0 0 r
+(/// the parsed characters.)s
+0 g
+(    )59.5 482.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( valueMap_; })s
+(    NotParser* Clone\(\) )59.5 472.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( NotParser< ParserT >\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+(    )59.5 462.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        )59.5 452.4 ms
+0.498 0 0 r
+(// if ParserT::Parse returns true)s
+0 g
+(        )59.5 442.4 ms
+0.498 0 0 r
+(// the get pointer will point one char)s
+0 g
+(        )59.5 432.4 ms
+0.498 0 0 r
+(// past the end of the validated char sequence,)s
+0 g
+(        )59.5 422.4 ms
+0.498 0 0 r
+(// it is therefore required to save the pointer)s
+0 g
+(        )59.5 412.4 ms
+0.498 0 0 r
+(// before the invocation and restore it in case)s
+0 g
+(        )59.5 402.4 ms
+0.498 0 0 r
+(// the parser validates the string to make it point)s
+0 g
+(        )59.5 392.4 ms
+0.498 0 0 r
+(// to one char before the beginning of the string to)s
+0 g
+(        )59.5 382.4 ms
+0.498 0 0 r
+(// validate)s
+0 g
+(        valueMap_.clear\(\);)59.5 372.4 ms
+(        String s;)59.5 362.4 ms
+(        Char c = )59.5 352.4 ms
+0.498 0 0.498 r
+(0)s
+0 g
+(;)s
+(        StreamPos pos = is.tellg\(\);)59.5 342.4 ms
+(        )59.5 332.4 ms
+0.498 0.498 0 r
+(while)s
+0 g
+(\( is.good\(\) && !parser_.Parse\( is \) \) {)s
+(            c = is.get\(\);)59.5 322.4 ms
+(            )59.5 312.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !is.good\(\) \) )s
+0.498 0.498 0 r
+(break)s
+0 g
+(;)s
+(            s.push_back\( c \);)59.5 302.4 ms
+(            pos = is.tellg\(\);)59.5 292.4 ms
+(        })59.5 282.4 ms
+(        )59.5 272.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( is.good\(\) \) is.seekg\( pos \);)s
+(        )59.5 262.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( s.length\(\) > )s
+0.498 0 0.498 r
+(0)s
+0 g
+( \) valueMap_.insert\( std::make_pair\( name_, s \) \);)s
+(        )59.5 252.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( s.length\(\) > )s
+0.498 0 0.498 r
+(0)s
+0 g
+(;)s
+(    })59.5 242.4 ms
+(    )59.5 222.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[].)s
+0 g
+(    )59.5 212.4 ms
+0.498 0 0 r
+(/// @exception std::logic error if key not found.)s
+0 g
+(    )59.5 202.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 192.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = GetValues\(\);)s
+(        Values::const_iterator i = v.find\( k \);)59.5 182.4 ms
+(        )59.5 172.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i == v.end\(\) \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::logic_error\( )s
+0.498 0 0.498 r
+("Cannot find value")s
+0 g
+( \);)s
+(        )59.5 162.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( i->second;)s
+(    })59.5 152.4 ms
+(    )59.5 142.4 ms
+0.498 0 0 r
+(/// \(Default\) constructor.)s
+0 g
+(    )59.5 132.4 ms
+0.498 0 0 r
+(/// @param name key indentifier for parsed text. )s
+0 g
+(    NotParser\( )59.5 122.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueID& name = ValueID\(\) \) : name_\( name \) {})s
+(    )59.5 112.4 ms
+0.498 0 0 r
+(/// Constructor. Allows for construction from any value that can be used to )s
+0 g
+(    )59.5 102.4 ms
+0.498 0 0 r
+(/// construct the contained parser type.)s
+0 g
+(    )59.5 92.4 ms
+0 0.498 0 r
+(template)s
+0 g
+( < )s
+0 0.498 0 r
+(class)s
+0 g
+( T > NotParser\( )s
+0 0.498 0 r
+(const)s
+0 g
+( T& v, )s
+(                                    )59.5 82.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueID& name = ValueID\(\) \) )s
+(        : parser_\( v \), name_\( name \) {})59.5 72.4 ms
+0.498 0.498 0 r
+(private)59.5 62.4 ms
+0 g
+(:)s
+(    )59.5 52.4 ms
+0.498 0 0 r
+(/// Contained parser.)s
+re sp
+%%PageTrailer
+%%Page: 7 7
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 7)59.5 792.4 ms
+F0 sf
+(    ParserT parser_;)59.5 772.4 ms
+(    )59.5 762.4 ms
+0.498 0 0 r
+(/// Value map: contains a @c \(NotParser#name_,String\) pair.  )s
+0 g
+(    Values valueMap_;)59.5 752.4 ms
+(    )59.5 742.4 ms
+0.498 0 0 r
+(/// Value identifier used as key in value map.)s
+0 g
+(    ValueID name_;)59.5 732.4 ms
+(};)59.5 722.4 ms
+0.498 0 0 r
+(//-----------------------------------------------------------------------------)59.5 692.4 ms
+(/// @brief Parser for optional expressions.)59.5 682.4 ms
+(///)59.5 672.4 ms
+(/// The Parse method applies the contained parser and always returns true.)59.5 662.4 ms
+0 0.498 0 r
+(class)59.5 652.4 ms
+0 g
+( OptionalParser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 642.4 ms
+0 g
+(:)s
+(    )59.5 632.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 622.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    OptionalParser\( )59.5 612.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p, )s
+0 0.498 0 r
+(const)s
+0 g
+( ValueID& name = ValueID\(\) \) )s
+(        : parser_\( p \), name_\( name \) {})59.5 602.4 ms
+(    )59.5 592.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues.)s
+0 g
+(    )59.5 582.4 ms
+0.498 0 0 r
+(/// @return one @c \(key,value\) pair where @c key is the name specified in )s
+0 g
+(    )59.5 572.4 ms
+0.498 0 0 r
+(/// the constructor or the empty string and @c value is a string containing )s
+0 g
+(    )59.5 562.4 ms
+0.498 0 0 r
+(/// the parsed characters.)s
+0 g
+(    )59.5 552.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( valueMap_; })s
+(    OptionalParser* Clone\(\) )59.5 542.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( OptionalParser\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+(    )59.5 532.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Parse: apply parser and always returns true.)s
+0 g
+(    )59.5 522.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        valueMap_.clear\(\);)59.5 512.4 ms
+(        )59.5 502.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( parser_.Parse\( is \) \) valueMap_ = parser_.GetValues\(\);)s
+(        )59.5 492.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0 0.498 r
+(true)s
+0 g
+(;)s
+(    })59.5 482.4 ms
+(    )59.5 472.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[].)s
+0 g
+(    )59.5 462.4 ms
+0.498 0 0 r
+(/// @exception std::logic error if key not found.)s
+0 g
+(    )59.5 452.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 442.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = GetValues\(\);)s
+(        Values::const_iterator i = v.find\( k \);)59.5 432.4 ms
+(        )59.5 422.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i == v.end\(\) \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::logic_error\( )s
+0.498 0 0.498 r
+("Cannot find value")s
+0 g
+( \);)s
+(        )59.5 412.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( i->second;)s
+(    })59.5 402.4 ms
+(    )59.5 392.4 ms
+0.498 0 0 r
+(/// Constructor. Allows for construction from any value that can be used)s
+0 g
+(    )59.5 382.4 ms
+0.498 0 0 r
+(/// to construct the contained parser type.)s
+0 g
+(    )59.5 372.4 ms
+0 0.498 0 r
+(template)s
+0 g
+( < )s
+0 0.498 0 r
+(class)s
+0 g
+( T > OptionalParser\( )s
+0 0.498 0 r
+(const)s
+0 g
+( T& v, )s
+(                                         )59.5 362.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueID& name = ValueID\(\) \) )s
+(        : parser_\( v \), name_\( name \) {})59.5 352.4 ms
+0.498 0.498 0 r
+(private)59.5 332.4 ms
+0 g
+(:)s
+(    )59.5 322.4 ms
+0.498 0 0 r
+(/// Contained parser.)s
+0 g
+(    Parser parser_;)59.5 312.4 ms
+(    )59.5 302.4 ms
+0.498 0 0 r
+(/// Value map: contains a @c \(NotParser#name_,String\) pair.  )s
+0 g
+(    Values valueMap_;)59.5 292.4 ms
+(    )59.5 282.4 ms
+0.498 0 0 r
+(/// Value identifier used as key in value map.)s
+0 g
+(    ValueID name_;)59.5 272.4 ms
+(};)59.5 262.4 ms
+0.498 0 0 r
+(//------------------------------------------------------------------------------)59.5 232.4 ms
+(/// @brief Ordered OR parser: invokes the contained parsers until one returns )59.5 222.4 ms
+(/// true.)59.5 212.4 ms
+(///)59.5 202.4 ms
+(/// The values parsed by the first parser that returns true are accessible)59.5 192.4 ms
+(/// through the OrParser::GetValue method.)59.5 182.4 ms
+0 0.498 0 r
+(class)59.5 172.4 ms
+0 g
+( OrParser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 162.4 ms
+0 g
+(:)s
+(    )59.5 152.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 142.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    )59.5 132.4 ms
+0.498 0 0 r
+(/// Append new parser to parser list.)s
+0 g
+(    )59.5 122.4 ms
+0.498 0 0 r
+(/// @param p parser to append to parser list.)s
+0 g
+(    )59.5 112.4 ms
+0.498 0 0 r
+(/// @return reference to @c *this.)s
+0 g
+(    OrParser& Add\( )59.5 102.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { parsers_.push_back\( p \); )s
+0.498 0.498 0 r
+(return)s
+0 g
+( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+(; })s
+(    )59.5 92.4 ms
+0.498 0 0 r
+(/// Invokes OrParser::Add\(const Parser&\).)s
+0 g
+(    OrParser& )59.5 82.4 ms
+0.498 0.498 0 r
+(operator)s
+0 g
+(/=\( )s
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( Add\(p\); })s
+(    )59.5 72.4 ms
+0.498 0 0 r
+(/// Convenience method to apped a parser non contained into a Parser )s
+0 g
+(    )59.5 62.4 ms
+0.498 0 0 r
+(/// instance.)s
+0 g
+(    OrParser& )59.5 52.4 ms
+0.498 0.498 0 r
+(operator)s
+0 g
+(/=\( )s
+0 0.498 0 r
+(const)s
+0 g
+( IParser& p \) { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( Add\( p \); })s
+re sp
+%%PageTrailer
+%%Page: 8 8
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 8)59.5 792.4 ms
+F0 sf
+(    )59.5 772.4 ms
+0.498 0 0 r
+(/// Default constructor.)s
+0 g
+(    OrParser\(\) : matchedParser_\( parsers_.end\(\) \) {})59.5 762.4 ms
+(    )59.5 752.4 ms
+0.498 0 0 r
+(/// Copy constructor.)s
+0 g
+(    OrParser\( )59.5 742.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( OrParser& op \) )s
+(        : parsers_\( op.parsers_ \), matchedParser_\( parsers_.end\(\) \) {}  )59.5 732.4 ms
+(    )59.5 722.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Parse.)s
+0 g
+(    )59.5 712.4 ms
+0.498 0 0 r
+(/// Iterates of alternative parsers and stops at the first parser that )s
+0 g
+(    )59.5 702.4 ms
+0.498 0 0 r
+(/// parses the input.)s
+0 g
+(    )59.5 692.4 ms
+0.498 0 0 r
+(/// @param is input stream.)s
+0 g
+(    )59.5 682.4 ms
+0.498 0 0 r
+(/// @return true if at least one one parser is successful, false otherwise. )s
+0 g
+(    )59.5 672.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        matchedParser_ = parsers_.end\(\);)59.5 662.4 ms
+(        )59.5 652.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( ok = )s
+0.498 0 0.498 r
+(false)s
+0 g
+(; {)s
+(        REWIND r\( ok, is \);)59.5 642.4 ms
+(        Parsers::iterator i = parsers_.begin\(\);)59.5 632.4 ms
+(        )59.5 622.4 ms
+0.498 0.498 0 r
+(for)s
+0 g
+(\( ; i != parsers_.end\(\); ++i \) {)s
+(            )59.5 612.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( StreamPos pos = is.tellg\(\);)s
+(            )59.5 602.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !i->Parse\( is \) \) {)s
+(                is.seekg\( pos \);)59.5 592.4 ms
+(                )59.5 582.4 ms
+0.498 0.498 0 r
+(continue)s
+0 g
+(;)s
+(            })59.5 572.4 ms
+(            )59.5 562.4 ms
+0.498 0.498 0 r
+(else)s
+0 g
+( )s
+0.498 0.498 0 r
+(break)s
+0 g
+(;)s
+(        })59.5 552.4 ms
+(        matchedParser_ = i;)59.5 542.4 ms
+(        ok = i != parsers_.end\(\);)59.5 532.4 ms
+(        })59.5 522.4 ms
+(        )59.5 512.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( ok; )s
+(    })59.5 502.4 ms
+(    )59.5 492.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues.)s
+0 g
+(    )59.5 482.4 ms
+0.498 0 0 r
+(/// @return values parsed by matching parser of emtpy value map.)s
+0 g
+(    )59.5 472.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 462.4 ms
+0 0.498 0 r
+(static)s
+0 g
+( )s
+0 0.498 0 r
+(const)s
+0 g
+( Values dummy;)s
+(        )59.5 452.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( matchedParser_ != parsers_.end\(\) ? )s
+(               matchedParser_->GetValues\(\) : dummy;)59.5 442.4 ms
+(    })59.5 432.4 ms
+(    )59.5 422.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[].)s
+0 g
+(    )59.5 412.4 ms
+0.498 0 0 r
+(/// @throw std::logic_error if key not found.)s
+0 g
+(    )59.5 402.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 392.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = GetValues\(\);)s
+(        Values::const_iterator i = v.find\( k \);)59.5 382.4 ms
+(        )59.5 372.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i == v.end\(\) \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::logic_error\( )s
+0.498 0 0.498 r
+("Cannot find value")s
+0 g
+( \);)s
+(        )59.5 362.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( i->second;)s
+(    })59.5 352.4 ms
+(    )59.5 332.4 ms
+0.498 0 0 r
+(/// Implemetation of IParser::Clone.)s
+0 g
+(    OrParser* Clone\(\) )59.5 322.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( OrParser\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+0.498 0.498 0 r
+(private)59.5 302.4 ms
+0 g
+(:)s
+(    )59.5 292.4 ms
+0.498 0 0 r
+(/// Parser list type.)s
+0 g
+(    )59.5 282.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( std::list< Parser > Parsers;)s
+(    )59.5 272.4 ms
+0.498 0 0 r
+(/// Alternative parsers.)s
+0 g
+(    Parsers parsers_;)59.5 262.4 ms
+(    )59.5 252.4 ms
+0.498 0 0 r
+(/// Reference to matched parser or to @c parsers_.end\(\) if no match found.)s
+0 g
+(    Parsers::const_iterator matchedParser_;)59.5 242.4 ms
+(};)59.5 232.4 ms
+0.498 0 0 r
+(//------------------------------------------------------------------------------)59.5 202.4 ms
+(/// @brief Or Parser: applies a set of parsers to the given stream and validates)59.5 192.4 ms
+(/// the input only if at least one of the applied parser validates the input )59.5 182.4 ms
+(/// characters.)59.5 172.4 ms
+(///)59.5 162.4 ms
+(/// The parser selected as the validating parser is the one that  validates)59.5 152.4 ms
+(/// the maximum number of characters. )59.5 142.4 ms
+(/// At the end of the parsing operation the get pointer is positioned:)59.5 132.4 ms
+(/// - at the same position where it was before calling the Parser method if)59.5 122.4 ms
+(///   no parser that validates the input is found)59.5 112.4 ms
+(/// - one character past the last character validated by the parser that )59.5 102.4 ms
+(///   validates the maximum number of characters.)59.5 92.4 ms
+0 0.498 0 r
+(class)59.5 82.4 ms
+0 g
+( GreedyOrParser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 72.4 ms
+0 g
+(:)s
+(    )59.5 62.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 52.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+re sp
+%%PageTrailer
+%%Page: 9 9
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                              Page 9)59.5 792.4 ms
+F0 sf
+(    )59.5 772.4 ms
+0.498 0 0 r
+(/// Default constructor.)s
+0 g
+(    GreedyOrParser\(\) : matchedParser_\( parsers_.end\(\) \) {})59.5 762.4 ms
+(    )59.5 752.4 ms
+0.498 0 0 r
+(/// Copy constructor.)s
+0 g
+(    GreedyOrParser\( )59.5 742.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( GreedyOrParser& op \) )s
+(        : parsers_\( op.parsers_ \), matchedParser_\( parsers_.end\(\) \) {}  )59.5 732.4 ms
+(    )59.5 722.4 ms
+0.498 0 0 r
+(/// Add parser to the parser list.)s
+0 g
+(    )59.5 712.4 ms
+0.498 0 0 r
+(/// @param p parser to append to parser list.)s
+0 g
+(    )59.5 702.4 ms
+0.498 0 0 r
+(/// @return reference to @c *this.)s
+0 g
+(    GreedyOrParser& Add\( )59.5 692.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { )s
+(        parsers_.push_back\( p \); )59.5 682.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+(; )s
+(    })59.5 672.4 ms
+(    )59.5 662.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Parse method: applies each parser to the )s
+0 g
+(    )59.5 652.4 ms
+0.498 0 0 r
+(/// input stream and selects the parser that parses the most input or )s
+0 g
+(    )59.5 642.4 ms
+0.498 0 0 r
+(/// returns @c false if no validating parser found.)s
+0 g
+(    )59.5 632.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        matchedParser_ = parsers_.end\(\);)59.5 622.4 ms
+(        matchedParsers_.clear\(\);)59.5 612.4 ms
+(        )59.5 602.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( ok = )s
+0.498 0 0.498 r
+(false)s
+0 g
+(; {)s
+(        REWIND r\( ok, is \);)59.5 592.4 ms
+(        Parsers::iterator i = parsers_.begin\(\);)59.5 582.4 ms
+(        )59.5 572.4 ms
+0.498 0.498 0 r
+(for)s
+0 g
+(\( ; i != parsers_.end\(\); ++i \) {)s
+(            )59.5 562.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( StreamOff pos = is.tellg\(\);)s
+(            )59.5 552.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i->Parse\( is \) \) { )s
+(                matchedParsers_.insert\( std::make_pair\( is.tellg\(\), i \) \);)59.5 542.4 ms
+(            })59.5 532.4 ms
+(            is.seekg\( pos \);)59.5 522.4 ms
+(        })59.5 502.4 ms
+(        matchedParser_ = matchedParsers_.empty\(\) ? )59.5 492.4 ms
+(                         parsers_.end\(\) : \( --matchedParsers_.end\(\) \)->second;)59.5 482.4 ms
+(        ok = i != parsers_.end\(\);)59.5 472.4 ms
+(        )59.5 462.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( ok \) is.seekg\( \( --matchedParsers_.end\(\) \)->first \);)s
+(        })59.5 452.4 ms
+(        )59.5 442.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( ok; )s
+(    })59.5 432.4 ms
+(    )59.5 422.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues. Returns the values parsed by the )s
+0 g
+(    )59.5 412.4 ms
+0.498 0 0 r
+(/// selected parser.)s
+0 g
+(    )59.5 402.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 392.4 ms
+0 0.498 0 r
+(static)s
+0 g
+( )s
+0 0.498 0 r
+(const)s
+0 g
+( Values dummy;)s
+(        )59.5 382.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( matchedParser_ != parsers_.end\(\) ? )s
+(                                 matchedParser_->GetValues\(\) : dummy;)59.5 372.4 ms
+(    })59.5 362.4 ms
+(    )59.5 352.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[].)s
+0 g
+(    )59.5 342.4 ms
+0.498 0 0 r
+(/// @throw std::logic_error if key not found.)s
+0 g
+(    )59.5 332.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 322.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = GetValues\(\);)s
+(        Values::const_iterator i = v.find\( k \);)59.5 312.4 ms
+(        )59.5 302.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i == v.end\(\) \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::logic_error\( )s
+0.498 0 0.498 r
+("Cannot find value")s
+0 g
+( \);)s
+(        )59.5 292.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( i->second;)s
+(    })59.5 282.4 ms
+(    )59.5 272.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Clone.)s
+0 g
+(    GreedyOrParser* Clone\(\) )59.5 262.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( GreedyOrParser\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+0.498 0.498 0 r
+(private)59.5 252.4 ms
+0 g
+(:)s
+(    )59.5 242.4 ms
+0.498 0 0 r
+(/// Parser list type.)s
+0 g
+(    )59.5 232.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( std::list< Parser > Parsers;)s
+(    )59.5 222.4 ms
+0.498 0 0 r
+(/// Parser list.)s
+0 g
+(    Parsers parsers_;)59.5 212.4 ms
+(    )59.5 202.4 ms
+0.498 0 0 r
+(/// Reference to matching parser or to @c parsers_.end\(\) if no suitable)s
+0 g
+(    )59.5 192.4 ms
+0.498 0 0 r
+(/// parser found.)s
+0 g
+(    Parsers::const_iterator matchedParser_;)59.5 182.4 ms
+(    std::map< StreamOff, Parsers::const_iterator > matchedParsers_;)59.5 172.4 ms
+(};)59.5 162.4 ms
+0.498 0 0 r
+(//------------------------------------------------------------------------------)59.5 142.4 ms
+(/// @brief Applies a parser until it validates, eof is reached or a terminal)59.5 132.4 ms
+(/// condition parser validates.)59.5 122.4 ms
+0 0.498 0 r
+(class)59.5 112.4 ms
+0 g
+( GreedyParser : )s
+0.498 0.498 0 r
+(public)s
+0 g
+( IParser {)s
+0.498 0.498 0 r
+(public)59.5 102.4 ms
+0 g
+(:)s
+(    )59.5 92.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::value_type::second_type ValueType;)s
+(    )59.5 82.4 ms
+0 0.498 0 r
+(typedef)s
+0 g
+( Values::key_type KeyType;)s
+(    )59.5 72.4 ms
+0.498 0 0 r
+(/// Copy constructor.)s
+0 g
+(    GreedyParser\( )59.5 62.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( GreedyParser& p \) )s
+(        : parser_\( p.parser_ \), terminalParser_\( p.terminalParser_ \) {})59.5 52.4 ms
+re sp
+%%PageTrailer
+%%Page: 10 10
+%%BeginPageSetup
+sv
+0 g
+F0 sf
+%%EndPageSetup
+F1 sf
+(include/Parser.h                                                             Page 10)59.5 792.4 ms
+F0 sf
+(    )59.5 772.4 ms
+0.498 0 0 r
+(/// Constructor.)s
+0 g
+(    )59.5 762.4 ms
+0.498 0 0 r
+(/// @param p parser to apply)s
+0 g
+(    )59.5 752.4 ms
+0.498 0 0 r
+(/// @param term parser validating terminal condition)s
+0 g
+(    GreedyParser\( )59.5 742.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p,)s
+(                  )59.5 732.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( skipBlanks = )s
+0.498 0 0.498 r
+(true)s
+0 g
+(,)s
+(                  )59.5 722.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Parser& term = Parser\(\) \) )s
+(        : parser_\( p \), terminalParser_\( term \), skipBlanks_\( skipBlanks \) {})59.5 712.4 ms
+(    )59.5 702.4 ms
+0 0.498 0 r
+(void)s
+0 g
+( SetParser\( )s
+0 0.498 0 r
+(const)s
+0 g
+( Parser& p \) { parser_ = p; })s
+(    )59.5 692.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Parse. Returns @c true if and only if all )s
+0 g
+(    )59.5 682.4 ms
+0.498 0 0 r
+(/// the parsers in the sequnce return true; @c false otherwise.)s
+0 g
+(    )59.5 672.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( Parse\( InStream& is \) {)s
+(        )59.5 662.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( ok = !\( terminalParser_.Valid\(\) && terminalParser_.Parse\( is \) \))s
+(                  && parser_.Parse\( is \);)59.5 652.4 ms
+(        REWIND r\( ok, is \); )59.5 642.4 ms
+(        )59.5 632.4 ms
+0.498 0.498 0 r
+(while)s
+0 g
+(\( !ok && !is.eof\(\) \) {)s
+(            )59.5 622.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( skipBlanks_ \) {)s
+(                InStream::char_type c = is.get\(\);)59.5 612.4 ms
+(                )59.5 602.4 ms
+0.498 0.498 0 r
+(while)s
+0 g
+(\( IsSpace\( c \) && !is.eof\(\) \) c = is.get\(\);)s
+(                )59.5 592.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( !is.eof\(\) \) is.unget\(\);)s
+(            })59.5 582.4 ms
+(            ok = !\( terminalParser_.Valid\(\) && terminalParser_.Parse\( is \) \))59.5 572.4 ms
+(                  && parser_.Parse\( is \);)59.5 562.4 ms
+(        })59.5 552.4 ms
+(        )59.5 542.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( ok;)s
+(    })59.5 532.4 ms
+(    )59.5 522.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::GetValues.)s
+0 g
+(    )59.5 512.4 ms
+0.498 0 0 r
+(/// Returns all the values parsed by provided parsers. Lazy behavior: values)s
+0 g
+(    )59.5 502.4 ms
+0.498 0 0 r
+(/// are retrieved from parsers the first time this method is invoked.)s
+0 g
+(    )59.5 492.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& GetValues\(\) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 482.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( parser_.GetValues\(\);)s
+(    })59.5 472.4 ms
+(    )59.5 462.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::operator[]. Invokes GetValues\(\) first.)s
+0 g
+(    )59.5 452.4 ms
+0.498 0 0 r
+(/// @exception std::logic error if key not found.)s
+0 g
+(    )59.5 442.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( ValueType& )s
+0.498 0.498 0 r
+(operator)s
+0 g
+([]\( )s
+0 0.498 0 r
+(const)s
+0 g
+( KeyType& k \) )s
+0 0.498 0 r
+(const)s
+0 g
+( {)s
+(        )59.5 432.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( Values& v = GetValues\(\);)s
+(        Values::const_iterator i = v.find\( k \);)59.5 422.4 ms
+(        )59.5 412.4 ms
+0.498 0.498 0 r
+(if)s
+0 g
+(\( i == v.end\(\) \) )s
+0.498 0.498 0 r
+(throw)s
+0 g
+( std::logic_error\( )s
+0.498 0 0.498 r
+("Cannot find value")s
+0 g
+( \);)s
+(        )59.5 402.4 ms
+0.498 0.498 0 r
+(return)s
+0 g
+( i->second;)s
+(    })59.5 392.4 ms
+(    )59.5 382.4 ms
+(    )59.5 372.4 ms
+0.498 0 0 r
+(/// Implementation of IParser::Clone.)s
+0 g
+(    GreedyParser* Clone\(\) )59.5 362.4 ms
+0 0.498 0 r
+(const)s
+0 g
+( { )s
+0.498 0.498 0 r
+(return)s
+0 g
+( )s
+0.498 0.498 0 r
+(new)s
+0 g
+( GreedyParser\( *)s
+0.498 0.498 0 r
+(this)s
+0 g
+( \); })s
+0.498 0.498 0 r
+(private)59.5 342.4 ms
+0 g
+(:)s
+(    )59.5 332.4 ms
+0.498 0 0 r
+(/// Parser list.)s
+0 g
+(    Parser parser_;)59.5 322.4 ms
+(    Parser terminalParser_;)59.5 312.4 ms
+(    )59.5 302.4 ms
+0 0.498 0 r
+(bool)s
+0 g
+( skipBlanks_;)s
+(};)59.5 292.4 ms
+(} )59.5 272.4 ms
+0.498 0 0 r
+(//namespace)s
+re sp
+%%PageTrailer
+%%Trailer
+%%Pages: 10
+%%EOF
+
