@@ -31,9 +31,9 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include "types.h"
 #include "Any.h"
-#include "SmartPtr.h"
 
 namespace parsley {
 
@@ -92,7 +92,7 @@ public:
     } 
     /// Assignment operator from other parser.
     Parser& operator=( const Parser& l ) { 
-        Parser( l ).Swap( *this ); return *this;  
+        Parser( l ).Swap( *this ); return *this;
     }
     /// Constructor from IParser implementation.
     Parser( const IParser& l ) : pImpl_( l.Clone() ) {}
@@ -129,7 +129,7 @@ private:
     }
     /// Owned instance of IParser to which all IParser method calls are 
     /// forwarded.
-    SmartPtr< IParser > pImpl_;
+    std::unique_ptr< IParser > pImpl_;
 };
 
 //-----------------------------------------------------------------------------

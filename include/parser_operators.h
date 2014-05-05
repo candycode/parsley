@@ -34,6 +34,8 @@
 /// @defgroup AndParserOperators AndParser operators
 /// @ingroup operators
 
+#include "Parser.h"
+
 namespace parsley {
  
 /// @ingroup AndParserOperators

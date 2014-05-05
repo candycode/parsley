@@ -28,7 +28,9 @@
 
 /// @file types.h Common types and wrappers.
 
-//common types, other option is to parameterize all classes with template parameters
+//common types, other option is to parameterize all classes with template
+//parameters
+
 #include <iosfwd>
 #include <string>
 #include <cctype>
@@ -49,6 +51,7 @@ typedef String ParserID;
 typedef std::map< ValueID, Any > Values;
 
 // wrappers useful for future unicode support
+///@todo consder using the std::sto* functions
 inline double ToFloat( const char* str ) { return ::atof( str ); }
 inline int ToInt( const char* str ) { return ::atoi( str ); }
 inline int IsSpace( int c ) { return ::isspace( c ); }
