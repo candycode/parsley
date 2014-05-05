@@ -35,7 +35,6 @@
 #include "InStream.h"
 #include "parsers.h"
 #include "parser_operators.h"
-#include "ParserManager.h"
 #include "typedefs.h"
 
 using namespace parsley;

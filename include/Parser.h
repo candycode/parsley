@@ -87,7 +87,7 @@ public:
     /// Swap: swap internal pointers to IParser implementations.
     /// @return reference to @c *this after swap.
     Parser& Swap( Parser& l ) { 
-        parsley::Swap( pImpl_, l.pImpl_ ); 
+        std::swap( pImpl_, l.pImpl_ ); 
         return *this; 
     } 
     /// Assignment operator from other parser.
@@ -115,7 +115,7 @@ public:
     /// Implementation of IParser::Clone.
     Parser* Clone() const { return new Parser( *this ); }
     /// Returns @c true if pImpl_ non-null
-    bool Valid() const { return pImpl_; }
+    bool Valid() const { return pImpl_.get() != 0; }
 
 private:
     /// Check internal pointer to owned IParser instance.
