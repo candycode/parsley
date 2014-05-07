@@ -39,24 +39,29 @@
 
 using namespace parsley;
 
-bool CBack( const Values& v ) {
-    return true;
+struct Context {} ctx_G;
+
+bool CBack( const Values& v, Context&  ) {
     std::cout << *v.begin() << std::endl;
     return true;
 }
 
-template < class CB, class P >
-CBackParser< CB, P > MakeCBackParser( const CB& cb, const P& p ) {
-    return CBackParser< CB, P >( cb, p );
+template < typename CBT, typename P, typename Ctx >
+CBackParser< CBT, P, Ctx > MakeCBackParser( CBT cb, const P& p, Ctx& c ) {
+    return CBackParser< CBT, P, Ctx >( p, cb, c );
 }
 
 
+Parser CB(const Parser& p) {
+    return MakeCBackParser([](const Values& v, Context& ){
+            std::cout << *v.begin() << std::endl;
+            return true;}, p, ctx_G);
+}
+
 void TestRecursiveParser() {
-    typedef bool (*CBackType)(const Values& );
-    typedef CBackParser< CBackType, Parser > CBP;
     Parser expr;
     Parser rexpr = RefParser( expr );
-    Parser value = ( C("("), rexpr ,C(")") ) / F();
+    Parser value =  (CB(C("(")), rexpr ,C(")") ) / F();
     expr = ( RefParser( value ), ( C("+") / C("-") ), 
              RefParser( expr ) ) / RefParser( value );
     std::istringstream iss( "1+(2+3)-1-(23+23.5)" );

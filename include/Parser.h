@@ -76,7 +76,8 @@ public:
     typedef Values::value_type::second_type ValueType;
     typedef Values::key_type KeyType;
     typedef InCharStream InStream;
-    /// Returns @c false if no contained implementation available, true otherwise.
+    /// Returns @c false if no contained implementation available, @c true 
+    /// otherwise.
     /// @return @c false if internal pointer to IParser instance is @c NULL 
     ///         @c true otherwise.
     bool Empty() const { return pImpl_ == 0; }
@@ -745,24 +746,27 @@ private:
     IParserPtr ref_;
 };
 
-template < class CBackT, class ParserT >
+template < class CBackT, class ParserT, typename ContextT >
 class CBackParser : public IParser {
 public:
     typedef CBackT CallBackType;
     typedef ParserT ParserType;
-    CBackParser( const ParserType& p, const CallBackType& cback )   
-        : p_( p ), cback_( cback ) {}
+    CBackParser( const ParserType& p, 
+                 const CallBackType& cback,
+                 ContextT& ctx  )
+        : p_( p ), cback_( cback ), ctx_(ctx) {}
     const Values& GetValues() const { return p_.GetValues(); }
     const ValueType& operator[]( const KeyType& k ) const {
         return p_.operator[]( k ); 
     }
     bool Parse( InStream& is ) {
-        if( p_.Parse( is ) ) return cback_( p_.GetValues() ); return false; 
+        if( p_.Parse( is ) ) return cback_( p_.GetValues(), ctx_ ); return false; 
     }
     CBackParser* Clone() const { return new CBackParser( *this ); }
 private:
     ParserType p_;
     CallBackType cback_;
+    std::reference_wrapper< ContextT > ctx_;
 };
 
 
