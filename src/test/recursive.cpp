@@ -47,14 +47,14 @@ bool CBack( const Values& v, Context&  ) {
 }
 
 template < typename CBT, typename P, typename Ctx >
-CBackParser< CBT, P, Ctx > MakeCBackParser( CBT cb, const P& p, Ctx& c ) {
+CBackParser< CBT, P, Ctx > MakeCBackParser( CBT cb, P p, Ctx& c ) {
     return CBackParser< CBT, P, Ctx >( p, cb, c );
 }
 
 
-Parser CB(const Parser& p) {
-    return MakeCBackParser([](const Values& v, Context& ){
-            std::cout << *v.begin() << std::endl;
+Parser CB(Parser p) {
+    return MakeCBackParser([](const Values& v, Context ){
+            std::cout << v.begin()->second << std::endl;
             return true;}, p, ctx_G);
 }
 
