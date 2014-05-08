@@ -753,7 +753,7 @@ public:
     typedef ParserT ParserType;
     CBackParser( const ParserType& p, 
                  const CallBackType& cback,
-                 ContextT ctx  )
+                 ContextT& ctx )
         : p_( p ), cback_( cback ), ctx_(ctx) {}
     const Values& GetValues() const { return p_.GetValues(); }
     const ValueType& operator[]( const KeyType& k ) const {
@@ -766,7 +766,7 @@ public:
 private:
     ParserType p_;
     CallBackType cback_;
-    /*std::reference_wrapper< ContextT >*/ContextT ctx_;
+    std::reference_wrapper< ContextT > ctx_;
 };
 
 
