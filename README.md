@@ -12,6 +12,10 @@ the contained data.
 It is also possible to use this library to create Parsing Expression Grammar based
 parsers or parse simple languages.
 
+###WARNING
+Parsley is undergoing a rewrite that will end up with a full C++1y version 
+implemented with parser combinators only; no explicit state machine anymore.
+The latest stable version can be found inside the *v1.0-state-machine* tag
 
 [(Preliminary public docs)](http://candycode.github.com/parsley)
 
