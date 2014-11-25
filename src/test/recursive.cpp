@@ -55,7 +55,7 @@ CBackParser< CBT, P, Ctx > MakeCBackParser( const CBT& cb,
 }
 
 Parser CB(Parser p) {
-    return MakeCBackParser([](const Values& v, Context& ctx  ){
+    return MakeCBackParser([](const Values& v, Context& ctx, int ){
             std::cout << v.begin()->second << std::endl;
             return true;}, p, ctx_G);
 }
@@ -63,9 +63,12 @@ Parser CB(Parser p) {
 void TestRecursiveParser() {
     Parser expr;
     Parser rexpr = RefParser( expr );
-    Parser value =  (CB(C("(")), rexpr ,C(")") ) / F();
-    expr = ( RefParser( value ), ( C("+") / C("-") ), 
-             RefParser( expr ) ) / RefParser( value );
+    //Parser value =  ;
+    expr = F()
+           / (F(), C("+"), rexpr)
+           /(CB(C("(")), rexpr ,C(")") ) 
+           / (rexpr, ( C("+") / C("-") ), 
+             rexpr);
     std::istringstream iss( "1+(2+3)-1-(23+23.5)" );
     InStream is( iss );
     if( !expr.Parse( is ) || !is.eof() ) {

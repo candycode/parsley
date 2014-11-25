@@ -72,7 +72,12 @@ public:
         return (static_cast< ValHandler<ValT>* >( pval_ )->val_ ) == v;
     }
 public:
-     ///Convert to const reference.
+    ///Check, cast and return const reference.
+    template < typename T > const T& Get() const {
+        CheckAndThrow< T >();
+        return static_cast< ValHandler<ValT>* >( pval_ )->val_;
+    }
+    ///Convert to const reference.
     template < class ValT > operator const ValT&() const {
         CheckAndThrow< ValT >();    
         return (static_cast< ValHandler<ValT>* >( pval_ )->val_ );

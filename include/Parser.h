@@ -746,27 +746,32 @@ private:
     IParserPtr ref_;
 };
 
-template < class CBackT, class ParserT, typename ContextT >
+template < typename CBackT, 
+           typename ParserT, 
+           typename ContextT,
+           typename IdT = int >
 class CBackParser : public IParser {
 public:
     typedef CBackT CallBackType;
     typedef ParserT ParserType;
     CBackParser( const ParserType& p, 
                  const CallBackType& cback,
-                 ContextT& ctx )
-        : p_( p ), cback_( cback ), ctx_(ctx) {}
+                 ContextT& ctx,
+                 const IdT& id = IdT())
+        : p_( p ), cback_( cback ), ctx_(ctx), id_(id) {}
     const Values& GetValues() const { return p_.GetValues(); }
     const ValueType& operator[]( const KeyType& k ) const {
         return p_.operator[]( k ); 
     }
     bool Parse( InStream& is ) {
-        if( p_.Parse( is ) ) return cback_( p_.GetValues(), ctx_ ); return false; 
+        if( p_.Parse( is ) ) return cback_( p_.GetValues(), ctx_, id_); return false; 
     }
     CBackParser* Clone() const { return new CBackParser( *this ); }
 private:
     ParserType p_;
     CallBackType cback_;
     std::reference_wrapper< ContextT > ctx_;
+    IdT id_;
 };
 
 
