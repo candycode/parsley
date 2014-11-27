@@ -30,6 +30,9 @@
 #include <iostream>
 #include <cassert>
 #include <sstream>
+#include <vector>
+#include <memory>
+#include <type_traits>
 
 #include "types.h"
 #include "InStream.h"
@@ -37,56 +40,75 @@
 #include "parser_operators.h"
 #include "typedefs.h"
 
+class Node;
+
+using NodePtr = std::shared_ptr< Node >;
+using NodeRef = std::weak_ptr< Node >;
+using Nodes   = std::vector< NodePtr >;
+
 using namespace parsley;
 
-enum TYPES = {VALUE = 0,
-              PLUS,
-              MINUS,
-              MUL,
-              DIV,
-              POPEN,
-              PCLOSE,
-              EMPTY};
+enum TYPE {VALUE = 0,
+           PLUS,
+           MINUS,
+           MUL,
+           DIV,
+           POPEN,
+           PCLOSE,
+           EMPTY};
 
 
 class Node : std::enable_shared_from_this< Node > {
-    Any data_;
-    TYPES type_;
-    using Nodes = std::vector< std::unique_ptr< Node > >;
-    std::vector< std::shared_ptr< Node > > children_;
-    std::weak_ptr< Node > parent_;
 public:    
-    Node(const Any& data, TYPES types) 
-    : data_(data), type_(type),
-        parent_(this)) {}
+    Node(const Any& data, TYPE type, NodePtr parent = NodePtr(), NodePtr scope = NodePtr()) 
+    : data_(data), type_(type), parent_(parent), scope_(scope)
+    {}
     Node() = default;
     Node(const Node&) = default;
     Node(Node&&) = default;
     template < typename T >
     const T& Get() const { return data_.Get< T >(); }
-    void Add(std::shared_ptr< Node > n) {
+    void Add(NodePtr n) {
         children_.push_back(n);
-        n->SetParent(std::weak_ptr< Node >(shared_from_this()));
+        n->SetParent(shared_from_this());
     }
-    void Insert(std::shared_ptr< Node > n) {
-        n->SetParent(nodes_.back()->Parent());
-        nodes.back()->SetParent(n);
-        std::swap(nodes_.back(), n);
+    void Insert(NodePtr n) {
+        n->SetParent(children_.back()->Parent());
+        children_.back()->SetParent(n);
+        std::swap(children_.back(), n);
     }
-    void SetParent(std::shared_ptr< Node > p) { parent_->p; }
-    std::shared_ptr< Node > Parent() const { return parent_; }
+    void SetParent(NodePtr p) { parent_ = p; }
+    NodePtr Parent() const { return NodePtr(parent_); }
+    const Node& First() const {
+        return *children_.front();
+    }
+    const Node& Last() const {
+        return *children_.back();
+    }
+private:    
+    Any data_;
+    TYPE type_;
+    
+    Nodes children_;
+    NodeRef parent_;
+    NodeRef scope_;    
 };
 
+bool Operator(TYPE) { return true; }
+
 class Context {
-    bool Add(const Values& v, int id) {
+public:
+    Context() : root_(new Node(Any(), EMPTY)),
+                cursor_(root_), scope_(root_) {}
+    bool Add(const Any& v, TYPE id) {
         switch(id) {
         case VALUE: 
-            assert(v.size());
-            cursor_->Add(new Node(v.front(), id, scope_));
+            if(v.Empty()) return false;
+            cursor_.lock()->Add(new Node(v, id, NodePtr(), scope_));
             cursor_ = cursor_->children.back();
             break;
         case POPEN:
-            cursor_->Add(new Node(Any(), id, scope_));
+            cursor_->Add(new Node(Any(), id, NodePtr(), scope_));
             cursor_ = cursor_->LastChild();
             scope_ = cursor_;
             break;
@@ -97,7 +119,7 @@ class Context {
         case MINUS:
         case MUL:
         case DIV:
-            std::shared_ptr< Node > n(new Node(Any(), id, scope));
+            NodePtr n(new Node(Any(), id, NodePtr(), scope_));
             if(cursor_->Type() != POPEN
                && !Operator(cursor->Type())) {
                 cursor_->Insert(n);
@@ -106,16 +128,44 @@ class Context {
             }
             cursor_ = n;
         }
+        return true;
     }
+    const Node& Root() const { return *root_; }
 private:
-    std::shared_ptr< Node > cursor_;
-    std::shared_ptr< Node > context_;
-    std::shared_ptr< Node > root_;   
+    NodePtr root_; 
+    NodeRef scope_;
+    NodeRef cursor_;  
 };
 
-bool CBack( const Values& v, Context&  ) {
-    std::cout << *v.begin() << std::endl;
-    return true;
+float Traverse(const Node& n, float prevValue = float(0)) {
+    switch n.Type() {
+    case VALUE:
+        return n.Get< float >();
+        break;
+    case POPEN:
+        assert(n.NumChildren() > 0);
+        return Traverse(n.First());
+        break;
+    case PLUS:
+        const float v = n.NumChildren() == 1 ? float(0)
+                         : Traverse(n.First());
+        return v + Traverse(n.Last());
+        break;                 
+    case MINUS:
+        const float v = n.NumChildren() == 1 ? float(0)
+                         : Traverse(n.First());
+        return v - Traverse(n.Last());
+        break;                            
+    case MUL:
+        assert(n.NumChildren() > 1);
+        return Traverse(n.First()) * Traverse(n.Last());
+        break;
+    case DIV:
+        assert(n.NumChildren() > 1);
+        return Traverse(n.First()) / Traverse(n.Last());
+        break;
+    default: break;    
+    }
 }
 
 
@@ -129,14 +179,10 @@ CBackParser< CBT, P, Ctx > MakeCBackParser( const CBT& cb,
 
 Parser CB(Parser p, int id) {
     return MakeCBackParser([](const Values& v, Context& ctx, int id  ){
-            std::cout << v.begin()->second << ' ' << id << std::endl;
-            return true;}, p, ctx_G, id);
+            return ctx.Add(v.begin()->second, id); }, p, ctx_G, id);
 }
 
 //----------------------------------------------------------------------------
-
-
-
 
 void TestMathParser() {
     Parser f = CB(F(), 1),
@@ -154,9 +200,12 @@ void TestMathParser() {
     InStream is(iss);
     if(!expr.Parse( is ) || !is.eof()) {
         std::cout << "ERROR AT " << is.tellg() <<  std::endl;
+        return 1;
+    } else {
+        std::cout << "OK" << std::endl;
+        const float res = Traverse(ctx_G.Root());
+        std::cout << res << std::endl;
     }
-    else std::cout << "OK" << std::endl;
-}
 
 int main( int, char** ) {
     TestMathParser();

@@ -42,8 +42,8 @@ class Node {
 	virtual void Eval(Stack& s, NodeList& next) 
 }
 
-ScopedNodeEval(N n, Val) {
-    Val v = Eval[n.down.type()](n.down, Val());
+ScopedNodeEval(N n, Val, Node* scope) {
+    Val v = Eval[n.down.type()](n.down, Val(), scope);
     return Eval[n.next.type()](n.next, v);	
 }
 
