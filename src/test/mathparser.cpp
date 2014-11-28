@@ -58,9 +58,9 @@ enum TYPE {VALUE = 0,
            EMPTY};
 
 
-class Node : std::enable_shared_from_this< Node > {
+class Node : public std::enable_shared_from_this< Node > {
 public:    
-    Node(const Any& data, TYPE type, NodePtr parent = NodePtr(), NodePtr scope = NodePtr()) 
+    Node(const Any& data, TYPE type, NodeRef parent = NodeRef(), NodeRef scope = NodeRef()) 
     : data_(data), type_(type), parent_(parent), scope_(scope)
     {}
     Node() = default;
@@ -85,6 +85,8 @@ public:
     const Node& Last() const {
         return *children_.back();
     }
+    TYPE Type() const { return type_; }
+    std::size_t NumChildren() const { return children_.size(); }
 private:    
     Any data_;
     TYPE type_;
@@ -94,39 +96,57 @@ private:
     NodeRef scope_;    
 };
 
-bool Operator(TYPE) { return true; }
+bool Operator(TYPE t) { 
+    return t == PLUS
+           || t == MINUS
+           || t == MUL
+           || t == DIV; 
+}
+
+bool ScopeDelimiter(TYPE t) {
+    return t == POPEN || t == PCLOSE;
+}
 
 class Context {
 public:
     Context() : root_(new Node(Any(), EMPTY)),
                 cursor_(root_), scope_(root_) {}
     bool Add(const Any& v, TYPE id) {
+        NodePtr cursor = cursor_.lock();
+        NodePtr n;
+        TYPE t = EMPTY;  
         switch(id) {
         case VALUE: 
             if(v.Empty()) return false;
-            cursor_.lock()->Add(new Node(v, id, NodePtr(), scope_));
-            cursor_ = cursor_->children.back();
+            n = NodePtr(new Node(v, id, NodeRef(), scope_)); 
+            cursor->Add(n);
+            cursor_ = n;
             break;
         case POPEN:
-            cursor_->Add(new Node(Any(), id, NodePtr(), scope_));
-            cursor_ = cursor_->LastChild();
-            scope_ = cursor_;
+            n = NodePtr(new Node(v, id, NodeRef(), scope_)); 
+            cursor->Add(n);
+            scope_ = n;
+            cursor_ = n;
             break;
         case PCLOSE:
-            cursor_ = scope_->Parent();
+            cursor = scope_.lock();
+            assert(ScopeDelimiter(cursor->Type()));
+            scope_ = cursor->Parent();
             break;
         case PLUS:
         case MINUS:
         case MUL:
         case DIV:
-            NodePtr n(new Node(Any(), id, NodePtr(), scope_));
-            if(cursor_->Type() != POPEN
-               && !Operator(cursor->Type())) {
-                cursor_->Insert(n);
-            } else {
-                cursor_->Add(n);
-            }
+            n = NodePtr(new Node(v, id, NodeRef(), scope_)); 
+            t = cursor->Type();
+            if(!Operator(t) && !(ScopeDelimiter(t))) 
+                cursor->Insert(n);
+            else
+                cursor->Add(n);     
             cursor_ = n;
+        break;
+        case EMPTY: break;
+        default: break;    
         }
         return true;
     }
@@ -134,11 +154,13 @@ public:
 private:
     NodePtr root_; 
     NodeRef scope_;
-    NodeRef cursor_;  
-};
+    NodeRef cursor_;
+
+} ctx_G;
 
 float Traverse(const Node& n, float prevValue = float(0)) {
-    switch n.Type() {
+    float v;
+    switch(n.Type()) {
     case VALUE:
         return n.Get< float >();
         break;
@@ -147,12 +169,12 @@ float Traverse(const Node& n, float prevValue = float(0)) {
         return Traverse(n.First());
         break;
     case PLUS:
-        const float v = n.NumChildren() == 1 ? float(0)
+        v = n.NumChildren() == 1 ? float(0)
                          : Traverse(n.First());
         return v + Traverse(n.Last());
         break;                 
     case MINUS:
-        const float v = n.NumChildren() == 1 ? float(0)
+        v = n.NumChildren() == 1 ? float(0)
                          : Traverse(n.First());
         return v - Traverse(n.Last());
         break;                            
@@ -166,30 +188,31 @@ float Traverse(const Node& n, float prevValue = float(0)) {
         break;
     default: break;    
     }
+    return prevValue;
 }
 
 
 template < typename CBT, typename P, typename Ctx, typename Id >
-CBackParser< CBT, P, Ctx > MakeCBackParser( const CBT& cb,
+CBackParser< CBT, P, Ctx, Id > MakeCBackParser( const CBT& cb,
                                             const P& p, 
                                             Ctx& c,
                                             const Id& id) {
     return CBackParser< CBT, P, Ctx, Id >( p, cb, c, id );
 }
 
-Parser CB(Parser p, int id) {
-    return MakeCBackParser([](const Values& v, Context& ctx, int id  ){
+Parser CB(Parser p, TYPE id) {
+    return MakeCBackParser([](const Values& v, Context& ctx, TYPE id  ){
             return ctx.Add(v.begin()->second, id); }, p, ctx_G, id);
 }
 
 //----------------------------------------------------------------------------
 
 void TestMathParser() {
-    Parser f = CB(F(), 1),
-           plus = CB(C("+"), 2),
-           minus = CB(C("-"),3),
-           open  = CB(C("("), 4),
-           close = CB(C(")"), 5); 
+    Parser f = CB(F(), VALUE),
+           plus = CB(C("+"), PLUS),
+           minus = CB(C("-"), MINUS),
+           open  = CB(C("("), POPEN),
+           close = CB(C(")"), PCLOSE); 
     Parser expr;
     Parser rexpr = RefParser( expr );
     Parser term =  (open, rexpr, close) / f;
@@ -199,13 +222,13 @@ void TestMathParser() {
     std::istringstream iss("1+(2+3)-1-(23+23.5)");
     InStream is(iss);
     if(!expr.Parse( is ) || !is.eof()) {
-        std::cout << "ERROR AT " << is.tellg() <<  std::endl;
-        return 1;
+        std::cerr << "ERROR AT " << is.tellg() <<  std::endl;
     } else {
         std::cout << "OK" << std::endl;
         const float res = Traverse(ctx_G.Root());
         std::cout << res << std::endl;
     }
+}
 
 int main( int, char** ) {
     TestMathParser();
