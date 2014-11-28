@@ -40,6 +40,8 @@
 #include "parser_operators.h"
 #include "typedefs.h"
 
+#define log(x) std::cout << __LINE__ << ": " << x << std::endl;
+
 class Node;
 
 using NodePtr = std::shared_ptr< Node >;
@@ -48,7 +50,7 @@ using Nodes   = std::vector< NodePtr >;
 
 using namespace parsley;
 
-enum TYPE {VALUE = 0,
+enum TYPE {VALUE = 1,
            PLUS,
            MINUS,
            MUL,
@@ -60,7 +62,8 @@ enum TYPE {VALUE = 0,
 
 class Node : public std::enable_shared_from_this< Node > {
 public:    
-    Node(const Any& data, TYPE type, NodeRef parent = NodeRef(), NodeRef scope = NodeRef()) 
+    Node(const Any& data, TYPE type, 
+         NodeRef parent = NodeRef(), NodeRef scope = NodeRef()) 
     : data_(data), type_(type), parent_(parent), scope_(scope)
     {}
     Node() = default;
@@ -72,18 +75,36 @@ public:
         children_.push_back(n);
         n->SetParent(shared_from_this());
     }
-    void Insert(NodePtr n) {
-        n->SetParent(children_.back()->Parent());
-        children_.back()->SetParent(n);
-        std::swap(children_.back(), n);
+    void SetParent(NodePtr p) {
+        if(!parent_.expired()) {
+            NodePtr t = parent_.lock(); 
+            Nodes::iterator i = t->children_.begin();
+            for(;
+                i != t->children_.end(); ++i) {
+                if(i->get() == this) break; 
+            }
+            if(i != t->children_.end()) {
+                NodePtr self = *i;
+                p->Add(self);
+                t->children_.erase(i);
+            }
+        }
+        parent_ = p;
     }
-    void SetParent(NodePtr p) { parent_ = p; }
-    NodePtr Parent() const { return NodePtr(parent_); }
+    NodePtr Parent() const { 
+        return parent_.expired() ? NodePtr() :
+               parent_.lock(); 
+    }
     const Node& First() const {
         return *children_.front();
     }
     const Node& Last() const {
         return *children_.back();
+    }
+    NodePtr TakeLastChild() { 
+        NodePtr n = children_.back();
+        children_.resize(children_.size() - 1);
+        return n;
     }
     TYPE Type() const { return type_; }
     std::size_t NumChildren() const { return children_.size(); }
@@ -114,24 +135,26 @@ public:
     bool Add(const Any& v, TYPE id) {
         NodePtr cursor = cursor_.lock();
         NodePtr n;
-        TYPE t = EMPTY;  
+        TYPE t = EMPTY;
         switch(id) {
         case VALUE: 
-            if(v.Empty()) return false;
             n = NodePtr(new Node(v, id, NodeRef(), scope_)); 
             cursor->Add(n);
-            cursor_ = n;
+            if(cursor->NumChildren() < 2) cursor_ = n;
             break;
         case POPEN:
             n = NodePtr(new Node(v, id, NodeRef(), scope_)); 
             cursor->Add(n);
             scope_ = n;
             cursor_ = n;
+            //log(n->Type());
             break;
         case PCLOSE:
             cursor = scope_.lock();
+            //log(cursor->Type());
             assert(ScopeDelimiter(cursor->Type()));
             scope_ = cursor->Parent();
+            cursor_ = scope_;
             break;
         case PLUS:
         case MINUS:
@@ -139,8 +162,11 @@ public:
         case DIV:
             n = NodePtr(new Node(v, id, NodeRef(), scope_)); 
             t = cursor->Type();
-            if(!Operator(t) && !(ScopeDelimiter(t))) 
-                cursor->Insert(n);
+            if(true) {
+                NodePtr c = cursor->Parent()->TakeLastChild();
+                cursor->Parent()->Add(n);
+                n->Add(c);
+            }
             else
                 cursor->Add(n);     
             cursor_ = n;
@@ -158,37 +184,40 @@ private:
 
 } ctx_G;
 
-float Traverse(const Node& n, float prevValue = float(0)) {
-    float v;
+double Traverse(const Node& n) {
+    double v = double();
     switch(n.Type()) {
     case VALUE:
-        return n.Get< float >();
+        v = n.Get< double >();
         break;
     case POPEN:
         assert(n.NumChildren() > 0);
-        return Traverse(n.First());
+        v = Traverse(n.First());
         break;
     case PLUS:
-        v = n.NumChildren() == 1 ? float(0)
+        v = n.NumChildren() == 1 ? double(0)
                          : Traverse(n.First());
-        return v + Traverse(n.Last());
+        v = v + Traverse(n.Last());
         break;                 
     case MINUS:
-        v = n.NumChildren() == 1 ? float(0)
+        v = n.NumChildren() == 1 ? double(0)
                          : Traverse(n.First());
-        return v - Traverse(n.Last());
+        v = v - Traverse(n.Last());
         break;                            
     case MUL:
         assert(n.NumChildren() > 1);
-        return Traverse(n.First()) * Traverse(n.Last());
+        v = Traverse(n.First()) * Traverse(n.Last());
         break;
     case DIV:
         assert(n.NumChildren() > 1);
-        return Traverse(n.First()) / Traverse(n.Last());
+        v = Traverse(n.First()) / Traverse(n.Last());
         break;
+    case EMPTY:
+        if(n.NumChildren() > 0) v = Traverse(n.First());    
     default: break;    
     }
-    return prevValue;
+    
+    return v;
 }
 
 
@@ -202,30 +231,34 @@ CBackParser< CBT, P, Ctx, Id > MakeCBackParser( const CBT& cb,
 
 Parser CB(Parser p, TYPE id) {
     return MakeCBackParser([](const Values& v, Context& ctx, TYPE id  ){
+        log(v.begin()->second);
             return ctx.Add(v.begin()->second, id); }, p, ctx_G, id);
 }
 
 //----------------------------------------------------------------------------
 
 void TestMathParser() {
+
     Parser f = CB(F(), VALUE),
            plus = CB(C("+"), PLUS),
            minus = CB(C("-"), MINUS),
            open  = CB(C("("), POPEN),
-           close = CB(C(")"), PCLOSE); 
+           close = CB(C(")"), PCLOSE),
+           eof = EofParser(); 
     Parser expr;
     Parser rexpr = RefParser( expr );
     Parser term =  (open, rexpr, close) / f;
     Parser rterm = RefParser(term);      
-    expr = (rterm, (plus / minus), 
-             rexpr) / rterm;
-    std::istringstream iss("1+(2+3)-1-(23+23.5)");
+    expr = ((rterm, (plus / minus), 
+             rexpr) / rterm);
+    Parser mathExpr = (expr, eof);
+    std::istringstream iss("1+(2)");
     InStream is(iss);
-    if(!expr.Parse( is ) || !is.eof()) {
+    if(!mathExpr.Parse( is )) {
         std::cerr << "ERROR AT " << is.tellg() <<  std::endl;
     } else {
         std::cout << "OK" << std::endl;
-        const float res = Traverse(ctx_G.Root());
+        const double res = Traverse(ctx_G.Root());
         std::cout << res << std::endl;
     }
 }
