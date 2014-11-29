@@ -236,6 +236,134 @@ Parser CB(Parser p, TYPE id) {
 }
 
 //----------------------------------------------------------------------------
+template < typename IDT, 
+           typename InStreamT,
+           typename StateMapT,
+           typename ParserMapT >
+class IState {
+public:
+    using ID = IDT;
+    using InStream = InStreamT;
+    using StateMap = StateMapT;
+    using ParserMap = ParserMapT;
+    using Parser = typename ParserMap::value_type::second_type;
+    IDT Id() const = 0;
+    bool Eval(InStreamT&, ParserT&& = ParserT()) = 0;
+    IState* Clone() = 0;
+    virtual ~IState() {}
+};
+
+template < typename MapT >
+bool Exists(const MapT& m, 
+            const typename MapT::value_type::first_type& key) {
+    return m.find(key) != n.end();
+}
+
+
+template < typename IDT, 
+           typename InStreamT,
+           typename StateMapT,
+           typename ParserMapT >
+class State : public IState< IDT, InStreamT, StateMapT, ParserMapT >  {
+    using Base = IState< IDT, InStreamT, StateMapT, ParserMapT >;
+    using ID = Base::ID;
+public:
+    ///Empty ?
+    bool Empty() const { return pImpl_ == nullptr; }
+    /// Default constructor.
+    State() : pImpl_(nullptr) {}
+    /// Copy constructor.
+    State(const State& s) : pImpl_( s.pImpl_ ? s.pImpl_->Clone() : nullptr ) {}
+    State(State&& s) : pImpl_(s.pImpl_) {
+        s.pImpl_ = nullptr;
+    }
+    ///From pointer
+    State(IState* s) : pImpl_(s) {}
+    /// Swap: swap internal pointers to IState implementations.
+    /// @return reference to @c *this after swap.
+    State& Swap(State& l) { 
+        std::swap( pImpl_, l.pImpl_ ); 
+        return *this; 
+    } 
+    /// Assignment operator from other state.
+    State& operator=(State s) { 
+        s.Swap( *this );
+        return *this;
+    }
+    /// Constructor from IState implementation.
+    State(const IState& s) : pImpl_(s.Clone()) {}
+    ///Evaluate state: if parser for state exists to apply it, if not
+    ///move to next state
+    bool Eval(InStream& is, 
+              CBackT c, 
+              StateMap& map,
+              ParserMap& parsers) {
+        return pImpl_->Eval(is, c, map, parsers); 
+    }
+    ID Id() const { return pImpl_->Id(); }
+    IState* Clone() const { return new State(*this); }
+private:
+    IState* pImpl_ = nullptr; //willl use unique_ptr
+};
+
+//terminal state Eval implementation:
+if(!Exists(parsers, id)) { 
+    throw std::logic_error("No parser found - terminal "
+                           "state MUST have an associated parser");
+    return false;
+    return parsers[id].Parse(is) 
+           && c(parsers[id_].GetValues(), id);
+}
+
+//non-terminal state Eval implementation, invoke next parser
+return pImpl_->Eval(is, c, map[*this], parsers, final);
+
+
+
+using T = ...//terminal state
+using NT = ...//non-terminal state
+map[NT{EXPR}]  = T{FLOAT} /
+                 T{POPEN}, NT{EXPR}, T{PCLOSE};
+
+class OrState : ... {
+
+    bool Eval(...) {
+        for(auto& i: states_) {
+            const bool v = i.Eval(...);
+            if(v) return true;
+        }
+        return false;
+    }    
+};
+
+class AndState : ... {
+    bool Eval(...) {
+        for(auto& i: states_) {
+            if(!i.Eval(...)) return false;
+        }
+        return true;
+    }
+};
+
+class NotState : ... {
+    bool Eval(...) {
+        if(!state_.Eval(...)) return false;
+        return true;
+    }
+};
+
+
+template < CBackT >
+bool Eval(InStream is, CBackT c, STATE s, STATE final) {
+    if(map[s] == final) {
+        Parser& p = parsers[s];
+        if(parsers[s].Parse(is)) {
+            return c(p.GetValues(), s);
+        }
+    } else {
+       map[s].Eval(is); 
+    }     
+}
 
 void TestMathParser() {
 
@@ -247,14 +375,14 @@ void TestMathParser() {
            eof = EofParser(); 
     Parser expr;
     Parser rexpr = RefParser( expr );
-    Parser term =  (open, rexpr, close) / f;
+    Parser term =  f / (open, rexpr, close);
     Parser rterm = RefParser(term);      
     expr = ((rterm, (plus / minus), 
              rexpr) / rterm);
     Parser mathExpr = (expr, eof);
-    std::istringstream iss("1+(2)");
+    std::istringstream iss("(2)");
     InStream is(iss);
-    if(!mathExpr.Parse( is )) {
+    if(!expr.Parse( is )) {
         std::cerr << "ERROR AT " << is.tellg() <<  std::endl;
     } else {
         std::cout << "OK" << std::endl;
