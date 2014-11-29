@@ -322,8 +322,12 @@ return pImpl_->Eval(is, c, map[*this], parsers, final);
 
 using T = ...//terminal state
 using NT = ...//non-terminal state
-map[NT{EXPR}]  = T{FLOAT} /
-                 T{POPEN}, NT{EXPR}, T{PCLOSE};
+enum {FLOAT, PLUS, MINUS, POPEN, PCLOSE, EXPR};
+map[NT{EXPR}]  = T{FLOAT} |
+                 T{PLUS} & NT{EXPR} |
+                 T{MINUS} & NT{EXPR} |
+                 NT{EXPR} & (T{PLUS} | T{MINUS}) & NT{EXPR}) | 
+                 T{POPEN} & NT{EXPR} & T{PCLOSE};
 
 class OrState : ... {
 
