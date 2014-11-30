@@ -236,98 +236,207 @@ Parser CB(Parser p, TYPE id) {
 }
 
 //----------------------------------------------------------------------------
-template < typename IDT, 
-           typename InStreamT,
+// State machine
+//----------------------------------------------------------------------------
+template < typename InStreamT,
            typename StateMapT,
-           typename ParserMapT >
-class IState {
-public:
-    using ID = IDT;
+           typename ParserMapT,
+           typename ActionMapT >
+struct IState {
     using InStream = InStreamT;
     using StateMap = StateMapT;
     using ParserMap = ParserMapT;
     using Parser = typename ParserMap::value_type::second_type;
-    IDT Id() const = 0;
-    bool Eval(InStreamT&, ParserT&& = ParserT()) = 0;
-    IState* Clone() = 0;
+    using ActionMap = ActionMapT;
+    using Action = typename ActionMap::value_type::second_type;
+    using ID = StateMap::value_type::first_type;
+    virtual ID Id() const = 0;
+    virtual bool Eval(InStream& is, 
+                      ActionMap& c, 
+                      StateMap& map,
+                      ParserMap& parsers) = 0;
+    virtual IState* Clone() = 0;
     virtual ~IState() {}
 };
 
 template < typename MapT >
 bool Exists(const MapT& m, 
             const typename MapT::value_type::first_type& key) {
-    return m.find(key) != n.end();
+    return m.find(key) != m.end();
 }
 
 
-template < typename IDT, 
-           typename InStreamT,
-           typename StateMapT,
-           typename ParserMapT >
-class State : public IState< IDT, InStreamT, StateMapT, ParserMapT >  {
-    using Base = IState< IDT, InStreamT, StateMapT, ParserMapT >;
-    using ID = Base::ID;
+class State {
 public:
-    ///Empty ?
-    bool Empty() const { return pImpl_ == nullptr; }
-    /// Default constructor.
-    State() : pImpl_(nullptr) {}
+    template < typename T >
+    State(T& impl) : pImpl_(new Impl< T >(impl)) {}
+    template < typename T >
+    State(T&& impl) : pImpl_(new Impl< T >(std::move(impl))) {}
     /// Copy constructor.
-    State(const State& s) : pImpl_( s.pImpl_ ? s.pImpl_->Clone() : nullptr ) {}
-    State(State&& s) : pImpl_(s.pImpl_) {
-        s.pImpl_ = nullptr;
-    }
-    ///From pointer
-    State(IState* s) : pImpl_(s) {}
-    /// Swap: swap internal pointers to IState implementations.
-    /// @return reference to @c *this after swap.
-    State& Swap(State& l) { 
-        std::swap( pImpl_, l.pImpl_ ); 
-        return *this; 
-    } 
-    /// Assignment operator from other state.
-    State& operator=(State s) { 
-        s.Swap( *this );
-        return *this;
-    }
-    /// Constructor from IState implementation.
-    State(const IState& s) : pImpl_(s.Clone()) {}
-    ///Evaluate state: if parser for state exists to apply it, if not
-    ///move to next state
+    State(const State& s) : pImpl_(s.pImpl_->Clone()) {}
+    State(State&& s) = default;
+    ///Evaluate state.
+    template < typename InStreamT,
+               typename StateMapT, 
+               typename ParserMap,
+               typename ActionMap>
     bool Eval(InStream& is, 
-              CBackT c, 
-              StateMap& map,
-              ParserMap& parsers) {
-        return pImpl_->Eval(is, c, map, parsers); 
+              StateMapT& states, 
+              ParserMapT& parsers,
+              ActionMap& actions) {
+        assert(pImpl_);
+        return pImpl_->Eval(is, states, parsers, actions); 
     }
-    ID Id() const { return pImpl_->Id(); }
-    IState* Clone() const { return new State(*this); }
 private:
-    IState* pImpl_ = nullptr; //willl use unique_ptr
+    struct Instance {
+        template < typename InStream,
+                   typename StateMap,
+                   typename ParserMap,
+                   typename ActionMap >
+        bool Eval() const {
+            using S = IState< InStream,
+                              StateMap,
+                              ParserMap,
+                              ActionMap >;
+            return static_cast< const S* >(this)->Eval(is, sm, pm, am);                  
+        } 
+        virtual Instance* Clone() const = 0;
+    };
+    template < typename T >
+    struct Impl : Instance {
+        Impl(const T& impl) : impl_(impl) {}
+        Impl(T&& impl) : impl_(std::move(impl)) {}
+        Impl(const Impl&) = default;
+        Impl(Impl&&) = default;
+        Impl* Clone() const {
+            return new Impl(*this);
+        }
+        T impl_;
+    };
+private:
+    /// Implementation
+    std::unique_ptr< Instance > pImpl_;
 };
 
-//terminal state Eval implementation:
-if(!Exists(parsers, id)) { 
-    throw std::logic_error("No parser found - terminal "
-                           "state MUST have an associated parser");
-    return false;
-    return parsers[id].Parse(is) 
-           && c(parsers[id_].GetValues(), id);
-}
 
-//non-terminal state Eval implementation, invoke next parser
-return pImpl_->Eval(is, c, map[*this], parsers, final);
+
+
+/// Terminal state: invoke parser, to be put inside a State instance,
+/// optionally invoke callback
+template < typename InStreamT,
+           typename StateMapT,
+           typename ParserMapT,
+           typename ActionMapT >
+class TerminalState : public IState< InStreamT, StateMapT, ParserMapT > {
+public:    
+    using Base = IState< InStreamT, StateMapT, ParserMapT >;
+    using ID = Base::ID;
+    using InStream = Base::InStream;
+    using StateMap = Base::StateMap;
+    using ParserMap = Base::ParserMap;
+    using Parser = typename ParserMap::value_type::second_type;
+    using ActionMap = Base::ActionMap;
+    using Action = typename ActionMap::value_type::second_type;
+    TerminalState() = delete;
+    TerminalState(ID id) : id_(id) {}
+    TerminalState(const TerminalState&) = default;
+    TerminalState(TerminalState&&) = default;
+    virtual bool Eval(InStream& is, 
+                      ActionMap& actions, 
+                      StateMap& map,
+                      ParserMap& parsers) {
+        if(!Exists(parsers, id_)) { 
+            throw std::logic_error("No parser found - terminal "
+                                   "state MUST have an associated parser");
+
+            return false;
+            return parsers[id].Parse(is) 
+                   && Exists(actions, id) ? actions[id](parsers[id].GetValues(), id)
+                   : true;
+        }
+    }
+    virtual Base* Clone() { return new TerminalState(*this); }
+private:
+    ID id_;    
+};
+
+/// Non-terminal state: do not invoke parser, to be put inside a State instance,
+/// optionally invoke callback
+template < typename InStreamT,
+           typename StateMapT,
+           typename ParserMapT,
+           typename ActionMapT >
+class NonTerminalState : public IState< InStreamT, StateMapT, ParserMapT > {
+public:    
+    using Base = IState< InStreamT, StateMapT, ParserMapT >;
+    using ID = Base::ID;
+    using InStream = Base::InStream;
+    using StateMap = Base::StateMap;
+    using ParserMap = Base::ParserMap;
+    using Parser = typename ParserMap::value_type::second_type;
+    using ActionMap = Base::ActionMap;
+    using Action = typename ActionMap::value_type::second_type;
+    NonTerminalState() = delete;
+    NonTerminalState(ID id) : id_(id) {}
+    NonTerminalState(const NonTerminalState&) = default;
+    NonTerminalState(NonTerminalState&&) = default;
+    virtual bool Eval(InStream& is, 
+                      ActionMap& actions, 
+                      StateMap& map,
+                      ParserMap& parsers) {
+                    if(!Exists(map, id_))
+                        throw std::logic_error("Missing next state: Non terminal "
+                                               "state must have a next state");
+
+
+                   return false;
+                   return map[id_].Eval(is, actions, map, parsers);
+                   && Exists(actions, id_) ? actions[id](parsers[id].GetValues(), id)
+                   : true;
+    }
+    
+    virtual Base* Clone() { return new TerminalState(*this); }
+private:
+    ID id_;    
+};
+
+template < typename IDT, 
+           typename ActionT
+           template < typename, typename > class MapT = std::unordered_map >
+struct Types {
+    using KeyType = IDT;
+    using ActionType = ActionT;
+    using ParserType = Parserl
+    using StateType = State;
+    using ParserMapType = MapT< KeyType, ParserType >; 
+    using ActionMapType = MapT< KeyType, ActionType >;
+    using StateMapType = MapT< Key, StateType >
+    using IStateType = IState< InStream, StateMapType, 
+                               ParserMapType, ActionMapType >;
+    using NonTerminalStateType = NonTerminalState< InStream, StateMapType, 
+                               ParserMapType, ActionMapType >; 
+    using TerminalStateType = TerminalState< InStream, StateMapType, 
+                               ParserMapType, ActionMapType >;
+    using OrStateType = OrTerminalState< InStream, StateMapType, 
+                               ParserMapType, ActionMapType >;
+    using AndStateType = AndTerminalState< InStream, StateMapType, 
+                               ParserMapType, ActionMapType >;
+    using NotStateType = NotTerminalState< InStream, StateMapType, 
+                               ParserMapType, ActionMapType >;
+    using GreedyStateType = GreedyState< InStream, StateMapType, 
+                               ParserMapType, ActionMapType >;                                                                                                                                                                      
+};
 
 
 
 using T = ...//terminal state
 using NT = ...//non-terminal state
 enum {FLOAT, PLUS, MINUS, POPEN, PCLOSE, EXPR};
-map[NT{EXPR}]  = T{FLOAT} |
-                 T{PLUS} & NT{EXPR} |
-                 T{MINUS} & NT{EXPR} |
-                 NT{EXPR} & (T{PLUS} | T{MINUS}) & NT{EXPR}) | 
-                 T{POPEN} & NT{EXPR} & T{PCLOSE};
+map[EXPR]  = T{FLOAT} |
+             T{PLUS} & NT{EXPR} |
+             T{MINUS} & NT{EXPR} |
+             NT{EXPR} & (T{PLUS} | T{MINUS}) & NT{EXPR}) | 
+             T{POPEN} & NT{EXPR} & T{PCLOSE};
 
 class OrState : ... {
 
@@ -356,18 +465,17 @@ class NotState : ... {
     }
 };
 
+class GreedyState : ... {
+    bool Eval(...) {
+        States::iterator s == states_.end();
+        for(States::iterator i = states_.begin(); i != states_.end(); ++i) {
+            if(i->Eval(...)) s = i;
+        } 
+        return s != states_.end();
+    }
+};
 
-template < CBackT >
-bool Eval(InStream is, CBackT c, STATE s, STATE final) {
-    if(map[s] == final) {
-        Parser& p = parsers[s];
-        if(parsers[s].Parse(is)) {
-            return c(p.GetValues(), s);
-        }
-    } else {
-       map[s].Eval(is); 
-    }     
-}
+
 
 void TestMathParser() {
 
