@@ -47,6 +47,7 @@ typedef InStream::streamoff StreamOff;
 typedef InStream::char_type Char;
 typedef String ValueID;
 typedef String ParserID;
+//@todo consider using an unordered_map
 typedef std::map< ValueID, Any > Values;
 
 // wrappers useful for future unicode support

@@ -250,7 +250,6 @@ struct IState {
     using ActionMap = ActionMapT;
     using Action = typename ActionMap::value_type::second_type;
     using ID = StateMap::value_type::first_type;
-    virtual ID Id() const = 0;
     virtual bool Eval(InStream& is, 
                       ActionMap& c, 
                       StateMap& map,
@@ -262,16 +261,18 @@ struct IState {
 template < typename MapT >
 bool Exists(const MapT& m, 
             const typename MapT::value_type::first_type& key) {
+#ifdef CHECK_KEY
     return m.find(key) != m.end();
+#endif
 }
 
 
 class State {
 public:
     template < typename T >
-    State(T& impl) : pImpl_(new Impl< T >(impl)) {}
+    State(const T& impl) : pImpl_(new Impl< T >(impl)) {}
     template < typename T >
-    State(T&& impl) : pImpl_(new Impl< T >(std::move(impl))) {}
+    State(T&& impl) : pImpl_(new Impl< T >(std::forward(impl))) {}
     /// Copy constructor.
     State(const State& s) : pImpl_(s.pImpl_->Clone()) {}
     State(State&& s) = default;
@@ -293,12 +294,12 @@ private:
                    typename StateMap,
                    typename ParserMap,
                    typename ActionMap >
-        bool Eval() const {
+        bool Eval(InStream& is, StateMap& sm, ParserMap& pm, ActionMap& am) const {
             using S = IState< InStream,
                               StateMap,
                               ParserMap,
                               ActionMap >;
-            return static_cast< const S* >(this)->Eval(is, sm, pm, am);                  
+            return static_cast< const Impl< S >* >(this)->impl_.Eval(is, sm, pm, am);                  
         } 
         virtual Instance* Clone() const = 0;
     };
@@ -350,10 +351,10 @@ public:
                                    "state MUST have an associated parser");
 
             return false;
-            return parsers[id].Parse(is) 
-                   && Exists(actions, id) ? actions[id](parsers[id].GetValues(), id)
-                   : true;
         }
+        return parsers[id].Parse(is) 
+               && Exists(actions, id) ? actions[id](parsers[id].GetValues(), id)
+               : true;
     }
     virtual Base* Clone() { return new TerminalState(*this); }
 private:
@@ -384,15 +385,14 @@ public:
                       ActionMap& actions, 
                       StateMap& map,
                       ParserMap& parsers) {
-                    if(!Exists(map, id_))
-                        throw std::logic_error("Missing next state: Non terminal "
-                                               "state must have a next state");
-
-
-                   return false;
-                   return map[id_].Eval(is, actions, map, parsers);
-                   && Exists(actions, id_) ? actions[id](parsers[id].GetValues(), id)
-                   : true;
+        if(!Exists(map, id_)) {
+            throw std::logic_error("Missing next state: Non terminal "
+                                   "state must have a next state");
+            return false;
+        }
+        return map[id_].Eval(is, actions, map, parsers);
+        && Exists(actions, id_) ? actions[id_](parsers[id_].GetValues(), id_)
+        : true;
     }
     
     virtual Base* Clone() { return new TerminalState(*this); }
@@ -400,13 +400,53 @@ private:
     ID id_;    
 };
 
+/// Non-terminal state: do not invoke parser, to be put inside a State instance,
+/// optionally invoke callback
+template < typename InStreamT,
+           typename StateMapT,
+           typename ParserMapT,
+           typename ActionMapT >
+class GreedyState : public IState< InStreamT, StateMapT, ParserMapT > {
+public:    
+    using Base = IState< InStreamT, StateMapT, ParserMapT >;
+    using ID = Base::ID;
+    using InStream = Base::InStream;
+    using StateMap = Base::StateMap;
+    using ParserMap = Base::ParserMap;
+    using Parser = typename ParserMap::value_type::second_type;
+    using ActionMap = Base::ActionMap;
+    using Action = typename ActionMap::value_type::second_type;
+    GreedyState() = delete;
+    GreedyState(ID id) : id_(id) {}
+    GreedyState(const GreedyState&) = default;
+    GreedyState(GreedyState&&) = default;
+    virtual bool Eval(InStream& is, 
+                      ActionMap& actions, 
+                      StateMap& map,
+                      ParserMap& parsers) {
+        if(!Exists(map, id_)) {
+            throw std::logic_error("Missing next state: Non terminal "
+                                   "state must have a next state");
+            return false;
+        }
+        const bool v = map[id_].Eval(is, actions, map, parsers);
+        while(map[id_].Eval(is, actions, map, parsers));
+        return v && Exists(actions, id_) ? actions[id](parsers[id].GetValues(), id)
+        : v;
+    }
+    
+    virtual Base* Clone() { return new TerminalState(*this); }
+private:
+    ID id_;    
+};
+
+
 template < typename IDT, 
-           typename ActionT
            template < typename, typename > class MapT = std::unordered_map >
 struct Types {
     using KeyType = IDT;
-    using ActionType = ActionT;
-    using ParserType = Parserl
+    using ActionType = std::function< bool (InStream&, const Values&, KeyType) >;
+    using ParserType = Parser;
     using StateType = State;
     using ParserMapType = MapT< KeyType, ParserType >; 
     using ActionMapType = MapT< KeyType, ActionType >;
