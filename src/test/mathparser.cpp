@@ -465,14 +465,13 @@ class NotState : ... {
     }
 };
 
+//Greedy: evaluate until contained states evaluates
+//to true, return true iff at least one match occurs
 class GreedyState : ... {
     bool Eval(...) {
-        States::iterator s == states_.end();
-        for(States::iterator i = states_.begin(); i != states_.end(); ++i) {
-            if(i->Eval(...)) s = i;
-        } 
-        return s != states_.end();
-    }
+        bool r = state_.Eval();
+        while(state_.Eval(...));
+        return r;
 };
 
 
