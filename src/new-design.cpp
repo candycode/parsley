@@ -76,7 +76,7 @@ template < typename KeyT,
            typename ActionMapT >
 ParsingTypes< InStreamT, EvalMapT, ParserMapT, ActionMapT >
 ::EvalFunType
-T(KeyT id) {
+GenerateEvalTerm(KeyT id) {
 	return [id](InStreamT& is,
 				EvalMapT& em,
 				ParseMapT& pm,
@@ -180,32 +180,50 @@ template < typename InStreamT,
            typename... Fs >
 ParsingTypes< InStreamT, EvalMapT, ParserMapT, ActionMapT >
 ::EvalFunType
- Compose(F f, Fs...fs) {
+ Compose(C c F f, Fs...fs) {
     return [](InStreamT& is,
               EvalMapT& em,
               ParserMapT&  pm,
               ActionMapT& am) {
-        return C(f(is, em, pm, am), 
+        return c(f(is, em, pm, am), 
                  Compose< InStreamT, EvalMapT, ParserMapT,
-                  ActionMapT, C >(fs...))(is, em, pm, am);
+                  ActionMapT, C >(c, fs...))(is, em, pm, am);
     };
 }
 
-struct {
-  OR(...) {
-    Compose<OR_>(...);
-  };
-  
+struct GrammarTypes {
+    using EvalFun = ParsingTypes< InStreamT, EvalMapT, ParserMapT, ActionMapT >::EvalFun;
+    using Key = ParsingTypes< InStreamT, EvalMapT, ParserMapT, ActionMapT >::Key;
+    static EvalFun GenOR(EvalFun f1, EvalFun f2) {
+        return GenerateOrTerm< InStream, EvalMap, ParserMap, ActionMap >(f1, f2);
+    }   
+    static EvalFunType EvalTerm(Key id) {
+        return GenerateEvalTerm< InStream, EvalMap, ParserMap, ActionMap >(id);
+    }
+    template < typename...ArgsT >
+    static EvalFunType EvalOR(ArgsT...args) {
+        return Compose< ....>(GenOR, args...);
+        
+    } 
+    static EvalFunType EvalAND(EvalFunType f1, EvalFunType f2) {
+    template < typename...ArgsT >
+    static EvalFunType EvalOR(ArgsT...args) {
+        return Compose< ....>(GenAnd, args...);
+        
+    } 
 
 };
 
+GrammarTypes< InStream, EvalMap, ParserMap, ActionMap > {
 
+};
 grammar[EXPR] = OR(T(VALUE),
                    AND(T(POPEN),T(EXPR), T(PCLOSE)));
 grammar[VALUE] = T(VALUE)
 grammar[POPEN] = T(POPEN)
 grammar[PCLOSE] = T(PCLOSE)
 return grammar[EXPR](instream, grammar, parserMap, actionMap, context);m
+
 
 
 }
