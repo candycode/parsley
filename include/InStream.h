@@ -131,7 +131,7 @@ public:
     }
 
     /// Moves get pointer to the specified position. In case of forward movement
-    /// it repeatedly invokes Any::get() and records end of line separators.
+    /// it repeatedly invokes get() and records end of line separators.
     /// @param p stream position
     /// @return reference to stream
     IT& seekg( streampos p ) {
@@ -191,7 +191,7 @@ public:
     }
 
 private:
-    /// Seek backward. Called by Any::seekg.
+    /// Seek backward. Called by seekg().
     void BackwardSeek( streampos p ) {
         assert( isp_ != 0 && "NULL STREAM POINTER" );
         isp_->seekg( p );
@@ -204,7 +204,7 @@ private:
         lines_ = eols_.size();
         if( !eols_.empty() ) lineChars_ = int( p - eols_.back() ); 
     }
-    /// Seek forward. Called by Any::seekg.
+    /// Seek forward. Called by seekg().
     void ForwardSeek( streampos p ) {
         assert( isp_ != 0 && "NULL STREAM POINTER" );
         while( !isp_->bad() && isp_->tellg() != p ) get();

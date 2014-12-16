@@ -52,7 +52,9 @@ struct IParser {
     /// @exception std::logic error
     virtual const ValueType& operator[]( const KeyType& k ) const = 0;
     /// Performs parsing on input stream.
-    virtual bool Parse( InStream& ) = 0;
+    /// If @c rewind is @c false the stream pointer is left pointing at the 
+    /// first character that fails 
+    virtual bool Parse( InStream&, bool rewind = true ) = 0;
     /// Returns copy of current instance.
     /// @return pointer to newly created instance.
     virtual IParser* Clone() const = 0;
@@ -108,10 +110,10 @@ public:
         return pImpl_->operator[]( k );
     }
     /// Implementation of IParser::Parse.
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         CheckPointer();
         if( !pImpl_ ) return false;
-        return pImpl_->Parse( is );
+        return pImpl_->Parse( is, rewind );
     }
     /// Implementation of IParser::Clone.
     Parser* Clone() const { return new Parser( *this ); }
@@ -218,18 +220,21 @@ public:
     }
     /// Implementation of IParser::Parse. Returns @c true if and only if all 
     /// the parsers in the sequnce return true; @c false otherwise.
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         valueMap_.clear();
         //if( !is.good() ) return false;
         bool ok = false; {
-        REWIND r( ok, is );
+        REWIND r( rewind, is );
         for( Parsers::iterator i = parsers_.begin();
              i != parsers_.end();
              ++i ) {
             if( skipBlanks_) SkipBlanks( is );
-            if( !i->Parse( is ) ) return false;
+            if( !i->Parse( is, rewind ) ) {
+                rewind = !rewind;
+                return false;
+            }
         }
-        ok = true;
+        ok = true; 
         }
         return ok;
     }
@@ -306,14 +311,14 @@ public:
     /// @return true if parser invoked at least MultiParser#countMin_ times and 
     ///    no more than MultiParser#countMax_ times or invoked at least 
     ///    MultiParser#countMax_ times and MultiParser#countMax_ < 0.
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         valueMap_.clear();
         bool ok = false; {
-        REWIND r( ok, is );
+        REWIND r( rewind, is );
         int counter = 0;
         while( is.good() && 
                ( counter < countMax_ || countMax_ < 0 ) &&
-               parser_.Parse( is ) ) {
+               parser_.Parse( is, rewind ) ) {
             ++counter;
             const Values& v = parser_.GetValues();
             for( Values::const_iterator i = v.begin(); i != v.end(); ++i ) {
@@ -324,6 +329,7 @@ public:
             ok = false;    
         } 
         else ok = true; // counter in [countMin_, countMax_]
+        rewind = ok || !rewind;
         }
         return ok;
     }
@@ -395,7 +401,7 @@ public:
     /// the parsed characters.
     const Values& GetValues() const { return valueMap_; }
     NotParser* Clone() const { return new NotParser< ParserT >( *this ); }
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         // if ParserT::Parse returns true
         // the get pointer will point one char
         // past the end of the validated char sequence,
@@ -408,7 +414,7 @@ public:
         String s;
         Char c = 0;
         StreamPos pos = is.tellg();
-        while( is.good() && !parser_.Parse( is ) ) {
+        while( is.good() && !parser_.Parse( is, rewind ) ) {
             c = is.get();
             if( !is.good() ) break;
             s.push_back( c );
@@ -462,9 +468,9 @@ public:
     const Values& GetValues() const { return valueMap_; }
     OptionalParser* Clone() const { return new OptionalParser( *this ); }
     /// Implementation of IParser::Parse: apply parser and always returns true.
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         valueMap_.clear();
-        if( parser_.Parse( is ) ) valueMap_ = parser_.GetValues();
+        if( parser_.Parse( is, rewind ) ) valueMap_ = parser_.GetValues();
         return true;
     }
     /// Implementation of IParser::operator[].
@@ -520,14 +526,14 @@ public:
     /// parses the input.
     /// @param is input stream.
     /// @return true if at least one one parser is successful, false otherwise. 
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         matchedParser_ = parsers_.end();
         bool ok = false; {
-        REWIND r( ok, is );
+        REWIND r( rewind, is );
         Parsers::iterator i = parsers_.begin();
         for( ; i != parsers_.end(); ++i ) {
             const StreamPos pos = is.tellg();
-            if( !i->Parse( is ) ) {
+            if( !i->Parse( is, rewind ) ) {
                 is.seekg( pos );
                 continue;
             }
@@ -535,6 +541,7 @@ public:
         }
         matchedParser_ = i;
         ok = i != parsers_.end();
+        rewind = ok || !rewind;
         }
         return ok; 
     }
@@ -597,15 +604,15 @@ public:
     /// Implementation of IParser::Parse method: applies each parser to the 
     /// input stream and selects the parser that parses the most input or 
     /// returns @c false if no validating parser found.
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         matchedParser_ = parsers_.end();
         matchedParsers_.clear();
         bool ok = false; {
-        REWIND r( ok, is );
+        REWIND r( rewind, is );
         Parsers::iterator i = parsers_.begin();
         for( ; i != parsers_.end(); ++i ) {
             const StreamOff pos = is.tellg();
-            if( i->Parse( is ) ) { 
+            if( i->Parse( is, rewind ) ) { 
                 matchedParsers_.insert( std::make_pair( is.tellg(), i ) );
             }
             is.seekg( pos );
@@ -615,6 +622,7 @@ public:
                          parsers_.end() : ( --matchedParsers_.end() )->second;
         ok = i != parsers_.end();
         if( ok ) is.seekg( ( --matchedParsers_.end() )->first );
+        rewind = ok || !rewind;
         }
         return ok; 
     }
@@ -666,19 +674,20 @@ public:
     void SetParser( const Parser& p ) { parser_ = p; }
     /// Implementation of IParser::Parse. Returns @c true if and only if all 
     /// the parsers in the sequnce return true; @c false otherwise.
-    bool Parse( InStream& is ) {
-        bool ok = !( terminalParser_.Valid() && terminalParser_.Parse( is ) )
+    bool Parse( InStream& is, bool rewind = true ) {
+        bool ok = !( terminalParser_.Valid() && terminalParser_.Parse( is, rewind ) )
                   && parser_.Parse( is );
-        REWIND r( ok, is ); 
+        REWIND r( rewind, is ); 
         while( !ok && !is.eof() ) {
             if( skipBlanks_ ) {
                 InStream::char_type c = is.get();
                 while( IsSpace( c ) && !is.eof() ) c = is.get();
                 if( !is.eof() ) is.unget();
             }
-            ok = !( terminalParser_.Valid() && terminalParser_.Parse( is ) )
+            ok = !( terminalParser_.Valid() && terminalParser_.Parse( is, rewind ) )
                   && parser_.Parse( is );
         }
+        rewind = ok || !rewind;
         return ok;
     }
     /// Implementation of IParser::GetValues.
@@ -720,7 +729,7 @@ public:
     const ValueType& operator[]( const KeyType& k ) const {
         return ref_->operator[]( k ); 
     }
-    bool Parse( InStream& is ) {
+    bool Parse( InStream& is, bool rewind = true ) {
         assert( ref_ && "NULL PARSER REFERENCE" );
         // little memoization logic: if text already parsed simply skip to
         // end of parsed text
@@ -763,8 +772,8 @@ public:
     const ValueType& operator[]( const KeyType& k ) const {
         return p_.operator[]( k ); 
     }
-    bool Parse( InStream& is ) {
-        if( p_.Parse( is ) ) return cback_( p_.GetValues(), ctx_, id_); return false; 
+    bool Parse( InStream& is, bool rewind = true ) {
+        if( p_.Parse( is, rewind ) ) return cback_( p_.GetValues(), ctx_, id_); return false; 
     }
     CBackParser* Clone() const { return new CBackParser( *this ); }
 private:
