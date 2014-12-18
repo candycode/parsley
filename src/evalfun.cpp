@@ -14,9 +14,6 @@ using namespace std;
 
 using NonTerminal = Parser;
 
-//rewind = rewind stream pointer in case rule doesn't match
-//rewind is required for NOT type parsers: if rewind is on
-//by default 
 
 template < typename InStreamT,
            typename KeyT,
@@ -30,85 +27,95 @@ MakeTermEval(KeyT k,
                               //.., NonTerminal(),...
              ActionMapT& am,
              ContextT& c) {
-    return [k, &em, p, &am, &c](InStreamT& is, bool rewind) mutable -> bool {
+    return [k, &em, p, &am, &c](InStreamT& is) mutable -> bool {
         assert(em.find(k) != em.end());
         assert(am.find(k) != am.end());
         bool ret = false;
         if(!p.Empty()) {
-            ret = p.Parse(is, rewind)
+            ret = p.Parse(is) 
                   && am[k](p.GetValues(), c);
-        } else ret = em.find(k)->second(is, rewind) 
+        } else ret = em.find(k)->second(is)  
                       && am[k](Values(), c);
         return ret;
     };
 }
 
-using EvalFun = std::function< bool (InStream&, bool) >;
+using EvalFun = std::function< bool (InStream&) >;
 
 
 
 
 EvalFun OR() {
-  return [](InStream&, bool) { return false; };
+  return [](InStream&) { return false; };
 }
 
 template < typename F, typename...Fs > 
 EvalFun OR(F f, Fs...fs) {
-    return [=](InStream& is, bool rewind = true) {
+    return [=](InStream& is) {
+        {
         bool pass = false; 
-        REWIND(rewind, is);
-        pass = f(is, rewind) || OR(fs...)(is, rewind);
-        rewind = pass || !rewind;
-        return pass;
+        //REWIND r(pass, is);
+        pass = f(is);
+        if(pass) return true;
+        }
+        return OR(fs...)(is);
     };
 }
 
 
 EvalFun AND() {
-    return [](InStream& , bool rewind ) { return true; };
+    return [](InStream&) { return true; };
 }
 
 template < typename F, typename...Fs > 
 EvalFun AND(F f, Fs...fs) {
-    return [=](InStream& is, bool rewind = true) {
+    return [=](InStream& is) {
+        {
         bool pass = false; 
-        REWIND(rewind, is);
-        pass = f(is, rewind) && AND(fs...)(is, rewind);
-        rewind = pass || !rewind;
-        return pass;
+        //REWIND r(pass, is);
+        pass = f(is);
+        if(!pass) return false;  
+        }
+        return AND(fs...)(is);
     };
 }
 
 //the following works only if the parsers DO NOT REWIND
 template < typename F > 
 EvalFun NOT(F f) {
-    return [f](InStream& is, bool rewind = true) {
-        bool pass = false; 
-        REWIND(rewind, is);
-        pass = !f(is, false);
-        rewind = pass || !rewind;
+    return [f](InStream& is) {
+        Char c = 0;
+        StreamPos pos = is.tellg();
+        bool pass = false;
+        while(is.good() && !f(is)) {
+            pass = true;
+            c = is.get();
+            if(!is.good()) break;
+            pos = is.tellg();
+        }
+        if(is.good()) is.seekg( pos );
         return pass;
     };
 }
 
 template< typename F >
 EvalFun GREEDY(F f) {
-    return [f](InStream& is, bool rewind = true) {
-        bool r = f(is, rewind);
-        while(r) r = f(is, rewind);
+    return [f](InStream& is) {
+        bool r = f(is);
+        while(r) r = f(is);
         return r;
     }; 
 }
 
 template < typename EvalMapT, typename KeyT >
 EvalFun Call(const EvalMapT& em, KeyT key) {
-    return [&em, key](InStream& is, bool rewind) {
+    return [&em, key](InStream& is) {
         assert(em.find(key) != em.end());
-        return em.find(key)->second(is, rewind);  
+        return em.find(key)->second(is);  
     };
 }
 
-enum TERM {EXPR, EXPR_, OP, CP, VALUE, PLUS, MINUS, MUL, DIV};
+enum TERM {EXPR, EXPR_, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, T};
 
 #if 0
 namespace std {
@@ -131,7 +138,7 @@ namespace std {
 #endif
 
 struct Ctx {};
-using Map = std::map< TERM, std::function< bool (InStream&, bool) > >;
+using Map = std::map< TERM, EvalFun >;
 using ActionMap = std::map< TERM, std::function< bool (const Values&, Ctx&) > >;
 
 
@@ -145,20 +152,30 @@ void Go() {
                   {PLUS, [](const Values& , Ctx& ) {std::cout << "+" << std::endl; return true;}},
                   {MINUS, [](const Values& , Ctx& ) {std::cout << "-" << std::endl; return true;}},
                   {MUL, [](const Values& , Ctx& ) {std::cout << "*" << std::endl; return true;}},
-                  {DIV, [](const Values& , Ctx& ) {std::cout << "/" << std::endl; return true;}}};
+                  {DIV, [](const Values& , Ctx& ) {std::cout << "/" << std::endl; return true;}},
+                  {T, [](const Values&, Ctx& ) {std::cout << "TERM" << std::endl; return true;}}};
   Map g;
   // g[EXPR] = OR(g[VALUE],
   //              AND(g[OP], g[EXPR], g[CP]));
   auto c = [&g](TERM t) { return Call(g, t); };
+  
+
   //USE TERM!
-  g[EXPR]  = OR(c(VALUE), 
-                AND(c(PLUS), c(EXPR)),
-                AND(c(MINUS), c(EXPR)),
-                AND(c(EXPR), c(PLUS), c(EXPR)),
-                AND(c(EXPR), c(MINUS), c(EXPR)),
-                AND(c(EXPR), c(MUL), c(EXPR)),
-                AND(c(EXPR), c(DIV), c(EXPR)),
-                AND(c(OP), c(EXPR), c(CP)));
+  g[EXPR] = OR( 
+                AND(c(PLUS), c(T)),
+                AND(c(MINUS), c(T)),
+                AND(c(T), c(PLUS), c(T)),
+                AND(c(T), c(MINUS), c(T)),
+                AND(c(T), c(MUL), c(T)),
+                AND(c(T), c(DIV), c(T)),
+                c(T));
+  g[T]    = OR(AND(c(VALUE), c(PLUS), c(T)),
+               AND(c(VALUE), c(MINUS), c(T)),
+               AND(c(VALUE), c(MUL), c(T)),
+               AND(c(VALUE), c(DIV), c(T)),
+               AND(c(OP), c(EXPR), c(CP)),
+               c(VALUE)
+              );
   g[VALUE] = MakeTermEval<InStream>(VALUE, g, FloatParser(), am, ctx);
   g[OP]    = MakeTermEval<InStream>(OP, g, ConstStringParser("("), am, ctx);
   g[CP]    = MakeTermEval<InStream>(CP, g, ConstStringParser(")"), am, ctx);
@@ -171,9 +188,9 @@ void Go() {
   // g[EXPR_] = MakeTermEval<InStream>(EXPR, g, NonTerminal(), am, ctx);
   // g[EXPR] = OR(g[VALUE], 
   //              AND(g[OP], g[EXPR_], g[CP]));
-  istringstream is("1+2");
+  istringstream is("(1+2)*3");
   InStream ins(is);
-  g[EXPR](ins, true);
+  g[EXPR](ins);
   assert(ins.eof());
 }
 

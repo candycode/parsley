@@ -58,7 +58,7 @@ public:
     const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
-    bool Parse( InStream& is, bool rewind = false ) {
+    bool Parse( InStream& is ) {
         if( is.eof() ) return true;
         if( !is.good() ) return false;
         Char c = is.get(); 
@@ -91,7 +91,7 @@ public:
     const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
-    bool Parse( InStream& is, bool rewind = false ) {
+    bool Parse( InStream& is ) {
         if( is.eof() ) return true;
         if( !is.good() ) return false;
         Char c = is.get();
@@ -120,7 +120,7 @@ public:
     const ValueType& operator[]( const KeyType&  ) const {
         throw std::logic_error( "Not implemented" );
     }
-    bool Parse( InStream& is, bool rewind = false ) {
+    bool Parse( InStream& is ) {
         //Always returns true: used to skip blanks
         if( is.eof() ) return true;
         if( !is.good() ) return false;
@@ -150,7 +150,7 @@ public:
     }
     /// @return @c false if first character is not blank or input not in good 
     /// state, @c true otherwise.
-    bool Parse( InStream& is, bool rewind = false ) {
+    bool Parse( InStream& is ) {
         if( !is.good() && !is.eof() ) return false;
         if( is.eof() ) return true;
         Char c = is.get();
@@ -180,7 +180,7 @@ public:
         throw std::logic_error( "Not implemented" );
     }
     /// @return @c true if input stream @c eof flag set; @c false otherwise.
-    bool Parse( InStream& is, bool rewind = true ) {
+    bool Parse( InStream& is ) {
         return is.eof();  
     }
     EofParser* Clone() const { return new EofParser( *this ); }
@@ -202,7 +202,7 @@ public:
     /// The characters are stored inside a member variable for further 
     /// conversion to <tt>unsigned int</tt>.
     /// @return @c true if unsigned integer parsed; @c false otherwise. 
-    bool Parse( InStream& is, bool rewind = false ) {
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
@@ -284,7 +284,7 @@ public:
     /// Parses che characters composing an  integer value. The characters are 
     /// stored inside an member variable for further conversion to <tt>int</tt>.
     /// @return @c true if integer parsed; @c false otherwise.  
-    bool Parse( InStream& is, bool rewind = false ) {
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
@@ -294,12 +294,12 @@ public:
         if( !is.good() ) return false;
         if( c == '+' || c == '-' ) {
             UIntParser uil;
-            if( uil.Parse( is, rewind ) ) { token_ = c + uil.GetText(); ok = true; }
+            if( uil.Parse( is ) ) { token_ = c + uil.GetText(); ok = true; }
             else return false;          
         }
         else {
             UIntParser uil;
-            if( uil.Parse( is, rewind ) ) { token_ = uil.GetText(); ok = true; }
+            if( uil.Parse( is ) ) { token_ = uil.GetText(); ok = true; }
             else return false;
         }
         ok = true;
@@ -368,7 +368,7 @@ public:
     /// Reads a floating point number and stores the sequence of parsed 
     /// characters into a member variable. No conversion to a float number is 
     /// performed during parsing.
-    virtual bool Parse( InStream& is, bool rewind = false ) {
+    virtual bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
@@ -627,7 +627,7 @@ public:
         : name_( l.name_ ), token_( l.token_ ), valueMap_( l.valueMap_ ), 
           validator_( l.validator_ ) {}
     /// Overridden IParser::Parse method.
-    bool Parse( InStream& is, bool rewind = false ) {
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         validator_.Reset();
@@ -684,7 +684,7 @@ public:
     ConstStringParser( const String& s, const ValueID& name = ValueID(), 
                        bool ignoreCase = true ) :
       csv_( ConstStringValidator( s, ignoreCase ), name ) {}
-    bool Parse( InStream& is, bool rewind = false ) { return csv_.Parse( is, rewind ); }
+    bool Parse( InStream& is ) { return csv_.Parse( is ); }
     const Values& GetValues() const { return csv_.GetValues(); }
     const ValueType& operator[]( const KeyType& k ) const { return csv_[ k ]; }
     ConstStringParser* Clone() const { return new ConstStringParser( *this ); } 
@@ -701,7 +701,7 @@ private:
 class AlphaNumParser : public IParser {
 public:
     AlphaNumParser( const String& name ) : anl_( name ) {}
-    bool Parse( InStream& is, bool rewind = true ) { return anl_.Parse( is, rewind ); }
+    bool Parse( InStream& is ) { return anl_.Parse( is ); }
     const Values& GetValues() const { return anl_.GetValues(); }
     const ValueType& operator[]( const KeyType& k ) const { return anl_[ k ]; }
     AlphaNumParser* Clone() const { return new AlphaNumParser( *this ); }
@@ -725,14 +725,14 @@ public:
     FirstAlphaNumParser( const String& name ) : name_( name ) {}
     /// IParser::Parse implementation: checks if the first character is a letter
     /// then uses the included SequenceParser to parse additional input.
-    bool Parse( InStream& is, bool rewind = true ) {
+    bool Parse( InStream& is ) {
         token_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
         Char c = is.get();
         if( parsley::IsAlpha( c ) != 0 ) {
             token_ += c;
-            if( anl_.Parse( is, rewind ) ) {
+            if( anl_.Parse( is ) ) {
                 token_ += anl_.GetText();
             }
             return true;
@@ -806,7 +806,7 @@ public:
     /// applies end parser. Note that it will always parse as many values as 
     /// possible to make it possible to report an error when the number of 
     /// parsed values exceeds the number of required values.
-    bool Parse( InStream& is, bool rewind = true ) {
+    bool Parse( InStream& is ) {
         values_.clear();
         valueMap_.clear();
         if( !is.good() ) return false;
@@ -818,18 +818,18 @@ public:
         REWIND r( ok, is );
         // apply begin parser and return false if it fails
         if( skipBlanks_ ) SkipBlanks( is );
-        if( !beginParser_.Parse( is, rewind ) ) return false;
+        if( !beginParser_.Parse( is ) ) return false;
         bool endReached = false;
         std::vector< ValueType >::size_type s = 0;
         // start applying value parser
         if( skipBlanks_ ) SkipBlanks( is );
-        while( valueParser_.Parse( is, rewind ) ) {
+        while( valueParser_.Parse( is ) ) {
             // parsed values: add values to value array
             AddValue( valueParser_.GetValues() );
             // increment value counter
             ++counter;
             // apply separator parser and exit loop if it fails
-            if( !separatorParser_.Parse( is, rewind ) ) break;
+            if( !separatorParser_.Parse( is ) ) break;
             // value & separator parser applied, if required skip blanks 
             // before next value or end separator
             if( skipBlanks_ ) SkipBlanks( is );
@@ -839,7 +839,7 @@ public:
         // apply end separator: if it succeeds it means the end separator was
         // parsed successfully and the end of the tuple was reached
         if( skipBlanks_ ) SkipBlanks( is );
-        endReached = endParser_.Parse( is, rewind );
+        endReached = endParser_.Parse( is );
         
         // if end reached and number of parsed values is correct return true, 
         // false otherwhise
@@ -928,7 +928,7 @@ private:
 /// @ingroup Parsers
 class PassThruParser : public IParser {
 public:
-    bool Parse( InStream&,bool rewind = true ) { return true; }
+    bool Parse( InStream& ) { return true; }
     const Values& GetValues() const { static const Values v; return v; }
     const ValueType& operator[]( const KeyType&  ) const { 
         static const ValueType v; 
