@@ -54,7 +54,6 @@ EvalFun OR(F f, Fs...fs) {
     return [=](InStream& is) {
         {
         bool pass = false; 
-        //REWIND r(pass, is);
         pass = f(is);
         if(pass) return true;
         }
@@ -64,7 +63,7 @@ EvalFun OR(F f, Fs...fs) {
 
 
 EvalFun AND() {
-    return [](InStream&) { return true; };
+    return [](InStream& is) { std::cout << Char(is.peek()) << endl; return true; };
 }
 
 template < typename F, typename...Fs > 
@@ -72,7 +71,6 @@ EvalFun AND(F f, Fs...fs) {
     return [=](InStream& is) {
         {
         bool pass = false; 
-        //REWIND r(pass, is);
         pass = f(is);
         if(!pass) return false;  
         }
@@ -160,22 +158,10 @@ void Go() {
   auto c = [&g](TERM t) { return Call(g, t); };
   
 
-  //USE TERM!
-  g[EXPR] = OR( 
-                AND(c(PLUS), c(T)),
-                AND(c(MINUS), c(T)),
-                AND(c(T), c(PLUS), c(T)),
-                AND(c(T), c(MINUS), c(T)),
-                AND(c(T), c(MUL), c(T)),
-                AND(c(T), c(DIV), c(T)),
-                c(T));
-  g[T]    = OR(AND(c(VALUE), c(PLUS), c(T)),
-               AND(c(VALUE), c(MINUS), c(T)),
-               AND(c(VALUE), c(MUL), c(T)),
-               AND(c(VALUE), c(DIV), c(T)),
-               AND(c(OP), c(EXPR), c(CP)),
-               c(VALUE)
-              );
+  g[EXPR] = OR(AND(c(OP), c(EXPR), c(CP)),
+               AND(c(VALUE), c(PLUS), c(EXPR)),
+               c(VALUE));
+
   g[VALUE] = MakeTermEval<InStream>(VALUE, g, FloatParser(), am, ctx);
   g[OP]    = MakeTermEval<InStream>(OP, g, ConstStringParser("("), am, ctx);
   g[CP]    = MakeTermEval<InStream>(CP, g, ConstStringParser(")"), am, ctx);
@@ -188,9 +174,10 @@ void Go() {
   // g[EXPR_] = MakeTermEval<InStream>(EXPR, g, NonTerminal(), am, ctx);
   // g[EXPR] = OR(g[VALUE], 
   //              AND(g[OP], g[EXPR_], g[CP]));
-  istringstream is("(1+2)*3");
+  istringstream is("(1)");
   InStream ins(is);
   g[EXPR](ins);
+  if(!ins.eof()) std::cout << Char(ins.get()) << std::endl;
   assert(ins.eof());
 }
 
