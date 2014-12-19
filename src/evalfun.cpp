@@ -63,18 +63,18 @@ EvalFun OR(F f, Fs...fs) {
 
 
 EvalFun AND() {
-    return [](InStream& is) { std::cout << Char(is.peek()) << endl; return true; };
+    return [](InStream& is) { return true; };
 }
 
 template < typename F, typename...Fs > 
 EvalFun AND(F f, Fs...fs) {
     return [=](InStream& is) {
-        {
-        bool pass = false; 
+        bool pass = false;
+        REWIND r(pass, is);
         pass = f(is);
         if(!pass) return false;  
-        }
-        return AND(fs...)(is);
+        else pass = AND(fs...)(is);
+        return pass;
     };
 }
 
@@ -113,7 +113,7 @@ EvalFun Call(const EvalMapT& em, KeyT key) {
     };
 }
 
-enum TERM {EXPR, EXPR_, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, T};
+enum TERM {EXPR, EXPR_, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, T, EOS};
 
 #if 0
 namespace std {
@@ -151,6 +151,7 @@ void Go() {
                   {MINUS, [](const Values& , Ctx& ) {std::cout << "-" << std::endl; return true;}},
                   {MUL, [](const Values& , Ctx& ) {std::cout << "*" << std::endl; return true;}},
                   {DIV, [](const Values& , Ctx& ) {std::cout << "/" << std::endl; return true;}},
+                  {EOS, [](const Values& , Ctx& ) {std::cout << "EOF" << std::endl; return true;}},
                   {T, [](const Values&, Ctx& ) {std::cout << "TERM" << std::endl; return true;}}};
   Map g;
   // g[EXPR] = OR(g[VALUE],
@@ -158,9 +159,11 @@ void Go() {
   auto c = [&g](TERM t) { return Call(g, t); };
   
 
-  g[EXPR] = OR(AND(c(OP), c(EXPR), c(CP)),
-               AND(c(VALUE), c(PLUS), c(EXPR)),
-               c(VALUE));
+  g[EXPR] = OR(//c(EOS),
+               c(VALUE),
+               AND(c(OP), c(EXPR), c(CP)),
+               AND(c(VALUE), c(PLUS), c(EXPR))
+               );
 
   g[VALUE] = MakeTermEval<InStream>(VALUE, g, FloatParser(), am, ctx);
   g[OP]    = MakeTermEval<InStream>(OP, g, ConstStringParser("("), am, ctx);
@@ -169,12 +172,13 @@ void Go() {
   g[MINUS]  = MakeTermEval<InStream>(MINUS, g, ConstStringParser("-"), am, ctx);
   g[MUL]  = MakeTermEval<InStream>(MUL, g, ConstStringParser("*"), am, ctx);
   g[DIV]  = MakeTermEval<InStream>(DIV, g, ConstStringParser("/"), am, ctx);
+  g[EOS] = MakeTermEval<InStream>(EOS, g, EofParser(), am, ctx);
 
   //alternate solution bottom-up
   // g[EXPR_] = MakeTermEval<InStream>(EXPR, g, NonTerminal(), am, ctx);
   // g[EXPR] = OR(g[VALUE], 
   //              AND(g[OP], g[EXPR_], g[CP]));
-  istringstream is("(1)");
+  istringstream is("(1+2)");
   InStream ins(is);
   g[EXPR](ins);
   if(!ins.eof()) std::cout << Char(ins.get()) << std::endl;

@@ -820,7 +820,6 @@ public:
         if( skipBlanks_ ) SkipBlanks( is );
         if( !beginParser_.Parse( is ) ) return false;
         bool endReached = false;
-        std::vector< ValueType >::size_type s = 0;
         // start applying value parser
         if( skipBlanks_ ) SkipBlanks( is );
         while( valueParser_.Parse( is ) ) {

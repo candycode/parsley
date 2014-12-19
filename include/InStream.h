@@ -201,7 +201,7 @@ private:
         if( reolIt_ == eols_.rend() ) return;
         eolIt_ = reolIt_.base(); //reverse to forward iterator
         eols_.erase( eolIt_, eols_.end() );
-        lines_ = eols_.size();
+        lines_ = int(eols_.size());
         if( !eols_.empty() ) lineChars_ = int( p - eols_.back() ); 
     }
     /// Seek forward. Called by seekg().
