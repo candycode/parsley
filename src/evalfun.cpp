@@ -4,6 +4,7 @@
 #include <functional>
 #include <string>
 #include <algorithm>
+#include <limits>
 
 #include <parsers.h>
 #include <InStream.h>
@@ -27,53 +28,58 @@ MakeTermEval(KeyT k,
                               //.., NonTerminal(),...
              ActionMapT& am,
              ContextT& c) {
-    return [k, &em, p, &am, &c](InStreamT& is) mutable -> bool {
+    std::size_t prev = std::numeric_limits< std::size_t >::max(); 
+    return [prev, k, &em, p, &am, &c](InStreamT& is, bool fail) mutable -> bool {
+        static std::size_t prev = std::numeric_limits< std::size_t >::max();
+        //if(prev == is.tellg()) return false;
+        prev = is.tellg();
         assert(em.find(k) != em.end());
         assert(am.find(k) != am.end());
+        if(fail) {
+          am[k](Values(), c, fail);
+          return false;
+        }
         bool ret = false;
         if(!p.Empty()) {
             ret = p.Parse(is) 
-                  && am[k](p.GetValues(), c);
-        } else ret = em.find(k)->second(is)  
-                      && am[k](Values(), c);
+                  && am[k](p.GetValues(), c, fail);
+        } else ret = em.find(k)->second(is, fail)  
+                      && am[k](Values(), c, fail);
+
         return ret;
     };
 }
 
-using EvalFun = std::function< bool (InStream&) >;
-
-
-
+using EvalFun = std::function< bool (InStream&, bool) >;
 
 EvalFun OR() {
-  return [](InStream&) { return false; };
+  return [](InStream&, bool) { return false; };
 }
 
 template < typename F, typename...Fs > 
 EvalFun OR(F f, Fs...fs) {
-    return [=](InStream& is) {
-        {
+    return [=](InStream& is, bool ) {
         bool pass = false; 
-        pass = f(is);
+        pass = f(is, false);
         if(pass) return true;
-        }
-        return OR(fs...)(is);
+        return OR(fs...)(is, false);
     };
 }
 
 
 EvalFun AND() {
-    return [](InStream& is) { return true; };
+    return [](InStream& is, bool) { return true; };
 }
 
 template < typename F, typename...Fs > 
 EvalFun AND(F f, Fs...fs) {
-    return [=](InStream& is) {
+    return [=](InStream& is, bool ) {
         bool pass = false;
         REWIND r(pass, is);
-        pass = f(is);
-        if(!pass) return false;  
-        else pass = AND(fs...)(is);
+        pass = f(is, false);
+        if(!pass) return false;
+        pass = AND(fs...)(is, false);
+        if(!pass) f(is, true);
         return pass;
     };
 }
@@ -81,7 +87,7 @@ EvalFun AND(F f, Fs...fs) {
 //the following works only if the parsers DO NOT REWIND
 template < typename F > 
 EvalFun NOT(F f) {
-    return [f](InStream& is) {
+    return [f](InStream& is, bool ) {
         Char c = 0;
         StreamPos pos = is.tellg();
         bool pass = false;
@@ -98,7 +104,7 @@ EvalFun NOT(F f) {
 
 template< typename F >
 EvalFun GREEDY(F f) {
-    return [f](InStream& is) {
+    return [f](InStream& is, bool) {
         bool r = f(is);
         while(r) r = f(is);
         return r;
@@ -107,9 +113,12 @@ EvalFun GREEDY(F f) {
 
 template < typename EvalMapT, typename KeyT >
 EvalFun Call(const EvalMapT& em, KeyT key) {
-    return [&em, key](InStream& is) {
+    std::size_t prev = std::numeric_limits< std::size_t >::max();
+    return [&prev, &em, key](InStream& is, bool) mutable {
+        //if(prev == is.tellg()) return false;
+        prev = is.tellg();
         assert(em.find(key) != em.end());
-        return em.find(key)->second(is);  
+        return em.find(key)->second(is, false);
     };
 }
 
@@ -137,34 +146,35 @@ namespace std {
 
 struct Ctx {};
 using Map = std::map< TERM, EvalFun >;
-using ActionMap = std::map< TERM, std::function< bool (const Values&, Ctx&) > >;
+using ActionMap = std::map< TERM, std::function< bool (const Values&, Ctx&, bool) > >;
 
 
 void Go() {
   Ctx ctx;
-  ActionMap am  {{VALUE, [](const Values& v, Ctx& ) {std::cout << "VALUE: " << v.begin()->second << std::endl; return true;}},
+  ActionMap am  {{VALUE, [](const Values& v, Ctx&, bool ) {std::cout << "VALUE: " << v.begin()->second << std::endl; return true;}},
                   //{EXPR_, [](const Values& , Ctx& ) {throw std::logic_error("NEVER CALLED"); return true;}},
-                  {EXPR, [](const Values& , Ctx& ) {std::cout << "EXPR" << std::endl; return true;}},
-                  {OP, [](const Values& , Ctx& ) {std::cout << "OP" << std::endl; return true;}},
-                  {CP, [](const Values& , Ctx& ) {std::cout << "CP" << std::endl; return true;}},
-                  {PLUS, [](const Values& , Ctx& ) {std::cout << "+" << std::endl; return true;}},
-                  {MINUS, [](const Values& , Ctx& ) {std::cout << "-" << std::endl; return true;}},
-                  {MUL, [](const Values& , Ctx& ) {std::cout << "*" << std::endl; return true;}},
-                  {DIV, [](const Values& , Ctx& ) {std::cout << "/" << std::endl; return true;}},
-                  {EOS, [](const Values& , Ctx& ) {std::cout << "EOF" << std::endl; return true;}},
-                  {T, [](const Values&, Ctx& ) {std::cout << "TERM" << std::endl; return true;}}};
+                  {EXPR, [](const Values& , Ctx&, bool ) {std::cout << "EXPR" << std::endl; return true;}},
+                  {OP, [](const Values& , Ctx&, bool ) {std::cout << "OP" << std::endl; return true;}},
+                  {CP, [](const Values& , Ctx&, bool ) {std::cout << "CP" << std::endl; return true;}},
+                  {PLUS, [](const Values& , Ctx&, bool ) {std::cout << "+" << std::endl; return true;}},
+                  {MINUS, [](const Values& , Ctx&, bool ) {std::cout << "-" << std::endl; return true;}},
+                  {MUL, [](const Values& , Ctx&, bool ) {std::cout << "*" << std::endl; return true;}},
+                  {DIV, [](const Values& , Ctx&, bool ) {std::cout << "/" << std::endl; return true;}},
+                  {EOS, [](const Values& , Ctx&, bool ) {std::cout << "EOF" << std::endl; return true;}},
+                  {T, [](const Values&, Ctx&, bool ) {std::cout << "TERM" << std::endl; return true;}}};
   Map g;
   // g[EXPR] = OR(g[VALUE],
   //              AND(g[OP], g[EXPR], g[CP]));
   auto c = [&g](TERM t) { return Call(g, t); };
   
 
-  g[EXPR] = OR(//c(EOS),
-               c(VALUE),
+  g[EXPR] = OR(
                AND(c(OP), c(EXPR), c(CP)),
-               AND(c(VALUE), c(PLUS), c(EXPR))
+               AND(c(T), c(PLUS), c(T)),
+               c(VALUE)
                );
-
+  g[T] = OR(c(),
+            c(T));
   g[VALUE] = MakeTermEval<InStream>(VALUE, g, FloatParser(), am, ctx);
   g[OP]    = MakeTermEval<InStream>(OP, g, ConstStringParser("("), am, ctx);
   g[CP]    = MakeTermEval<InStream>(CP, g, ConstStringParser(")"), am, ctx);
@@ -178,9 +188,9 @@ void Go() {
   // g[EXPR_] = MakeTermEval<InStream>(EXPR, g, NonTerminal(), am, ctx);
   // g[EXPR] = OR(g[VALUE], 
   //              AND(g[OP], g[EXPR_], g[CP]));
-  istringstream is("(1+2)");
+  istringstream is("(1+2)+3");
   InStream ins(is);
-  g[EXPR](ins);
+  g[EXPR](ins, false);
   if(!ins.eof()) std::cout << Char(ins.get()) << std::endl;
   assert(ins.eof());
 }
