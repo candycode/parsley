@@ -57,17 +57,20 @@ MakeTermEval(KeyT k,
              //.., NonTerminal(),...
              ActionMapT& am,
              ContextT& c) {
-    return [k, &em, p, &am, &c](InStreamT& is) mutable -> bool {
+    std::size_t sp = std::numeric_limits<std::size_t>::max();
+    return [sp, k, &em, p, &am, &c](InStreamT& is) mutable -> bool {
         assert(em.find(k) != em.end());
         assert(am.find(k) != am.end());
         bool ret = false;
+        std::size_t i = is.tellg();
         if(!p.Empty()) {
-            ret = p.Parse(is)
-                  && am[k](p.GetValues(), c);
+            ret = p.Parse(is);
+            if(ret && i != sp) ret = ret && am[k](p.GetValues(), c);
         } else {
-            ret = em.find(k)->second(is)
-                  && am[k](Values(), c);
+            ret = em.find(k)->second(is);
+            if(ret && i != sp) ret = ret && am[k](Values(), c);
         }
+        if(ret) sp = i;
         return ret;
     };
 }
@@ -170,18 +173,18 @@ KeyT InitKey();
 template < typename KeyT, typename EvalMapT, typename ActionMapT, typename ContextT >
 EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c) {
     KeyT P = InitKey< KeyT >();
-    return [P, &em, &am, key, &c](InStream& is) mutable {
+    std::size_t sp = std::numeric_limits<std::size_t>::max();
+    return [P, sp, &em, &am, key, &c](InStream& is) mutable {
+        if(is.tellg() == sp) return true;
         if(P == key) {
             P = InitKey< KeyT >();
             return false;
         }
         P = key;
         assert(em.find(key) != em.end());
+        std::size_t i = is.tellg();
         const bool ret = em.find(key)->second(is);
-        if(ret) {
-            assert(am.find(key) != am.end());
-            am[key](Values(), c);
-        }
+        if(ret) sp = i;
         return ret;
     };
     //return C< KeyT, EvalMapT, ActionMapT, ContextT >(key, em, am, c);
@@ -252,12 +255,12 @@ void Go() {
     // g[EXPR_] = MakeTermEval<InStream>(EXPR, g, NonTerminal(), am, ctx);
     // g[EXPR] = OR(g[VALUE],
     //              AND(g[OP], g[EXPR_], g[CP]));
-    istringstream is("(2+-3)+1");
+    istringstream is("6+((2+-3)+1)");
     InStream ins(is);
 
     g[EXPR](ins);
     //EOF is set AFTER TRYING TO READ PAST THE END OF THE STREAM!
-    ins.get();
+    //ins.get();
     if(!ins.eof()) std::cout << "ERROR AT: " << ins.tellg() << std::endl;
     assert(ins.eof());
 }
