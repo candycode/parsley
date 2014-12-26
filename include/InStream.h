@@ -82,6 +82,7 @@ public:
     /// @throw std::logic_error if stream @c good bit @b not set.
     char_type get() {
         assert( isp_ != 0 && "NULL STREAM POINTER" );
+        assert(!isp_->eof());
         char_type c = 0;
         if( isp_->good() ) {
             c = isp_->get();
