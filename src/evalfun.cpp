@@ -1,6 +1,31 @@
+////////////////////////////////////////////////////////////////////////////////
+//Copyright (c) 2010-2014, Ugo Varetto
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//    * Neither the name of the copyright holder nor the
+//      names of its contributors may be used to endorse or promote products
+//      derived from this software without specific prior written permission.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL UGO VARETTO BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+////////////////////////////////////////////////////////////////////////////////
 
-//catch recursive call in AND: use counter in closure to check recursive call before even applying first AND clause
-//reset counter on exit (wheather true of false)
+///WORK IN PROGRESS: MINIMAL NEW IMPLEMENTATION OF RECURSIVE PEG PARSER (WITH INFINITE LOOKAHEAD)
 
 #include <map>
 #include <iostream>
@@ -32,7 +57,7 @@ MakeTermEval(KeyT k,
              //.., NonTerminal(),...
              ActionMapT& am,
              ContextT& c) {
-    return [k, &em, p, &am, &c](KeyT prev, InStreamT& is) mutable -> bool {
+    return [k, &em, p, &am, &c](InStreamT& is) mutable -> bool {
         assert(em.find(k) != em.end());
         assert(am.find(k) != am.end());
         bool ret = false;
@@ -40,46 +65,46 @@ MakeTermEval(KeyT k,
             ret = p.Parse(is)
                   && am[k](p.GetValues(), c);
         } else {
-            ret = em.find(k)->second(prev,is)
+            ret = em.find(k)->second(is)
                   && am[k](Values(), c);
         }
         return ret;
     };
 }
 
-template < typename KeyT > struct EvalFun {
-    using Type = std::function< bool (KeyT, InStream&) >;
-};
+
+using EvalFun = std::function< bool (InStream&) >;
 
 
-template < typename K >
-typename EvalFun< K >::Type OR() {
-    return [](K, InStream&) { return false; };
+
+
+EvalFun OR() {
+    return [](InStream&) { return false; };
 }
 
-template < typename K, typename F, typename...Fs >
-typename EvalFun< K >::Type OR(F f, Fs...fs) {
-    return [=](K k, InStream& is) {
+template < typename F, typename...Fs >
+EvalFun OR(F f, Fs...fs) {
+    return [=](InStream& is) {
         bool pass = false;
-        pass = f(k, is);
+        pass = f(is);
         if(pass) return true;
-        return OR<K>(fs...)(k, is);
+        return OR(fs...)(is);
     };
 }
 
-template < typename K >
-typename EvalFun< K >::Type AND() {
-    return [](K, InStream& is) { return true; };
+
+EvalFun AND() {
+    return [](InStream& is) { return true; };
 }
 
-template < typename K, typename F, typename...Fs >
-typename EvalFun< K >::Type AND(F f, Fs...fs) {
-    return [f, fs...](K k, InStream& is) {
+template < typename F, typename...Fs >
+EvalFun AND(F f, Fs...fs) {
+    return [f, fs...](InStream& is) {
         bool pass = false;
         REWIND r(pass, is);
-        pass = f(k, is);
+        pass = f(is);
         if(!pass) return false;
-        pass = AND<K>(fs...)(k, is);
+        pass = AND(fs...)(is);
         return pass;
     };
 }
@@ -111,6 +136,7 @@ typename EvalFun< K >::Type AND(F f, Fs...fs) {
 //    };
 //}
 
+#if 0
 template < typename KeyT, typename EvalMapT, typename ActionMapT, typename ContextT >
 struct C {
     C(KeyT k, const EvalMapT& e, ActionMapT& a, ContextT& c) : terminate(false),
@@ -135,19 +161,24 @@ struct C {
     mutable std::reference_wrapper<ActionMapT> am;
     mutable std::reference_wrapper<ContextT> ctx;
 };
-
+#endif
 
 template < typename KeyT, typename EvalMapT, typename ActionMapT, typename ContextT >
-typename EvalFun< KeyT >::Type Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c) {
+EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c) {
     KeyT P = KeyT();
-    return [P, &em, &am, key](KeyT k, InStream& is) mutable {
+    return [P, &em, &am, key, &c](InStream& is) mutable {
         if(P == key) {
             P = KeyT();
             return false;
         }
         P = key;
         assert(em.find(key) != em.end());
-        return em.find(key)->second(key, is);
+        const bool ret = em.find(key)->second(is);
+        if(ret) {
+            assert(am.find(key) != am.end());
+            am[key](Values(), c);
+        }
+        return ret;
     };
     //return C< KeyT, EvalMapT, ActionMapT, ContextT >(key, em, am, c);
 }
@@ -175,7 +206,7 @@ namespace std {
 #endif
 
 struct Ctx {};
-using Map = std::map< TERM, typename EvalFun< TERM >::Type >;
+using Map = std::map< TERM, EvalFun >;
 using ActionMap = std::map< TERM, std::function< bool (const Values&, Ctx&) > >;
 
 
@@ -193,19 +224,15 @@ void Go() {
         {PLUS, [](const Values& , Ctx&) {std::cout << "+ " << std::endl; return true;}},
         {MINUS, [](const Values& , Ctx&) {std::cout << "- " << std::endl; return true;}},
         {MUL, [](const Values& , Ctx&) {std::cout << "* " << std::endl; return true;}},
-        {DIV, [](const Values& , Ctx&) {std::cout << "/ " << std::endl; return true;}},
-        {EOS, [](const Values& , Ctx&) {std::cout << "EOF " << std::endl; return true;}},
-        {T, [](const Values&, Ctx&) {std::cout << "TERM " << std::endl; return true;}}};
+        {DIV, [](const Values& , Ctx&) {std::cout << "/ " << std::endl; return true;}}};
+    
     Map g;
     
     auto c = [&g, &am, &ctx](TERM t) { return Call(t, g, am, ctx); };
     
-    using K = TERM;
-    g[EXPR] = OR<K>(
-                    AND<K>(c(EXPR), c(PLUS), c(EXPR)),
-                    AND<K>(c(OP), c(EXPR), c(CP)),
-                    c(VALUE)
-                    );
+    g[EXPR] = OR(AND(c(EXPR), c(PLUS), c(EXPR)),
+                 AND(c(OP), c(EXPR), c(CP)),
+                 c(VALUE));
     
     g[VALUE] = MakeTermEval<InStream>(VALUE, g, FloatParser(), am, ctx);
     g[OP]    = MakeTermEval<InStream>(OP, g, ConstStringParser("("), am, ctx);
@@ -214,8 +241,6 @@ void Go() {
     g[MINUS]  = MakeTermEval<InStream>(MINUS, g, ConstStringParser("-"), am, ctx);
     g[MUL]  = MakeTermEval<InStream>(MUL, g, ConstStringParser("*"), am, ctx);
     g[DIV]  = MakeTermEval<InStream>(DIV, g, ConstStringParser("/"), am, ctx);
-    g[EOS] = MakeTermEval<InStream>(EOS, g, EofParser(), am, ctx);
-    
     //alternate solution bottom-up
     // g[EXPR_] = MakeTermEval<InStream>(EXPR, g, NonTerminal(), am, ctx);
     // g[EXPR] = OR(g[VALUE],
@@ -223,7 +248,7 @@ void Go() {
     istringstream is("(2+-3)+1");
     InStream ins(is);
 
-    g[EXPR](EXPR, ins);
+    g[EXPR](ins);
     //EOF is set AFTER TRYING TO READ PAST THE END OF THE STREAM!
     ins.get();
     if(!ins.eof()) std::cout << "ERROR AT: " << ins.tellg() << std::endl;
