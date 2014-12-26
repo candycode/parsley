@@ -163,12 +163,16 @@ struct C {
 };
 #endif
 
+//User must implement function
+template < typename KeyT >
+KeyT InitKey();
+
 template < typename KeyT, typename EvalMapT, typename ActionMapT, typename ContextT >
 EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c) {
-    KeyT P = KeyT();
+    KeyT P = InitKey< KeyT >();
     return [P, &em, &am, key, &c](InStream& is) mutable {
         if(P == key) {
-            P = KeyT();
+            P = InitKey< KeyT >();
             return false;
         }
         P = key;
@@ -183,7 +187,10 @@ EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c) {
     //return C< KeyT, EvalMapT, ActionMapT, ContextT >(key, em, am, c);
 }
 
-enum TERM {EXPR = 1, EXPR_, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, T, EOS};
+enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV};
+
+template <>
+TERM InitKey<TERM>() { return TERM(); }
 
 #if 0
 namespace std {
