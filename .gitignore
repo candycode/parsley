@@ -3,3 +3,4 @@ gh-pages/
 tmp*
 .*
 *.glue
+*.1

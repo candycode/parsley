@@ -33,7 +33,12 @@
 //note that parsing is *not* context-free because advancement depends on both
 //the grammar *and* the return value of the context-aware callback function
 
+#ifdef HASH_MAP
+#include <unordered_map>
+#else
 #include <map>
+#endif
+
 #include <iostream>
 #include <sstream>
 #include <functional>
@@ -64,10 +69,12 @@ MakeTermEval(KeyT k,
              Parser p, //use an empty parser to specify non-terminal term
              //.., NonTerminal(),...
              ActionMapT& am,
-             ContextT& c) {
+             ContextT& c,
+             bool cback = false) {
     std::size_t sp = std::numeric_limits<std::size_t>::max();
     bool last = false;
-    return [last, sp, k, &em, p, &am, &c](InStreamT& is) mutable -> bool {
+    return [cback, last, sp, k, &em, p, &am, &c](InStreamT& is)
+            mutable -> bool {
         if(is.tellg() == sp) return last;
         assert(em.find(k) != em.end());
         assert(am.find(k) != am.end());
@@ -78,7 +85,7 @@ MakeTermEval(KeyT k,
             ret = ret && am[k](p.GetValues(), c);
         } else {
             ret = em.find(k)->second(is);
-            ret = ret && am[k](Values(), c);
+            if(cback) ret = ret && am[k](Values(), c);
         }
         sp = i;
         last = ret;
@@ -173,16 +180,29 @@ EvalFun GREEDY(F f) {
 //to enable/disable callback invocation upon successful parsing
 template < typename KeyT, typename EvalMapT, typename ActionMapT,
            typename ContextT >
-EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c) {
-    std::size_t sp = std::numeric_limits<std::size_t>::max();
-    return [sp, &em, &am, key, &c](InStream& is) mutable {
-        if(is.tellg() == sp) return true;
-        assert(em.find(key) != em.end());
-        std::size_t i = is.tellg();
-        const bool ret = em.find(key)->second(is);
-        if(ret) sp = i;
-        return ret;
-    };
+EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c, bool cback) {
+//    std::size_t sp = std::numeric_limits<std::size_t>::max();
+//    bool last = false;
+//    return [last, sp, &em, &am, key, &c](InStream& is) mutable {
+//        if(is.tellg() == sp) return last;
+//        assert(em.find(key) != em.end());
+//        sp = is.tellg();
+//        bool ret = em.find(key)->second(is);
+//        ret = ret && am[key](Values(), c);
+//        return ret;
+//    };
+    return MakeTermEval<InStream>(key, em, Parser(), am, c, cback);
+}
+
+#define MAKE_CALL(K, G, AM, CTX) \
+[& G, & AM, & CTX](K t) { return Call(t, G, AM, CTX, false); }
+
+#define MAKE_CBCALL(K, G, AM, CTX) \
+[& G, & AM, & CTX](K t) { return Call(t, G, AM, CTX, true); }
+
+#define MAKE_EVAL(K, G, AM, CTX) \
+[& G, & AM, & CTX](TERM t, Parser p) { \
+return MakeTermEval<InStream>(t, g, p, am, ctx); \
 }
 
 EvalFun operator&(const EvalFun& e1, const EvalFun& e2) {
@@ -205,49 +225,101 @@ EvalFun operator!(const EvalFun& e) {
     return NOT(e);
 }
 
+EvalFun operator,(const EvalFun& e1, const EvalFun& e2) {
+    return AND(e1, e2);
+}
+
+
 //==============================================================================
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER};
+           NUMBER, POW, POWER};
+
+#ifdef HASH_MAP
+namespace std {
+    template <>
+    struct hash<TERM>
+    {
+        std::size_t operator()(TERM k) const
+        {
+            using std::size_t;
+            using std::hash;
+
+            // Compute individual hash values for first,
+            // second and third and combine them using XOR
+            // and bit shifting:
+
+            return std::hash<int>()(int(k));
+        }
+    };
+}
+#endif
+
 
 struct Ctx {};
+#ifdef HASH_MAP
+using Map = std::unordered_map< TERM, EvalFun >;
+using ActionMap = std::unordered_map< TERM,
+                                 std::function< bool (const Values&, Ctx&) > >;
+#else
 using Map = std::map< TERM, EvalFun >;
 using ActionMap = std::map< TERM, std::function< bool (const Values&, Ctx&) > >;
-
+#endif
 
 void Go() {
     Ctx ctx;
     ActionMap am  {{NUMBER, [](const Values& v, Ctx&) {
-                        std::cout << "VALUE: ";
+                        std::cout << "NUMBER: ";
                         if(!v.empty()) cout << v.begin()->second;
                         cout << std::endl;
                         return true;}},
         {EXPR, [](const Values& , Ctx&) {
-            std::cout << "EXPR " << std::endl; return true;}},
+            std::cout << "EXPR" << std::endl; return true;}},
         {OP, [](const Values& , Ctx&) {
-            std::cout << "OP " << std::endl; return true;}},
+            std::cout << "OP" << std::endl; return true;}},
         {CP, [](const Values& , Ctx&) {
-            std::cout << "CP " << std::endl; return true;}},
+            std::cout << "CP" << std::endl; return true;}},
         {PLUS, [](const Values& , Ctx&) {
-            std::cout << "+ " << std::endl; return true;}},
+            std::cout << "+" << std::endl; return true;}},
         {MINUS, [](const Values& , Ctx&) {
-            std::cout << "- " << std::endl; return true;}},
+            std::cout << "-" << std::endl; return true;}},
         {MUL, [](const Values& , Ctx&) {
-            std::cout << "* " << std::endl; return true;}},
+            std::cout << "*" << std::endl; return true;}},
         {DIV, [](const Values& , Ctx&) {
-            std::cout << "/ " << std::endl; return true;}}};
-    
-    
-#define MAKE_CALL(K, G, AM, CTX) \
-     [& G, & AM, & CTX](K t) { return Call(t, G, AM, CTX); };
-    Map g;
-    auto c = MAKE_CALL(TERM, g, am, ctx);
-    //auto c = [&g, &am, &ctx](TERM t) { return Call(t, g, am, ctx); };
-#define MAKE_EVAL(K, G, AM, CTX) \
-    [& G, & AM, & CTX](TERM t, Parser p) { \
-        return MakeTermEval<InStream>(t, g, p, am, ctx); \
+            std::cout << "/" << std::endl; return true;}},
+        {POW, [](const Values& , Ctx&) {
+            std::cout << "^" << std::endl; return true;}},
+        {SUM, [](const Values& , Ctx&) {
+            std::cout << "SUM" << std::endl; return true;}},
+        {PRODUCT, [](const Values& , Ctx&) {
+            std::cout << "PRODUCT" << std::endl; return true;}},
+        {VALUE, [](const Values& , Ctx&) {
+            std::cout << "VALUE" << std::endl; return true;}}
     };
+
+    Map g; // grammar
+    auto c = MAKE_CALL(TERM, g, am, ctx);
+    auto cb = MAKE_CBCALL(TERM, g, am, ctx);
+    //auto c = [&g, &am, &ctx](TERM t) { return Call(t, g, am, ctx); };
     auto mt = MAKE_EVAL(TERM, g, am, ctx);
 
+    //grammar definition
+    //non-terminal - note the top-down definition through deferred calls using
+    //the 'c' helper function
+    g[EXPR]    = cb(SUM);
+    //Option 1:
+    //    g[SUM]     = AND(c(PRODUCT), ZM(AND(OR(c(PLUS), c(MINUS)), c(PRODUCT))));
+    //    g[PRODUCT] = AND(c(VALUE), ZM(AND(OR(c(MUL), c(DIV), c(POW), c(VALUE))));
+    //    g[VALUE]   = OR(c(NUMBER), AND(c(OP),c(EXPR), c(CP)));
+    //Option 2:
+    //    g[SUM]     = c(PRODUCT) & *((c(PLUS) / c(MINUS)) & c(PRODUCT));
+    //    g[PRODUCT] = c(VALUE) & *((c(MUL) / c(DIV) / c(POW)) & c(VALUE));
+    //    g[VALUE]   = c(NUMBER) / (c(OP) & c(EXPR) & c(CP));
+    //Option 3: commas for ANDs, parenthesis required, if not they are parsed
+    //          with standard rules
+    g[SUM]     = (cb(PRODUCT), *((c(PLUS) / c(MINUS)), cb(PRODUCT)));
+    g[PRODUCT] = (c(VALUE), *((c(MUL) / c(DIV) / c(POW)), c(VALUE)));
+    g[VALUE]   = c(NUMBER) / (c(OP), c(EXPR), c(CP));
+    
     //terminal
     g[NUMBER] = mt(NUMBER, FloatParser());
     g[OP]     = mt(OP, ConstStringParser("("));
@@ -256,18 +328,10 @@ void Go() {
     g[MINUS]  = mt(MINUS, ConstStringParser("-"));
     g[MUL]    = mt(MUL, ConstStringParser("*"));
     g[DIV]    = mt(DIV, ConstStringParser("/"));
+    g[POW]    = mt(POW, ConstStringParser("^"));
     
-    //non-terminal
-    g[EXPR]    = c(SUM);
-//    g[SUM]     = AND(c(PRODUCT), ZM(AND(OR(c(PLUS), c(MINUS)), c(PRODUCT))));
-//    g[PRODUCT] = AND(c(VALUE), ZM(AND(OR(c(MUL), c(DIV)), c(VALUE))));
-//    g[VALUE]   = OR(c(NUMBER), AND(c(OP),c(EXPR), c(CP)));
-    g[SUM]     = c(PRODUCT) & *((c(PLUS) / c(MINUS)) & c(PRODUCT));
-    g[PRODUCT] = c(VALUE) & *((c(MUL) / c(DIV)) & c(VALUE));
-    g[VALUE]   = c(NUMBER) / (c(OP) & c(EXPR) & c(CP));
-
     //text
-    istringstream is("6+((2+-3)+1)");
+    istringstream is("6+((2+-3)+7^5)");
     InStream ins(is);
     
     //invoke parser
@@ -280,6 +344,7 @@ void Go() {
 
 //------------------------------------------------------------------------------
 int main(int, char**) {
+
     Go();
    	return 0;
 }
