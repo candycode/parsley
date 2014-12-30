@@ -633,7 +633,7 @@ public:
         validator_.Reset();
         if( !is.good() ) return false;
         Char c = 0;
-        while( !is.eof() ) {
+        while( !is.eof() && is.good() ) {
             c = is.get();
             if( !is.good() ) {
                 return token_.length() > 0;
@@ -641,7 +641,7 @@ public:
             if( !validator_.Validate( token_, c ) ) break;
             token_.push_back( c );
         }
-        if( is.good() ) is.unget();
+        if( is.good() && !is.eof() ) is.unget();
         return token_.length() > 0;
     }
     /// Overridden IParser::GetValues method.   
