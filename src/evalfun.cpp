@@ -28,8 +28,8 @@
 
 ///WORK IN PROGRESS: MINIMAL NEW IMPLEMENTATION OF RECURSIVE PEG PARSER
 //(WITH INFINITE LOOKAHEAD)
-//MEMOIZATION: PARSERS ARE APPLIED ONCE AND ONLY ONCE (A LA PACKRAT), DATA
-//STORED IN CLOSURE
+//MEMOIZATION: PARSERS ARE APPLIED ONCE AND ONLY ONCE PER STREAM POSITION
+//(A LA PACKRAT), DATA STORED IN CLOSURE
 //note that parsing is *not* context-free because advancement depends on both
 //the grammar *and* the return value of the context-aware callback function
 
@@ -172,25 +172,10 @@ EvalFun GREEDY(F f) {
 
 //Returns a function which forwards calls to other function in grammar
 //map
-
-//currently callbacks are called only for items parsed through
-//MakeTermEval: can modify to *not* call callback from within MakeTermEval
-//and call callback from Call only, but this would force client code
-//to *always* use Call; other option configure MakeTermEval with parameter
-//to enable/disable callback invocation upon successful parsing
 template < typename KeyT, typename EvalMapT, typename ActionMapT,
            typename ContextT >
-EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c, bool cback) {
-//    std::size_t sp = std::numeric_limits<std::size_t>::max();
-//    bool last = false;
-//    return [last, sp, &em, &am, key, &c](InStream& is) mutable {
-//        if(is.tellg() == sp) return last;
-//        assert(em.find(key) != em.end());
-//        sp = is.tellg();
-//        bool ret = em.find(key)->second(is);
-//        ret = ret && am[key](Values(), c);
-//        return ret;
-//    };
+EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c,
+             bool cback) {
     return MakeTermEval<InStream>(key, em, Parser(), am, c, cback);
 }
 
