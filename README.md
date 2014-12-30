@@ -1,4 +1,4 @@
-_Parsley_ is a header-only C++ library with no dependencies useful to extract data from text
+_Parsley_ is a header-only C++ library with no dependencies, useful to extract data from text
 streams.
 The framework currently contains types implementing lexers and
 parsers which can be composed to generate more complex parsing classes.
@@ -12,10 +12,9 @@ the contained data.
 It is also possible to use this library to create Parsing Expression Grammar based
 parsers or parse simple languages.
 
-###WARNING
-Parsley is undergoing a rewrite that will end up with a full C++1y version 
-implemented with parser combinators only; no explicit state machine anymore.
-The latest stable version can be found inside the *v1.0-state-machine* tag
+###Note
+Parsley is undergoing a rewrite.
+The latest stable version can be found inside the *v1.0-state-machine* tag.
 
 [(Preliminary public docs)](http://candycode.github.com/parsley)
 
@@ -26,7 +25,7 @@ _Parsley_ is distributes under the terms of the _New BSD License_
 
 ---
 
-Copyright (c) 2010-2013, Ugo Varetto
+Copyright (c) 2010-2015, Ugo Varetto
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
