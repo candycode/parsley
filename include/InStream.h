@@ -65,7 +65,7 @@ public:
     ///@param is input stream.
     InChStream( IT& is ) :  isp_( &is ), lines_( 0 ),
                             lineChars_( 0 ), eolIt_( eols_.begin() ),
-                            locale_( is.getloc() ) {
+                            locale_( is.getloc() ), gets_(0), ungets_(0) {
 #ifndef BUFFERED_IN_STREAM
         ///@warning required on MS Windows with VC++, issues in istreams require
         ///the stream to be NOT buffered for tellg/unget/putback/seekg to work 
@@ -102,6 +102,7 @@ public:
         if( eols_.size() > RESIZE_THRESHOLD ) {
             eols_.erase( eols_.begin(), eols_.begin() + RESIZE_THRESHOLD / 2 );
         }
+        ++gets_;
         return c;
     }
     
@@ -159,7 +160,9 @@ public:
             eolIt_ = eols_.end(); --eolIt_;
             eols_.erase( eolIt_, eols_.end() );
         }
-        if( !eols_.empty() ) lineChars_ = int( isp_->tellg() - eols_.back() ); 
+        ++ungets_;
+        if( eols_.empty() ) lineChars_ = int(isp_->tellg());
+        else lineChars_ = int( isp_->tellg() - eols_.back() );
     }
 
     /// Returns @c good bit.
@@ -191,6 +194,12 @@ public:
     const std::locale& getloc() const {
         return locale_;
     }
+    
+    ///Returns total number of char read operations
+    int gets() const { return gets_; }
+    
+    ///Returns total number of unget operations
+    int ungets() const { return ungets_; }
 
 private:
     /// Seek backward. Called by seekg().
@@ -229,6 +238,10 @@ private:
     typename EOLs::reverse_iterator reolIt_;
     /// Current locale, recorded at construction time.
     const std::locale locale_;
+    ///Total number of get() operations
+    int gets_;
+    ///Total number of unget() operations
+    int ungets_;
 };
 
 /// Convenience typedef for stadard streams.

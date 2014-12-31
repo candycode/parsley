@@ -27,6 +27,7 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <limits>
 
 template < typename T >
 class PTree {
@@ -47,18 +48,25 @@ public:
     PTree() : weight_(std::numeric_limits< int >::max()), parent_(nullptr),
                 data_(T()) {}
     PTree(const T& d, int w) : data_(d), weight_(w), parent_(nullptr) {}
-    PTree* Insert(const T& d, int weight) {
-        if(weight >= weight_) {
-            children_.push_back(new PTree(d, weight));
-            children_.back()->parent_ = this;
-            return children_.back();
+    PTree* Insert(const T& d, int weight, PTree* caller = nullptr) {
+        if(weight > weight_) {
+            if(std::find(children_.begin(), children_.end(), caller)
+               == children_.end()) {
+                children_.push_back(new PTree(d, weight));
+                children_.back()->parent_ = this;
+                return children_.back();
+            } else {
+                std::vector< PTree* > i =
+                    std::find(children_.begin(), children_.end(), caller);
+                PTree* p = *i;
+                *i = new PTree(data weight);
+                i->children_.push_back(p);
+                p->parent_(*i);
+                return *i;
+            }
         } else {
             if(parent_) {
-                PTree< T >* n = new PTree(data, weight);
-                parent_->Replace(this, n);
-                children_.push_back(this);
-                children_.back()->parent_ = n;
-                return n;
+                return parent_->Insert(d, weight, this);
             } else {
                 parent_ = new PTree(d, weight);
                 parent_->children_.push_back(this);
@@ -75,11 +83,8 @@ public:
             }
         }
     }
-    template < typename F >
-    void Apply(F& f) const {
-        for(auto i: children_) i->Apply(f);
-        f(data_);
-    }
+    const T& Data() const { return data_; }
+    const std::vector< PTree* >& Children() const { return children_; }
     ~PTree() {
         for(auto i: children_) delete i;
     }
@@ -101,12 +106,17 @@ public:
             tree_ = new PTRee< T >(data, weight);
             cursor_ = tree_.get();
         } else {
-            cursor_ = cursor_.Insert(data, weight);
+            cursor_ = cursor_->Insert(data, weight);
         }
     }
+    std::shared_ptr< PTree< T > > Root() const { return tree_; }
 private:
-    std::unique_ptr< PTree< T > > tree_;
+    std::shared_ptr< PTree< T > > tree_;
     PTree< T >* cursor_;
 };
+
+//Eval(PTree* r, const FMap& fm) {
+//    return fm[r->type_](r);
+//}
 
 
