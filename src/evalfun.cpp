@@ -56,6 +56,11 @@ using namespace std;
 
 using NonTerminal = Parser;
 
+enum class EvalState {BEGIN, PASS, FAIL};
+
+using EvalFun = std::function< bool (InStream&) >;
+
+
 ///@todo add operator () to parser so that function is independent from
 ///Parser class
 template < typename InStreamT,
@@ -70,7 +75,7 @@ MakeTermEval(KeyT k,
              //.., NonTerminal(),...
              ActionMapT& am,
              ContextT& c,
-             bool cback = false) {
+             bool cback = true) {
     std::size_t sp = std::numeric_limits<std::size_t>::max();
     bool last = false;
     return [cback, last, sp, k, &em, p, &am, &c](InStreamT& is)
@@ -78,22 +83,29 @@ MakeTermEval(KeyT k,
         if(is.tellg() == sp) return last;
         assert(em.find(k) != em.end());
         assert(am.find(k) != am.end());
-        bool ret = false;
+        bool ret = true;
         std::size_t i = is.tellg();
+        if(cback) {
+            ret = am[k](k, Values(), c, EvalState::BEGIN);
+        }
         if(!p.Empty()) {
-            ret = p.Parse(is);
-            ret = ret && am[k](k, p.GetValues(), c);
+            ret = ret && p.Parse(is);
+            if(cback) {
+                const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
+                ret = ret && am[k](k, p.GetValues(), c, s);
+            }
         } else {
-            ret = em.find(k)->second(is);
-            if(cback) ret = ret && am[k](k, Values(), c);
+            ret = ret && em.find(k)->second(is);
+            if(cback) {
+                const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
+                ret = ret && am[k](k, Values(), c, s);
+            }
         }
         sp = i;
         last = ret;
         return ret;
     };
 }
-
-using EvalFun = std::function< bool (InStream&) >;
 
 EvalFun OR() {
     return [](InStream&) { return false; };
@@ -214,6 +226,28 @@ EvalFun operator,(const EvalFun& e1, const EvalFun& e2) {
     return AND(e1, e2);
 }
 
+
+template < typename F, typename KeyT, typename CB, typename Ctx >
+F Invoke(const EvalFun& f, const CB& cb, Ctx& c,
+         KeyT k = KeyT(), const Values& def = Values()) {
+    return [cb, f, k, &c, def](InStream& is) {
+        cb(k, def, EvalState::BEGIN);
+        bool ret = f(is);
+        if(ret) cb(k, def, c, ret ? EvalState::PASS : EvalState::FAIL);
+    };
+}
+
+template < typename F, typename KeyT, typename MapT, typename Ctx >
+F InvokeMapped(const EvalFun& f, KeyT k, const MapT& m, Ctx& c,
+               const Values& def = Values()) {
+    return [f, k, &m, &c, def](InStream& is) {
+        m.find(k)->second(k, def, c, EvalState::BEGIN);
+        bool ret = f(is);
+        if(ret) m.find(k)->second(k, def, c,
+                                  ret ? EvalState::PASS : EvalState::FAIL);
+    };
+}
+
 template < typename M >
 void Set(M& m, typename M::value_type::second_type ) {}
 
@@ -242,13 +276,30 @@ struct hash< T > \
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
            NUMBER, POW, POWER};
 
+std::string TermToString(TERM t) {
+    std::string ret;
+    switch(t) {
+        case EXPR: ret = "EXPR";
+            break;
+        case OP: ret = "OP";
+            break;
+        case CP: ret = "CP";
+            break;
+        case VALUE: ret = "VALUE";
+            break;
+        default: break;
+    }
+    return ret;
+};
+
+
 #ifdef HASH_MAP
 DEFINE_HASH(TERM)
 #endif
 
 
 struct Ctx {};
-using ActionFun = std::function< bool (TERM, const Values&, Ctx&) >;
+using ActionFun = std::function< bool (TERM, const Values&, Ctx&, EvalState) >;
 #ifdef HASH_MAP
 using Map = std::unordered_map< TERM, EvalFun >;
 using ActionMap = std::unordered_map< TERM, ActionFun >;
@@ -259,36 +310,61 @@ using ActionMap = std::map< TERM, ActionFun  >;
 
 void Go() {
     Ctx ctx;
-    ActionMap am  {{NUMBER, [](TERM t, const Values& v, Ctx&) {
+    ActionMap am;
+#if 0
+    {{NUMBER, [](TERM t, const Values& v, Ctx&, EvalState) {
                         std::cout << "NUMBER: ";
                         if(!v.empty()) cout << v.begin()->second;
                         cout << std::endl;
-                        return true;}},
-        {EXPR, [](TERM t, const Values& , Ctx&) {
+        return true;}},
+        {EXPR, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "EXPR" << std::endl; return true;}},
-        {OP, [](TERM t, const Values& , Ctx&) {
+        {OP, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "OP" << std::endl; return true;}},
-        {CP, [](TERM t, const Values& , Ctx&) {
+        {CP, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "CP" << std::endl; return true;}},
-        {PLUS, [](TERM t, const Values& , Ctx&) {
+        {PLUS, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "+" << std::endl; return true;}},
-        {MINUS, [](TERM t, const Values& , Ctx&) {
+        {MINUS, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "-" << std::endl; return true;}},
-        {MUL, [](TERM t, const Values& , Ctx&) {
+        {MUL, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "*" << std::endl; return true;}},
-        {DIV, [](TERM t, const Values& , Ctx&) {
+        {DIV, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "/" << std::endl; return true;}},
-        {POW, [](TERM t, const Values& , Ctx&) {
+        {POW, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "^" << std::endl; return true;}},
-        {SUM, [](TERM t, const Values& , Ctx&) {
+        {SUM, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "SUM" << std::endl; return true;}},
-        {PRODUCT, [](TERM t, const Values& , Ctx&) {
+        {PRODUCT, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "PRODUCT" << std::endl; return true;}},
-        {POWER, [](TERM t, const Values& , Ctx&) {
+        {POWER, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "POWER" << std::endl; return true;}},
-        {VALUE, [](TERM t, const Values& , Ctx&) {
+        {VALUE, [](TERM t, const Values& , Ctx&, EvalState) {
             std::cout << "VALUE" << std::endl; return true;}}
     };
+#endif
+    int indent = 0;
+    auto handleTerm = [&indent](TERM t, const Values& v, Ctx&, EvalState es) {
+        if(es == EvalState::BEGIN) {
+            ++indent;
+            return true;
+        } else if(es == EvalState::FAIL) {
+            --indent;
+            return false;
+        }
+        cout << std::string(indent, '`') << ' ' << TermToString(t);
+        switch(t) {
+            case NUMBER:
+                if(!v.empty()) cout << v.begin()->second;
+                break;
+            default: cout << t;
+        }
+        cout << endl;
+        --indent;
+        return true;
+    };
+    Set(am, handleTerm, NUMBER,
+        EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE);
     //callback function also receives key: it is possible to have same
     //callbak handle multiple keys; to assign the same callback to multiple
     //keys in action map use Set helper:
@@ -298,7 +374,7 @@ void Go() {
     //           cout << t << endl; return true; },
     //        OP, CP, MINUS, MUL);
     Map g; // grammar
-    auto c = MAKE_CALL(TERM, g, am, ctx);
+    auto c = MAKE_CBCALL(TERM, g, am, ctx);
     //auto cb = MAKE_CBCALL(TERM, g, am, ctx);
     auto mt = MAKE_EVAL(TERM, g, am, ctx);
     //grammar definition
@@ -345,7 +421,7 @@ void Go() {
 
 
 int main(int, char**) {
-    //Go();
+    Go();
    	return 0;
 }
 
