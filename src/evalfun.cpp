@@ -281,11 +281,29 @@ std::string TermToString(TERM t) {
     switch(t) {
         case EXPR: ret = "EXPR";
             break;
-        case OP: ret = "OP";
+        case OP: ret = "(";
             break;
-        case CP: ret = "CP";
+        case CP: ret = ")";
             break;
         case VALUE: ret = "VALUE";
+            break;
+        case PLUS: ret = "+";
+            break;
+        case MINUS: ret = "-";
+            break;
+        case MUL: ret = "*";
+            break;
+        case DIV: ret = "/";
+            break;
+        case SUM: ret = "SUM";
+            break;
+        case PRODUCT: ret = "PROD";
+            break;
+//        case NUMBER: ret = "";
+//            break;
+        case POW: ret = "^";
+            break;
+        case POWER: ret = "POW";
             break;
         default: break;
     }
@@ -352,14 +370,12 @@ void Go() {
             --indent;
             return false;
         }
+        if(!v.empty())
         cout << std::string(indent, '`') << ' ' << TermToString(t);
-        switch(t) {
-            case NUMBER:
-                if(!v.empty()) cout << v.begin()->second;
-                break;
-            default: cout << t;
+        if(t == NUMBER) {
+            if(!v.empty()) cout << v.begin()->second;
         }
-        cout << endl;
+        if(!v.empty()) cout << endl;
         --indent;
         return true;
     };
