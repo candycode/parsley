@@ -50,12 +50,9 @@ public:
     PTree() : weight_(std::numeric_limits< int >::min()), parent_(nullptr),
                 data_(T()) {}
     PTree(const T& d, int w) : data_(d), weight_(w), parent_(nullptr) {}
-    PTree* Insert(const T& d, int weight, PTree* caller = nullptr, int woff = 0) {
+    PTree* Insert(const T& d, int weight, PTree* caller = nullptr) {
 //        std::cout << "===========================\n";
 //        if(Root()) Root()->Apply([](T t) { std::cout << t << ' ' << std::endl;});
-        weight += woff;
-        if(ScopeBegin(d)) woff += weight;
-        else if(ScopeEnd(d)) woff -= weight;
         PTree* ret = nullptr;
         if(weight >= weight_) {
             if(std::find(children_.begin(), children_.end(), caller)
@@ -74,15 +71,13 @@ public:
             }
         } else {
             if(parent_) {
-                ret = parent_->Insert(d, weight, caller, woff);
+                ret = parent_->Insert(d, weight, caller);
             } else {
                 parent_ = new PTree(d, weight);
                 parent_->children_.push_back(this);
                 ret = parent_;
             }
         }
-        
-       
         return ret;
     }
     template < typename F >
@@ -108,9 +103,7 @@ private:
     T data_;
     int weight_; //children's weight is >= current weight
     PTree* parent_;
-    std::vector< PTree* > children_;
-    int scopeWeightOffset_ = 0;
-};
+    std::vector< PTree* > children_;};
 
 template < typename T > class STree {
 public:
