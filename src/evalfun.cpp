@@ -276,6 +276,20 @@ struct hash< T > \
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
            NUMBER, POW, POWER};
 
+std::map< TERM, int > weights = {
+    {NUMBER, 0},
+    {OP, 0},
+    {CP, 0},
+    {POW, 1},
+    {MUL, 2},
+    {DIV, 2},
+    {MINUS, 3},
+    {PLUS, 4}
+};
+
+bool ScopeBegin(TERM t) { return t == OP; }
+bool ScopeEnd(TERM t) { return t == CP; }
+
 std::string TermToString(TERM t) {
     std::string ret;
     switch(t) {
@@ -315,7 +329,6 @@ std::string TermToString(TERM t) {
 DEFINE_HASH(TERM)
 #endif
 
-
 struct Ctx {};
 using ActionFun = std::function< bool (TERM, const Values&, Ctx&, EvalState) >;
 #ifdef HASH_MAP
@@ -329,38 +342,6 @@ using ActionMap = std::map< TERM, ActionFun  >;
 void Go() {
     Ctx ctx;
     ActionMap am;
-#if 0
-    {{NUMBER, [](TERM t, const Values& v, Ctx&, EvalState) {
-                        std::cout << "NUMBER: ";
-                        if(!v.empty()) cout << v.begin()->second;
-                        cout << std::endl;
-        return true;}},
-        {EXPR, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "EXPR" << std::endl; return true;}},
-        {OP, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "OP" << std::endl; return true;}},
-        {CP, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "CP" << std::endl; return true;}},
-        {PLUS, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "+" << std::endl; return true;}},
-        {MINUS, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "-" << std::endl; return true;}},
-        {MUL, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "*" << std::endl; return true;}},
-        {DIV, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "/" << std::endl; return true;}},
-        {POW, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "^" << std::endl; return true;}},
-        {SUM, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "SUM" << std::endl; return true;}},
-        {PRODUCT, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "PRODUCT" << std::endl; return true;}},
-        {POWER, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "POWER" << std::endl; return true;}},
-        {VALUE, [](TERM t, const Values& , Ctx&, EvalState) {
-            std::cout << "VALUE" << std::endl; return true;}}
-    };
-#endif
     int indent = 0;
     auto handleTerm = [&indent](TERM t, const Values& v, Ctx&, EvalState es) {
         if(es == EvalState::BEGIN) {
@@ -379,7 +360,23 @@ void Go() {
         --indent;
         return true;
     };
-    Set(am, handleTerm, NUMBER,
+    auto handleWeightedTerm = [&indent](TERM t, const Values& v, Ctx&,
+                                        EvalState es) {
+        if(es == EvalState::BEGIN) return true;
+        else if(es == EvalState::FAIL) return false;
+        if(ScopeBegin(t)) ++indent;
+        if(!v.empty())
+            cout << std::string((indent + weights[t]), ' ')
+            << TermToString(t);
+        if(t == NUMBER) {
+            if(!v.empty()) cout << v.begin()->second;
+        }
+        if(ScopeEnd(t)) --indent;
+        if(!v.empty()) cout << endl;
+        return true;
+    };
+
+    Set(am, handleWeightedTerm, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE);
     //callback function also receives key: it is possible to have same
     //callbak handle multiple keys; to assign the same callback to multiple
@@ -391,12 +388,12 @@ void Go() {
     //        OP, CP, MINUS, MUL);
     Map g; // grammar
     auto c = MAKE_CBCALL(TERM, g, am, ctx);
-    //auto cb = MAKE_CBCALL(TERM, g, am, ctx);
+    auto n = MAKE_CALL(TERM, g, am, ctx);
     auto mt = MAKE_EVAL(TERM, g, am, ctx);
     //grammar definition
     //non-terminal - note the top-down definition through deferred calls using
     //the 'c' helper function
-    g[EXPR]    = c(SUM);
+    g[EXPR]    = n(SUM);
     //Option 1:
     //    g[SUM]     = AND(c(PRODUCT), ZM(AND(OR(c(PLUS), c(MINUS)), c(PRODUCT))));
     //    g[PRODUCT] = AND(c(VALUE), ZM(AND(OR(c(MUL), c(DIV), c(POW), c(VALUE))));
@@ -407,10 +404,10 @@ void Go() {
     //    g[VALUE]   = c(NUMBER) / (c(OP) & c(EXPR) & c(CP));
     //Option 3: commas for ANDs, parenthesis required, if not they are parsed
     //          with standard rules
-    g[SUM]     = (c(PRODUCT), *((c(PLUS) / c(MINUS)), c(PRODUCT)));
-    g[PRODUCT] = (c(POWER), *((c(MUL) / c(DIV) / c(POW)), c(VALUE)));
-    g[POWER]   = (c(VALUE), *(c(POW), c(VALUE)));
-    g[VALUE]   = c(NUMBER) / (c(OP), c(EXPR), c(CP));
+    g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
+    g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
+    g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
+    g[VALUE]   = n(NUMBER) / (n(OP), n(EXPR), n(CP));
     using FP = FloatParser;
     using CS = ConstStringParser;
     //terminal
@@ -433,11 +430,11 @@ void Go() {
                              << ins.get_line_chars() << std::endl;
 }
 
-//------------------------------------------------------------------------------}
-
-
+//------------------------------------------------------------------------------
 int main(int, char**) {
-    Go();
+    //Go();
+    void TreeTest();
+    TreeTest();
    	return 0;
 }
 
@@ -531,4 +528,37 @@ int main(int, char**) {
 //KeyT InitKey();
 //template <>
 //TERM InitKey<TERM>() { return TERM(); }
+//#if 0
+//{{NUMBER, [](TERM t, const Values& v, Ctx&, EvalState) {
+//    std::cout << "NUMBER: ";
+//    if(!v.empty()) cout << v.begin()->second;
+//    cout << std::endl;
+//    return true;}},
+//    {EXPR, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "EXPR" << std::endl; return true;}},
+//    {OP, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "OP" << std::endl; return true;}},
+//    {CP, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "CP" << std::endl; return true;}},
+//    {PLUS, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "+" << std::endl; return true;}},
+//    {MINUS, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "-" << std::endl; return true;}},
+//    {MUL, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "*" << std::endl; return true;}},
+//    {DIV, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "/" << std::endl; return true;}},
+//    {POW, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "^" << std::endl; return true;}},
+//    {SUM, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "SUM" << std::endl; return true;}},
+//    {PRODUCT, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "PRODUCT" << std::endl; return true;}},
+//    {POWER, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "POWER" << std::endl; return true;}},
+//    {VALUE, [](TERM t, const Values& , Ctx&, EvalState) {
+//        std::cout << "VALUE" << std::endl; return true;}}
+//    };
+//#endif
+
 

@@ -28,7 +28,9 @@
 #include <vector>
 #include <memory>
 #include <limits>
+#include <algorithm>
 
+///@todo make it an inner class of STree and allow for typed weight
 template < typename T >
 class PTree {
 public:
@@ -56,12 +58,12 @@ public:
                 children_.back()->parent_ = this;
                 return children_.back();
             } else {
-                std::vector< PTree* > i =
+                typename std::vector< PTree* >::iterator i =
                     std::find(children_.begin(), children_.end(), caller);
-                PTree* p = *i;
-                *i = new PTree(data weight);
-                i->children_.push_back(p);
-                p->parent_(*i);
+                PTree< T >* p = *i;
+                *i = new PTree(d, weight);
+                (*i)->children_.push_back(p);
+                p->parent_ = *i;
                 return *i;
             }
         } else {
@@ -74,14 +76,11 @@ public:
             }
         }
     }
-    void Replace(PTree* p, PTree* n) {
-        for(std::vector< PTree< T >* >::iterator i = children_.begin();
-            i != children_.end(); ++i) {
-            if(*i == p) {
-                *i = n;
-                n->parent_ = this;
-            }
-        }
+    template < typename F >
+    F Apply(F f) {
+        f(data_);
+        for(auto i: children_) i->Apply(f);
+        return f;
     }
     const T& Data() const { return data_; }
     const std::vector< PTree* >& Children() const { return children_; }
@@ -89,7 +88,6 @@ public:
         for(auto i: children_) delete i;
     }
 private:
-    using PTreePtr = PTree*;
     T data_;
     int weight_; //children's weight is >= current weight
     PTree* parent_;
@@ -98,16 +96,24 @@ private:
 
 template < typename T > class STree {
 public:
-    STree(const STree& t) : tree_(new PTree(*tree_)), cursor_(nullptr) {}
-    STree(STree&&) = default;
+    STree(const STree& t) : tree_(new PTree< T >(*t.tree_)),
+                            cursor_(tree_.get()) {}
+    STree(STree&& t) : tree_(std::move(t.tree_)), cursor_(nullptr) {
+        if(tree_) cursor_ = tree_.get();
+    }
     STree() = default;
-    void Add(const T& data, int weight) {
+    STree& Add(const T& data, int weight) {
         if(!tree_) {
-            tree_ = new PTRee< T >(data, weight);
+            tree_ = std::shared_ptr<PTree< T > >(new PTree< T >(data, weight));
             cursor_ = tree_.get();
         } else {
             cursor_ = cursor_->Insert(data, weight);
         }
+        return *this;
+    }
+    template < typename F >
+    F Apply(F f) {
+        return tree_->Apply(f);
     }
     std::shared_ptr< PTree< T > > Root() const { return tree_; }
 private:
@@ -116,7 +122,7 @@ private:
 };
 
 //Eval(PTree* r, const FMap& fm) {
-//    return fm[r->type_](r);
+//    return fm[r->data_.type](r);
 //}
 
 
