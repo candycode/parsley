@@ -14,8 +14,8 @@ enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
 
 std::map< TERM, int > weights = {
     {NUMBER, 10},
-    {OP, 9},
-    {CP, 9},
+    {OP, 100},
+    {CP, 100},
     {POW, 8},
     {MUL, 7},
     {DIV, 7},
@@ -64,6 +64,7 @@ std::string TermToString(TERM t) {
 using namespace std;
 void TreeTest() {
     STree< TERM > stree;
+    int i = 0;
     //"6*((2+-3)+7^9)"
     stree.Add(NUMBER, weights[NUMBER])
     .Add(MUL, weights[MUL])
@@ -71,7 +72,6 @@ void TreeTest() {
     .Add(OP, weights[OP])
     .Add(NUMBER, weights[NUMBER])
     .Add(PLUS, weights[PLUS])
-    .Add(MINUS, weights[MINUS])
     .Add(NUMBER, weights[NUMBER])
     .Add(CP, weights[CP])
     .Add(PLUS, weights[PLUS])
@@ -79,7 +79,7 @@ void TreeTest() {
     .Add(POW, weights[POW])
     .Add(NUMBER, weights[NUMBER])
     .Add(CP, weights[CP]);
-    stree.Apply([](TERM t) { cout << t << endl; });
+    stree.Apply([&i](TERM t) { cout <<  t << endl; });
     
 }
 

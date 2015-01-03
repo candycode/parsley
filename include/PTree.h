@@ -47,16 +47,22 @@ public:
             i->parent_ = this;
         }
     }
-    PTree() : weight_(std::numeric_limits< int >::max()), parent_(nullptr),
+    PTree() : weight_(std::numeric_limits< int >::min()), parent_(nullptr),
                 data_(T()) {}
     PTree(const T& d, int w) : data_(d), weight_(w), parent_(nullptr) {}
-    PTree* Insert(const T& d, int weight, PTree* caller = nullptr) {
-        if(weight > weight_) {
+    PTree* Insert(const T& d, int weight, PTree* caller = nullptr, int woff = 0) {
+//        std::cout << "===========================\n";
+//        if(Root()) Root()->Apply([](T t) { std::cout << t << ' ' << std::endl;});
+        weight += woff;
+        if(ScopeBegin(d)) woff += weight;
+        else if(ScopeEnd(d)) woff -= weight;
+        PTree* ret = nullptr;
+        if(weight >= weight_) {
             if(std::find(children_.begin(), children_.end(), caller)
                == children_.end()) {
                 children_.push_back(new PTree(d, weight));
                 children_.back()->parent_ = this;
-                return children_.back();
+                ret = children_.back();
             } else {
                 typename std::vector< PTree* >::iterator i =
                     std::find(children_.begin(), children_.end(), caller);
@@ -64,23 +70,34 @@ public:
                 *i = new PTree(d, weight);
                 (*i)->children_.push_back(p);
                 p->parent_ = *i;
-                return *i;
+                ret = *i;
             }
         } else {
             if(parent_) {
-                return parent_->Insert(d, weight, this);
+                ret = parent_->Insert(d, weight, caller, woff);
             } else {
                 parent_ = new PTree(d, weight);
                 parent_->children_.push_back(this);
-                return parent_;
+                ret = parent_;
             }
         }
+        
+       
+        return ret;
     }
     template < typename F >
     F Apply(F f) {
         f(data_);
         for(auto i: children_) i->Apply(f);
         return f;
+    }
+    const PTree< T >* Root() const {
+        if(parent_ == nullptr) return this;
+        return parent_->Root();
+    }
+    PTree< T >* Root() {
+        if(parent_ == nullptr) return this;
+        return parent_->Root();
     }
     const T& Data() const { return data_; }
     const std::vector< PTree* >& Children() const { return children_; }
@@ -92,33 +109,30 @@ private:
     int weight_; //children's weight is >= current weight
     PTree* parent_;
     std::vector< PTree* > children_;
+    int scopeWeightOffset_ = 0;
 };
 
 template < typename T > class STree {
 public:
-    STree(const STree& t) : tree_(new PTree< T >(*t.tree_)),
-                            cursor_(tree_.get()) {}
-    STree(STree&& t) : tree_(std::move(t.tree_)), cursor_(nullptr) {
-        if(tree_) cursor_ = tree_.get();
-    }
-    STree() = default;
+//    STree(const STree& t) : tree_(new PTree< T >(*t.tree_)) {}
+//    STree(STree&& t) : tree_(t.tree_) { t.tree_ = nullptr; }
+//STree() = default;
     STree& Add(const T& data, int weight) {
         if(!tree_) {
-            tree_ = std::shared_ptr<PTree< T > >(new PTree< T >(data, weight));
-            cursor_ = tree_.get();
+            tree_ = new PTree< T >(data, weight);
         } else {
-            cursor_ = cursor_->Insert(data, weight);
+            tree_ = tree_->Insert(data, weight);
         }
         return *this;
     }
     template < typename F >
     F Apply(F f) {
-        return tree_->Apply(f);
+        if(!tree_) return f;
+        return tree_->Root()->Apply(f);
     }
-    std::shared_ptr< PTree< T > > Root() const { return tree_; }
+    ~STree() { delete tree_; }
 private:
-    std::shared_ptr< PTree< T > > tree_;
-    PTree< T >* cursor_;
+    PTree< T >* tree_ = nullptr;
 };
 
 //Eval(PTree* r, const FMap& fm) {
