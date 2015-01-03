@@ -66,21 +66,25 @@ void TreeTest() {
     STree< TERM > stree;
     int i = 0;
     //"6*((2+-3)+7^9)"
+    //NUM * (NUM + NUM)
     stree.Add(NUMBER, weights[NUMBER])
+//    .Add(MUL, weights[MUL])
+//    .Add(OP, weights[OP])
+//    .Add(OP, weights[OP] + weights[OP])
+    //.Add(NUMBER, weights[NUMBER] + 2*weights[OP])
     .Add(MUL, weights[MUL])
     .Add(OP, weights[OP])
-    .Add(OP, weights[OP])
-    .Add(NUMBER, weights[NUMBER] + 2*weights[OP])
-    .Add(PLUS, weights[PLUS] + 2*weights[OP])
-    .Add(NUMBER, weights[NUMBER] + 2*weights[OP])
-    .Add(CP, weights[MUL] + weights[OP])
-    .Add(PLUS, weights[PLUS]+ weights[OP])
-    .Add(NUMBER, weights[NUMBER]+ weights[OP])
-    .Add(POW, weights[POW]+ weights[OP])
-    .Add(NUMBER, weights[NUMBER]+ weights[OP])
+    .Add(NUMBER, weights[NUMBER])
+    .Add(PLUS, weights[PLUS])
+    .Add(NUMBER, weights[NUMBER])
     .Add(CP, weights[CP]);
+//    .Add(CP, weights[CP] + weights[OP])
+//    .Add(PLUS, weights[PLUS]+ weights[OP])
+//    .Add(NUMBER, weights[NUMBER]+ weights[OP])
+//    .Add(POW, weights[POW]+ weights[OP])
+//    .Add(NUMBER, weights[NUMBER]+ weights[OP])
+//    .Add(CP, weights[CP]);
     stree.Apply([&i](TERM t) { cout <<  t << endl; });
-    
 }
 
 

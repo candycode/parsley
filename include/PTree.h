@@ -51,32 +51,47 @@ public:
                 data_(T()) {}
     PTree(const T& d, int w) : data_(d), weight_(w), parent_(nullptr) {}
     PTree* Insert(const T& d, int weight, PTree* caller = nullptr) {
-//        std::cout << "===========================\n";
-//        if(Root()) Root()->Apply([](T t) { std::cout << t << ' ' << std::endl;});
         PTree* ret = nullptr;
-        if(weight >= weight_) {
-            if(std::find(children_.begin(), children_.end(), caller)
-               == children_.end()) {
-                children_.push_back(new PTree(d, weight));
-                children_.back()->parent_ = this;
-                ret = children_.back();
-            } else {
-                typename std::vector< PTree* >::iterator i =
-                    std::find(children_.begin(), children_.end(), caller);
-                PTree< T >* p = *i;
-                *i = new PTree(d, weight);
-                (*i)->children_.push_back(p);
-                p->parent_ = *i;
-                ret = *i;
-            }
+        const int off = weight;
+        weight = weight + offset_;
+        if(weight == weight_) {
+            children_.push_back(new PTree(d, weight));
+            children_.back()->parent_ = this;
+            ret = children_.back();
         } else {
-            if(parent_) {
-                ret = parent_->Insert(d, weight, caller);
+            if(weight > weight_) {
+                if(std::find(children_.begin(), children_.end(), caller)
+                   == children_.end()) {
+                    children_.push_back(new PTree(d, weight));
+                    children_.back()->parent_ = this;
+                    ret = children_.back();
+                } else {
+                    typename std::vector< PTree* >::iterator i =
+                        std::find(children_.begin(), children_.end(), caller);
+                    PTree< T >* p = *i;
+                    *i = new PTree(d, weight);
+                    (*i)->parent_ = this;
+                    (*i)->children_.push_back(p);
+                    p->parent_ = *i;
+                    ret = *i;
+                }
             } else {
-                parent_ = new PTree(d, weight);
-                parent_->children_.push_back(this);
-                ret = parent_;
+                if(parent_) {
+                    //offset_ is added by default at each invocation of
+                    //Insert: in case insert is invoked from within insert
+                    //do remove offset_ offset
+                    ret = parent_->Insert(d, weight - offset_, this);
+                } else {
+                    parent_ = new PTree(d, weight);
+                    parent_->children_.push_back(this);
+                    ret = parent_;
+                }
             }
+        }
+        if(ScopeBegin(d)) offset_ += off;
+        else if(ScopeEnd(d)) {
+            //weight = offset_;
+            offset_ -= off;
         }
         return ret;
     }
@@ -103,7 +118,12 @@ private:
     T data_;
     int weight_; //children's weight is >= current weight
     PTree* parent_;
-    std::vector< PTree* > children_;};
+    std::vector< PTree* > children_;
+    static int offset_;
+};
+
+template < typename T >
+int PTree< T >::offset_ = 0;
 
 template < typename T > class STree {
 public:
