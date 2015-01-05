@@ -29,6 +29,14 @@
 #include <memory>
 #include <limits>
 #include <algorithm>
+#include <type_traits>
+#include <cassert>
+
+template < typename R, typename N >
+R GetData(const N& n);
+
+template < typename T, typename N >
+T GetType(const N& n);
 
 ///@todo make it an inner class of STree and allow for typed weight
 template < typename T, typename WeightT = int, typename OffT = WeightT >
@@ -96,6 +104,17 @@ public:
         for(auto i: children_) i->Apply(f);
         return f;
     }
+    template < typename U, typename D, typename M >
+    D Eval(const M& fm)  {
+        assert(fm.find(GetType< U, T >(data_)) != fm.end());
+        auto f = fm.find(GetType< U, T >(data_));
+        D r = f(children_.begin()->Eval(fm),
+                GetData< D, T >(data_));
+        typename std::vector< PTree< T >* >::iterator i = children_.begin();
+        ++i;
+        for(i; i != children_.end(); ++i) r = f(r, i->Eval(fm));
+        return r;
+    }
     const PTree< T >* Root() const {
         if(parent_ == nullptr) return this;
         return parent_->Root();
@@ -151,6 +170,9 @@ private:
     PTree< T >* tree_ = nullptr;
     int offset_ = 0;
 };
+
+
+
 
 //Eval(PTree* r, const FMap& fm) {
 //    return fm[r->data_.type](r);
