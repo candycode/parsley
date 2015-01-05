@@ -31,8 +31,11 @@
 #include <algorithm>
 
 ///@todo make it an inner class of STree and allow for typed weight
-template < typename T >
+template < typename T, typename WeightT = int, typename OffT = WeightT >
 class PTree {
+public:
+    using Weight = WeightT;
+    using Offset = OffT;
 public:
     PTree(const PTree& t) : data_(t.data_), weight_(t.weight_),
          parent_(nullptr) {
@@ -47,52 +50,44 @@ public:
             i->parent_ = this;
         }
     }
-    PTree() : weight_(std::numeric_limits< int >::min()), parent_(nullptr),
-                data_(T()) {}
-    PTree(const T& d, int w) : data_(d), weight_(w), parent_(nullptr) {}
-    PTree* Insert(const T& d, int weight, PTree* caller = nullptr) {
+    PTree() = delete;
+    PTree(const T& d, Weight w) : data_(d), weight_(w), parent_(nullptr) {}
+    PTree* Insert(const T& d, Weight weight, Offset& offset,
+                  PTree* caller = nullptr) {
         PTree* ret = nullptr;
-        const int off = weight;
-        weight = weight + offset_;
-        if(weight == weight_) {
-            children_.push_back(new PTree(d, weight));
-            children_.back()->parent_ = this;
-            ret = children_.back();
-        } else {
-            if(weight > weight_) {
-                if(std::find(children_.begin(), children_.end(), caller)
-                   == children_.end()) {
-                    children_.push_back(new PTree(d, weight));
-                    children_.back()->parent_ = this;
-                    ret = children_.back();
-                } else {
-                    typename std::vector< PTree* >::iterator i =
-                        std::find(children_.begin(), children_.end(), caller);
-                    PTree< T >* p = *i;
-                    *i = new PTree(d, weight);
-                    (*i)->parent_ = this;
-                    (*i)->children_.push_back(p);
-                    p->parent_ = *i;
-                    ret = *i;
-                }
+        const Offset off = Offset(weight);
+        weight = weight + offset;
+
+        if(weight > weight_) {
+            if(std::find(children_.begin(), children_.end(), caller)
+               == children_.end()) {
+                children_.push_back(new PTree(d, weight));
+                children_.back()->parent_ = this;
+                ret = children_.back();
             } else {
-                if(parent_) {
-                    //offset_ is added by default at each invocation of
-                    //Insert: in case insert is invoked from within insert
-                    //do remove offset_ offset
-                    ret = parent_->Insert(d, weight - offset_, this);
-                } else {
-                    parent_ = new PTree(d, weight);
-                    parent_->children_.push_back(this);
-                    ret = parent_;
-                }
+                typename std::vector< PTree* >::iterator i =
+                    std::find(children_.begin(), children_.end(), caller);
+                PTree< T >* p = *i;
+                *i = new PTree(d, weight);
+                (*i)->parent_ = this;
+                (*i)->children_.push_back(p);
+                p->parent_ = *i;
+                ret = *i;
+            }
+        } else {
+            if(parent_) {
+                //offset_ is added by default at each invocation of
+                //Insert: in case insert is invoked from within insert
+                //do remove offset_ offset
+                ret = parent_->Insert(d, weight - offset, offset, this);
+            } else {
+                parent_ = new PTree(d, weight);
+                parent_->children_.push_back(this);
+                ret = parent_;
             }
         }
-        if(ScopeBegin(d)) offset_ += off;
-        else if(ScopeEnd(d)) {
-            //weight = offset_;
-            offset_ -= off;
-        }
+        if(ScopeBegin(d)) offset += off;
+        else if(ScopeEnd(d)) offset -= off;
         return ret;
     }
     template < typename F >
@@ -116,36 +111,45 @@ public:
     }
 private:
     T data_;
-    int weight_; //children's weight is >= current weight
+    Weight weight_; //children's weight is > current weight
     PTree* parent_;
     std::vector< PTree* > children_;
-    static int offset_;
 };
 
-template < typename T >
-int PTree< T >::offset_ = 0;
 
-template < typename T > class STree {
+template < typename T, typename WM = std::map< int, int > > class STree {
 public:
-//    STree(const STree& t) : tree_(new PTree< T >(*t.tree_)) {}
-//    STree(STree&& t) : tree_(t.tree_) { t.tree_ = nullptr; }
-//STree() = default;
+    STree(const STree& t) : tree_(new PTree< T >(*t.tree_)),
+                            weights_(t.weights_),
+                            offset_(t.offset_) {}
+    STree(STree&& t) : tree_(t.tree_),
+                       weights_(std::move(t.weights_)),
+                       offset_(t.offset_) { t.tree_ = nullptr; }
+    STree(const WM& wm) : weights_(wm) {}
+    STree() = default;
     STree& Add(const T& data, int weight) {
         if(!tree_) {
             tree_ = new PTree< T >(data, weight);
         } else {
-            tree_ = tree_->Insert(data, weight);
+            tree_ = tree_->Insert(data, weight, offset_);
         }
         return *this;
+    }
+    STree& Add(const T& data) {
+        assert(weights_.find(data) != weights_.end());
+        return Add(data, weights_[data]);
     }
     template < typename F >
     F Apply(F f) {
         if(!tree_) return f;
         return tree_->Root()->Apply(f);
     }
+    void SetWeights(const WM& wm) { weights_ = wm; }
     ~STree() { delete tree_; }
 private:
+    WM weights_;
     PTree< T >* tree_ = nullptr;
+    int offset_ = 0;
 };
 
 //Eval(PTree* r, const FMap& fm) {
