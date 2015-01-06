@@ -38,12 +38,16 @@ R GetData(const N& n);
 template < typename T, typename N >
 T GetType(const N& n);
 
+template < typename D, typename TypeT >
+D InitData() { return D(); }
+
 ///@todo make it an inner class of STree and allow for typed weight
 template < typename T, typename WeightT = int, typename OffT = WeightT >
 class PTree {
 public:
     using Weight = WeightT;
     using Offset = OffT;
+    using UUID = void*; //unique, per-process id
 public:
     PTree(const PTree& t) : data_(t.data_), weight_(t.weight_),
          parent_(nullptr) {
@@ -104,15 +108,21 @@ public:
         for(auto i: children_) i->Apply(f);
         return f;
     }
-    template < typename U, typename D, typename M >
-    D Eval(const M& fm)  {
-        assert(fm.find(GetType< U, T >(data_)) != fm.end());
-        auto f = fm.find(GetType< U, T >(data_));
-        D r = f(children_.begin()->Eval(fm),
-                GetData< D, T >(data_));
-        typename std::vector< PTree< T >* >::iterator i = children_.begin();
-        ++i;
-        for(i; i != children_.end(); ++i) r = f(r, i->Eval(fm));
+    template < typename DataT, typename FunctionMapT >
+    DataT Eval(const FunctionMapT& fm)  {
+        using Type = typename FunctionMapT::value_type::second_type;
+        assert(fm.find(GetType< Type, T >(data_)) != fm.end());
+        auto f = fm.find(GetType< Type, T >(data_));
+        DataT r = InitData< DataT, Type >();
+        if(children_.size() > 0) {
+            r = f(children_.begin()->Eval(fm),
+                  GetData< DataT, T >(data_));
+            typename std::vector< PTree< T >* >::iterator i = children_.begin();
+            ++i;
+            for(i; i != children_.end(); ++i) r = f(r, i->Eval(fm));
+        } else {
+            r = f(r, GetData< DataT, T >(data_));
+        }
         return r;
     }
     const PTree< T >* Root() const {
@@ -128,6 +138,18 @@ public:
     ~PTree() {
         for(auto i: children_) delete i;
     }
+    //copies tree, it also returns the new address assigned to the copy
+    //of the node passed as a parameter; this is required because in case
+    //a pointer points to a tree node we want to know the address of the
+    //newly created node in the new tree
+    PTree* DeepCopy(PTree* in, PTree*& out) {
+        PTree* p = new PTree(data_, weight_);
+        for(auto i: children_) {
+            p->children_.push_back(i->DeepCopy(in, out));
+        }
+        if(this == in) out = p;
+        return p;
+    }
 private:
     T data_;
     Weight weight_; //children's weight is > current weight
@@ -136,14 +158,31 @@ private:
 };
 
 
-template < typename T, typename WM = std::map< int, int > > class STree {
+template < typename T,
+           typename WM = std::map< int, int >,
+           typename WT = typename WM::value_type::second_type,
+           typename OFFT = WT >
+class STree {
 public:
-    STree(const STree& t) : tree_(new PTree< T >(*t.tree_)),
-                            weights_(t.weights_),
-                            offset_(t.offset_) {}
+    //copy constructor, copies tree and also makes the tree_ pointer point
+    //to the correct node in the newly created tree
+    STree(const STree& t) : weights_(t.weights_), tree_(nullptr),
+                            offset_(t.offset_) {
+        if(t.tree_) {
+            root_ = TPtr(t.tree_->Root()->DeepCopy(t.tree_, tree_));
+        }
+    }
     STree(STree&& t) : tree_(t.tree_),
+                       root_(std::move(t.root_)),
                        weights_(std::move(t.weights_)),
-                       offset_(t.offset_) { t.tree_ = nullptr; }
+                       offset_(t.offset_) {}
+    STree& operator=(STree s) {
+        weights_ = std::move(s.weights);
+        root_ = std::move(s.root_);
+        offset_ = s.offset_;
+        tree_ = s.tree_;
+        return *this;
+    }
     STree(const WM& wm) : weights_(wm) {}
     STree() = default;
     STree& Add(const T& data, int weight) {
@@ -152,30 +191,34 @@ public:
         } else {
             tree_ = tree_->Insert(data, weight, offset_);
         }
+        root_.release();
+        root_ = TPtr(tree_->Root());
         return *this;
     }
     STree& Add(const T& data) {
         assert(weights_.find(data) != weights_.end());
         return Add(data, weights_[data]);
     }
+    template < typename DataT, typename FunctionMapT >
+    DataT Eval(const FunctionMapT& fm) {
+        assert(root_);
+        return root_->template Eval< DataT, FunctionMapT >(fm);
+    }
     template < typename F >
     F Apply(F f) {
-        if(!tree_) return f;
-        return tree_->Root()->Apply(f);
+        assert(root_);
+        return root_->Apply(f);
     }
     void SetWeights(const WM& wm) { weights_ = wm; }
     ~STree() { delete tree_; }
 private:
+    using Tree = PTree< T, WT, OFFT>;
+    using TPtr = std::unique_ptr< Tree > ;
+    using Offset = OFFT;
     WM weights_;
-    PTree< T >* tree_ = nullptr;
-    int offset_ = 0;
+    TPtr root_;
+    Tree* tree_ = nullptr;
+    Offset offset_ = 0;
 };
-
-
-
-
-//Eval(PTree* r, const FMap& fm) {
-//    return fm[r->data_.type](r);
-//}
 
 
