@@ -210,7 +210,6 @@ public:
         return root_->Apply(f);
     }
     void SetWeights(const WM& wm) { weights_ = wm; }
-    ~STree() { delete tree_; }
 private:
     using Tree = PTree< T, WT, OFFT>;
     using TPtr = std::unique_ptr< Tree > ;
