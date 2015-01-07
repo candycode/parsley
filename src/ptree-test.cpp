@@ -62,11 +62,18 @@ std::string TermToString(TERM t) {
 
 }
 using namespace std;
+
 void TreeTest() {
-    STree< TERM > stree;
-    int i = 0;
+    std::vector< int > result;
+    const std::vector< int > CORRECT =
+    {MUL, NUMBER, OP, PLUS, NUMBER, NUMBER, CP};
+    parsley::STree< TERM > stree;
     //"6*((2+-3)+7^9)"
-    //NUM * (NUM + NUM)
+    
+    //2*(5+6)
+    //MUL -> NUMBER
+    //    -> OP -> PLUS -> NUMBER
+    //                  -> NUMBER -> CP
     stree.Add(NUMBER, weights[NUMBER])
 //    .Add(MUL, weights[MUL])
 //    .Add(OP, weights[OP])
@@ -84,7 +91,12 @@ void TreeTest() {
 //    .Add(POW, weights[POW]+ weights[OP])
 //    .Add(NUMBER, weights[NUMBER]+ weights[OP])
 //    .Add(CP, weights[CP]);
-    stree.Apply([&i](TERM t) { cout <<  t << endl; });
+    stree.Apply([&result](TERM t) { result.push_back(t); });
+    assert(result == CORRECT);
 }
+
+
+
+
 
 

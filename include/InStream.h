@@ -58,7 +58,7 @@ namespace parsley {
 /// @ingroup utility
 template < class IT,
            unsigned long RESIZE_THRESHOLD = 0xffffff,
-           typename IT::char_type EOL_ = '\n' >
+           typename IT::char_type EOL_ = typename IT::char_type('\n') >
 class InChStream {
 public:
     ///Constructor.
