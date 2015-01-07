@@ -35,9 +35,16 @@
 
 namespace parsley {
 
+template < typename T >
+    bool ScopeBegin(T);
+template < typename T >
+    bool ScopeEnd(T);
+    
 ///@todo make it an inner class of STree and allow for typed weight
 template < typename T, typename WeightT = int, typename OffT = WeightT >
 class WTree {
+    friend bool ScopeBegin(const T&);
+    friend bool ScopeEnd(const T&);
 public:
     using Weight = WeightT;
     using Offset = OffT;
@@ -112,15 +119,15 @@ public:
                const GetDataF& getData,
                const GetTypeF& getType)  {
         using Type = typename FunctionMapT::value_type::first_type;
-        assert(fm.find(getData(data_)) != fm.end());
-        auto f = fm.find(getType(data_));
+        assert(fm.find(getType(data_)) != fm.end());
+        auto f = fm.find(getType(data_))->second;
         DataT r = init(getType(data_));
         if(children_.size() > 0) {
-            r = f(children_.begin()->Eval(fm),
+            r = f((*children_.begin())->template Eval< DataT >(fm, init, getData, getType),
                   getData(data_));
             typename std::vector< WTree< T >* >::iterator i = children_.begin();
             ++i;
-            for(i; i != children_.end(); ++i) r = f(r, i->Eval(fm));
+            for(i; i != children_.end(); ++i) r = f(r, (*i)->template Eval< DataT >(fm, init, getData, getType));
         } else {
             r = f(r, getData(data_));
         }
@@ -221,12 +228,11 @@ public:
         root_ = TPtr(tree_->Root());
         return *this;
     }
-    template < typename D, typename U >
-    friend D Get(const U& );
+    friend typename WM::value_type::first_type GetType(const T& );
     //ADD ACCESSORS
     STree& Add(const T& data) {
-        assert(weights_.find(data) != weights_.end());
-        return Add(data, weights_[data]);
+        assert(weights_.find(GetType(data)) != weights_.end());
+        return Add(data, weights_.find(GetType(data))->second);
     }
     template < typename DataT,
     typename FunctionMapT,

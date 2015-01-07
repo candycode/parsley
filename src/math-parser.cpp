@@ -39,8 +39,7 @@ struct Term {
     Term(TERM t, real_t v) : type(t), value(v) {}
 };
 
-bool ScopeBegin(TERM t) { return t == OP; }
-bool ScopeEnd(TERM t) { return t == CP; }
+
 
 using namespace parsley;
 using AST = parsley::STree< Term, std::map< TERM, int > >;
@@ -113,8 +112,14 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     
     return g;
 }
+ 
+    TERM GetType(const Term& t) { return t.type; }
     
 }
+
+
+bool ScopeBegin(const Term& t) { return t.type == OP; }
+bool ScopeEnd(const Term& t) { return t.type == CP; }
 
 void MathParser(const string& expr) {
     istringstream iss(expr);
@@ -131,7 +136,10 @@ void MathParser(const string& expr) {
     auto init    = [](TERM tid) { return tid == MUL
         || tid == DIV ? real_t(1) : real_t(0); };
     
-    cout << "RESULT: " << ast.Eval< real_t >(am, init, getData, getType)
+    using Op = std::function< real_t (real_t, real_t) >;
+    using Ops = std::map< TERM, Op >;
+    Ops ops;
+    cout << "RESULT: " << ast.Eval< real_t >(ops, init, getData, getType)
          << endl;
     
 }
