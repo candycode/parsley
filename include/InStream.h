@@ -63,9 +63,13 @@ class InChStream {
 public:
     ///Constructor.
     ///@param is input stream.
-    InChStream( IT& is ) :  isp_( &is ), lines_( 0 ),
+    ///@param f filter: proceed until function does not return true
+    template < typename F >
+    InChStream( IT& is, const F& f = [](char_type) {return true;}) :
+                            isp_( &is ), lines_( 0 ),
                             lineChars_( 0 ), eolIt_( eols_.begin() ),
-                            locale_( is.getloc() ), gets_(0), ungets_(0) {
+                            locale_( is.getloc() ), gets_(0), ungets_(0),
+                            filter_(f) {
 #ifndef BUFFERED_IN_STREAM
         ///@warning required on MS Windows with VC++, issues in istreams require
         ///the stream to be NOT buffered for tellg/unget/putback/seekg to work 
@@ -87,6 +91,9 @@ public:
         char_type c = 0;
         if( isp_->good() ) {
             c = isp_->get();
+            while(isp_->good()
+                  && filter_(c)) c = get();
+            
         } else {
             throw std::logic_error( "Attempt to read from invalid stream" );
             return c; // in case exception handling disabled
@@ -242,6 +249,8 @@ private:
     int gets_;
     ///Total number of unget() operations
     int ungets_;
+    ///Filter characters
+    std::function< bool (char_type) > filter_;
 };
 
 /// Convenience typedef for stadard streams.

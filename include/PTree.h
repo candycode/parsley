@@ -115,6 +115,8 @@ public:
         return f;
     }
    
+    //recursive evaluation: current data is passed to eval function in SECOND
+    //parameter
     template < typename FunctionMapT >
     typename Result<
         typename FunctionMapT::value_type::second_type >::Type

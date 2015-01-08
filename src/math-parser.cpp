@@ -4,8 +4,8 @@
 #include <sstream>
 #include <string>
 #include <parsers.h>
-#include <InStream.h>
 #include <functional>
+#include <cmath>
 
 #include <peg.h>
 #ifdef HASH_MAP
@@ -13,7 +13,7 @@
 #else
 #include <map>
 #endif
-
+#include <InStream.h>
 #include <PTree.h>
 using namespace std;
 
@@ -41,7 +41,14 @@ struct Term {
     Term(TERM t, real_t v) : type(t), value(v) {}
 };
 
-
+//required customization points
+bool ScopeBegin(const Term& t) { return t.type == OP; }
+bool ScopeEnd(const Term& t) { return t.type == CP; }
+real_t GetData(const Term& t) { return t.value; }
+real_t Init(TERM tid) { return tid == MUL
+    || tid == DIV
+    || tid == POW ? real_t(1) : real_t(0); };
+TERM GetType(const Term& t) { return t.type; }
 
 using namespace parsley;
 using AST = parsley::STree< Term, std::map< TERM, int > >;
@@ -52,7 +59,7 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ast, EvalState es) {
     if(es == EvalState::BEGIN || v.empty()) return true;
     if(es == EvalState::FAIL) return false;
     if(t == NUMBER) ast.Add({t, v.begin()->second});
-    else ast.Add({t, real_t()});
+    else ast.Add({t, Init(t)});
     return true;
 };
 
@@ -115,36 +122,36 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     return g;
 }
  
-//required customization points
-bool ScopeBegin(const Term& t) { return t.type == OP; }
-bool ScopeEnd(const Term& t) { return t.type == CP; }
-real_t GetData(const Term& t) { return t.value; }
-real_t Init(TERM tid) { return tid == MUL
-    || tid == DIV ? real_t(1) : real_t(0); };
-TERM GetType(const Term& t) { return t.type; }
 
 }
 
 
-
 real_t MathParser(const string& expr) {
-    using Op = std::function< real_t (real_t, real_t) >;
-    using Ops = std::map< TERM, Op >;
-    Ops ops;
-
+    
     istringstream iss(expr);
-    InStream is(iss);
+    InStream is(iss, [](Char c) {return c == ' ' || c == '\t';});
     AST ast(weights);
     ActionMap am;
     Set(am, HandleTerm, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE);
     ParsingRules g = GenerateParser(am, ast);
     g[START](is);
-    
-//    auto getData = [](const Term& t) { return t.value; };
-//    auto getType = [](const Term& t) { return t.type;  };
-//    auto init    = [](TERM tid) { return tid == MUL
-//        || tid == DIV ? real_t(1) : real_t(0); };
+    if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
+    using Op = std::function< real_t (real_t, real_t) >;
+    using Ops = std::map< TERM, Op >;
+    //second eval parameter starts with value from current node associated
+    //with TERM id, first parameter is what has been already evaluated or
+    //initialized
+    Ops ops = {
+        {NUMBER, [](real_t, real_t n) { return n; }},
+        {PLUS, [](real_t v1, real_t v2) { return v1 + v2; }},
+        {MINUS, [](real_t v1, real_t v2) { return v1 - v2; }},
+        {MUL, [](real_t v1, real_t v2) { return v1 * v2; }},
+        {DIV, [](real_t v1, real_t v2) { return v1 / v2; }},
+        {POW, [](real_t v1, real_t v2) { return pow(v1,v2); }},
+        {OP, [](real_t v, real_t ) { return v; }},
+        {CP, [](real_t v, real_t ) { return v; }}
+    };
 
     return ast.Eval(ops);
 }
