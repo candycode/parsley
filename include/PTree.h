@@ -32,19 +32,24 @@
 #include <type_traits>
 #include <cassert>
 #include <functional>
+#include <type_traits>
+
 
 namespace parsley {
 
-template < typename T >
-    bool ScopeBegin(T);
-template < typename T >
-    bool ScopeEnd(T);
+template < typename F >
+struct Result {
+    using Type = typename F::result_type;
+};
+    
+template < typename R, typename... Args >
+struct Result< R (*)(Args...) > {
+    using Type = R;
+};
     
 ///@todo make it an inner class of STree and allow for typed weight
 template < typename T, typename WeightT = int, typename OffT = WeightT >
 class WTree {
-    friend bool ScopeBegin(const T&);
-    friend bool ScopeEnd(const T&);
 public:
     using Weight = WeightT;
     using Offset = OffT;
@@ -109,27 +114,24 @@ public:
         for(auto i: children_) i->Apply(f);
         return f;
     }
-    template < typename DataT,
-               typename FunctionMapT,
-               typename InitDataF,
-               typename GetDataF,
-               typename GetTypeF >
-    DataT Eval(const FunctionMapT& fm,
-               const InitDataF& init,
-               const GetDataF& getData,
-               const GetTypeF& getType)  {
+   
+    template < typename FunctionMapT >
+    typename Result<
+        typename FunctionMapT::value_type::second_type >::Type
+    Eval(const FunctionMapT& fm)  {
         using Type = typename FunctionMapT::value_type::first_type;
-        assert(fm.find(getType(data_)) != fm.end());
-        auto f = fm.find(getType(data_))->second;
-        DataT r = init(getType(data_));
+        assert(fm.find(GetType(data_)) != fm.end());
+        auto f = fm.find(GetType(data_))->second;
+        using DataT = typename Result<
+            typename FunctionMapT::value_type::second_type >::Type;
+        DataT r = Init(GetType(data_));
         if(children_.size() > 0) {
-            r = f((*children_.begin())->template Eval< DataT >(fm, init, getData, getType),
-                  getData(data_));
+            r = f((*children_.begin())->template Eval(fm), GetData(data_));
             typename std::vector< WTree< T >* >::iterator i = children_.begin();
             ++i;
-            for(i; i != children_.end(); ++i) r = f(r, (*i)->template Eval< DataT >(fm, init, getData, getType));
+            for(; i != children_.end(); ++i) r = f(r, (*i)->Eval(fm));
         } else {
-            r = f(r, getData(data_));
+            r = f(r, GetData(data_));
         }
         return r;
     }
@@ -228,23 +230,16 @@ public:
         root_ = TPtr(tree_->Root());
         return *this;
     }
-    friend typename WM::value_type::first_type GetType(const T& );
-    //ADD ACCESSORS
     STree& Add(const T& data) {
         assert(weights_.find(GetType(data)) != weights_.end());
         return Add(data, weights_.find(GetType(data))->second);
     }
-    template < typename DataT,
-    typename FunctionMapT,
-    typename InitDataF,
-    typename GetDataF,
-    typename GetTypeF >
-    DataT Eval(const FunctionMapT& fm,
-               const InitDataF& init,
-               const GetDataF& getData,
-               const GetTypeF& getType) {
+    template < typename FunctionMapT >
+    typename Result<
+        typename FunctionMapT::value_type::second_type >::Type
+    Eval(const FunctionMapT& fm ) {
         assert(root_);
-        return root_->template Eval< DataT >(fm, init, getData, getType);
+        return root_->Eval(fm);
     }
     template < typename F >
     F Apply(F f) {

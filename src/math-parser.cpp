@@ -5,7 +5,8 @@
 #include <string>
 #include <parsers.h>
 #include <InStream.h>
-#include <PTree.h>
+#include <functional>
+
 #include <peg.h>
 #ifdef HASH_MAP
 #include <unordered_map>
@@ -13,8 +14,9 @@
 #include <map>
 #endif
 
-
+#include <PTree.h>
 using namespace std;
+
 
 namespace {
 //==========================================================================
@@ -113,15 +115,23 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     return g;
 }
  
-    TERM GetType(const Term& t) { return t.type; }
-    
+//required customization points
+bool ScopeBegin(const Term& t) { return t.type == OP; }
+bool ScopeEnd(const Term& t) { return t.type == CP; }
+real_t GetData(const Term& t) { return t.value; }
+real_t Init(TERM tid) { return tid == MUL
+    || tid == DIV ? real_t(1) : real_t(0); };
+TERM GetType(const Term& t) { return t.type; }
+
 }
 
 
-bool ScopeBegin(const Term& t) { return t.type == OP; }
-bool ScopeEnd(const Term& t) { return t.type == CP; }
 
-void MathParser(const string& expr) {
+real_t MathParser(const string& expr) {
+    using Op = std::function< real_t (real_t, real_t) >;
+    using Ops = std::map< TERM, Op >;
+    Ops ops;
+
     istringstream iss(expr);
     InStream is(iss);
     AST ast(weights);
@@ -131,16 +141,19 @@ void MathParser(const string& expr) {
     ParsingRules g = GenerateParser(am, ast);
     g[START](is);
     
-    auto getData = [](const Term& t) { return t.value; };
-    auto getType = [](const Term& t) { return t.type;  };
-    auto init    = [](TERM tid) { return tid == MUL
-        || tid == DIV ? real_t(1) : real_t(0); };
-    
-    using Op = std::function< real_t (real_t, real_t) >;
-    using Ops = std::map< TERM, Op >;
-    Ops ops;
-    cout << "RESULT: " << ast.Eval< real_t >(ops, init, getData, getType)
-         << endl;
-    
+//    auto getData = [](const Term& t) { return t.value; };
+//    auto getType = [](const Term& t) { return t.type;  };
+//    auto init    = [](TERM tid) { return tid == MUL
+//        || tid == DIV ? real_t(1) : real_t(0); };
+
+    return ast.Eval(ops);
 }
+
+int main(int, char**) {
+    string me;
+    getline(cin, me);
+    cout << MathParser(me) << endl;
+}
+
+
 

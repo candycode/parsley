@@ -26,39 +26,39 @@ std::map< TERM, int > weights = {
 bool ScopeBegin(TERM t) { return t == OP; }
 bool ScopeEnd(TERM t) { return t == CP; }
 
-std::string TermToString(TERM t) {
-    std::string ret;
-    switch(t) {
-        case EXPR: ret = "EXPR";
-            break;
-        case OP: ret = "(";
-            break;
-        case CP: ret = ")";
-            break;
-        case VALUE: ret = "VALUE";
-            break;
-        case PLUS: ret = "+";
-            break;
-        case MINUS: ret = "-";
-            break;
-        case MUL: ret = "*";
-            break;
-        case DIV: ret = "/";
-            break;
-        case SUM: ret = "SUM";
-            break;
-        case PRODUCT: ret = "PROD";
-            break;
-            //        case NUMBER: ret = "";
-            //            break;
-        case POW: ret = "^";
-            break;
-        case POWER: ret = "POW";
-            break;
-        default: break;
-    }
-    return ret;
-};
+//std::string TermToString(TERM t) {
+//    std::string ret;
+//    switch(t) {
+//        case EXPR: ret = "EXPR";
+//            break;
+//        case OP: ret = "(";
+//            break;
+//        case CP: ret = ")";
+//            break;
+//        case VALUE: ret = "VALUE";
+//            break;
+//        case PLUS: ret = "+";
+//            break;
+//        case MINUS: ret = "-";
+//            break;
+//        case MUL: ret = "*";
+//            break;
+//        case DIV: ret = "/";
+//            break;
+//        case SUM: ret = "SUM";
+//            break;
+//        case PRODUCT: ret = "PROD";
+//            break;
+//            //        case NUMBER: ret = "";
+//            //            break;
+//        case POW: ret = "^";
+//            break;
+//        case POWER: ret = "POW";
+//            break;
+//        default: break;
+//    }
+//    return ret;
+//};
 
 }
 using namespace std;
