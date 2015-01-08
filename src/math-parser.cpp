@@ -23,9 +23,13 @@ namespace {
 using real_t = double;
 
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, POWER, START};
+           NUMBER, POW, POWER, START, VARIABLE, ASSIGN, ASSIGNMENT,
+           RVARIABLE};
 std::map< TERM, int > weights = {
     {NUMBER, 10},
+    {VARIABLE, 10},
+    {RVARIABLE, 10},
+    {ASSIGN, 9 },
     {OP, 100},
     {CP, 100},
     {POW, 8},
@@ -45,21 +49,58 @@ struct Term {
 bool ScopeBegin(const Term& t) { return t.type == OP; }
 bool ScopeEnd(const Term& t) { return t.type == CP; }
 real_t GetData(const Term& t) { return t.value; }
-real_t Init(TERM tid) { return tid == MUL
+real_t Init(TERM tid) {
+    if(tid == ASSIGN) return std::numeric_limits<real_t>::quiet_NaN();
+    return tid == MUL
     || tid == DIV
     || tid == POW ? real_t(1) : real_t(0); };
 TERM GetType(const Term& t) { return t.type; }
-
+//in case functions implementing operators are not of standard
+//C function type and do not define 'return_type' it is required to also
+//specialize Return<T> to allow for return type deduction
+//namespace parsley {
+//template <>
+//struct Return< MyCallableType > {
+//    using Type = AReturnType;
+//};
+//}
+    
+    
 using namespace parsley;
 using AST = parsley::STree< Term, std::map< TERM, int > >;
 
-using Ctx = AST;
+//variable handling: only using evaluation function supporting numbers
+//use var -> real key -> real value
+using VarToKey = std::map< string, real_t >;
+using KeyToVaue = std::map< real_t, real_t >;
+
     
-bool HandleTerm(TERM t, const Values& v, Ctx& ast, EvalState es) {
+struct Ctx {
+    AST ast;
+    VarToKey varkey;
+    KeyToVaue keyvalue;
+};
+
+real_t GenKey() {
+    static real_t k = real_t(0);
+    return k++;
+}
+    
+bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     if(es == EvalState::BEGIN || v.empty()) return true;
     if(es == EvalState::FAIL) return false;
-    if(t == NUMBER) ast.Add({t, v.begin()->second});
-    else ast.Add({t, Init(t)});
+    if(t == VARIABLE || t == RVARIABLE) {
+        if(ctx.varkey.find(v.begin()->second) != ctx.varkey.end()) {return true;
+        } else {
+            const real_t k = GenKey();
+            ctx.varkey[v.begin()->second] = k;
+            ctx.keyvalue[k] = real_t();
+            ctx.ast.Add({t, k});
+        }
+    } else  if(t == ASSIGN) {
+        ctx.ast.Add({t, std::numeric_limits<real_t>::quiet_NaN()});
+    } else if(t == NUMBER) ctx.ast.Add({t, v.begin()->second});
+    else ctx.ast.Add({t, Init(t)});
     return true;
 };
 
@@ -101,14 +142,16 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     //non-terminal - note the top-down definition through deferred calls using
     //the 'c' helper function
     
-    g[START]   = n(EXPR);
+    g[START]   = n(ASSIGNMENT) / n(EXPR);
     g[EXPR]    = n(SUM);
     g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
     g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
-    g[VALUE]   = n(NUMBER) / (n(OP), n(EXPR), n(CP));
+    g[VALUE]   = n(RVARIABLE) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
+    g[ASSIGNMENT]  = (n(VARIABLE), n(ASSIGN), n(EXPR));
     using FP = FloatParser;
     using CS = ConstStringParser;
+    using VS = FirstAlphaNumParser;
     //terminal
     g[NUMBER] = mt(NUMBER, FP());
     g[OP]     = mt(OP,     CS("("));
@@ -118,6 +161,9 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[MUL]    = mt(MUL,    CS("*"));
     g[DIV]    = mt(DIV,    CS("/"));
     g[POW]    = mt(POW,    CS("^"));
+    g[ASSIGN] = mt(ASSIGN, CS("<-"));
+    g[VARIABLE] = mt(VARIABLE, VS());
+    g[RVARIABLE] = mt(RVARIABLE, VS());
     
     return g;
 }
@@ -127,18 +173,20 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
 
 
 real_t MathParser(const string& expr) {
-    
     istringstream iss(expr);
     InStream is(iss, [](Char c) {return c == ' ' || c == '\t';});
-    AST ast(weights);
+    Ctx ctx;
+    ctx.ast.SetWeights(weights);
     ActionMap am;
     Set(am, HandleTerm, NUMBER,
-        EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE);
-    ParsingRules g = GenerateParser(am, ast);
+        EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE,
+        VARIABLE, ASSIGN, ASSIGNMENT, RVARIABLE);
+    ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
     using Op = std::function< real_t (real_t, real_t) >;
     using Ops = std::map< TERM, Op >;
+    const real_t INVALID_KEY = real_t(-1);
     //second eval parameter starts with value from current node associated
     //with TERM id, first parameter is what has been already evaluated or
     //initialized
@@ -150,16 +198,36 @@ real_t MathParser(const string& expr) {
         {DIV, [](real_t v1, real_t v2) { return v1 / v2; }},
         {POW, [](real_t v1, real_t v2) { return pow(v1,v2); }},
         {OP, [](real_t v, real_t ) { return v; }},
-        {CP, [](real_t v, real_t ) { return v; }}
+        {CP, [](real_t v, real_t ) { return v; }},
+        //HACK TO AVOID USING AN EVAL FUNCTION THAT TAKES FULL Term
+        //INSTANCES AND SUPPORTS DATA OTHER THAN double
+        {ASSIGN, [&ctx, INVALID_KEY](real_t key, real_t value ) {
+            if(isnan(value)) return key;
+            ctx.keyvalue[key] = value;
+            return value;
+        }},
+        {VARIABLE, [&ctx](real_t, real_t k) {
+            return k;
+        }},
+        {RVARIABLE, [&ctx](real_t, real_t k) {
+            return ctx.keyvalue[k];
+        }}
+            
     };
-
-    return ast.Eval(ops);
+    
+    const real_t ret = ctx.ast.Eval(ops);
+    cout << ctx.varkey["x"] << ' ' << ctx.keyvalue[ctx.varkey["x"]] << endl;
+    return ret;
 }
 
 int main(int, char**) {
     string me;
-    getline(cin, me);
-    cout << MathParser(me) << endl;
+    while(getline(cin, me)) {
+        if(me.empty()) break;
+        cout << MathParser(me) << endl;
+       
+    }
+    return 0;
 }
 
 

@@ -701,7 +701,7 @@ private:
 /// @ingroup StringParsers
 class AlphaNumParser : public IParser {
 public:
-    AlphaNumParser( const String& name ) : anl_( name ) {}
+    AlphaNumParser( const String& name = String() ) : anl_( name ) {}
     bool Parse( InStream& is ) { return anl_.Parse( is ); }
     const Values& GetValues() const { return anl_.GetValues(); }
     const ValueType& operator[]( const KeyType& k ) const { return anl_[ k ]; }
@@ -723,7 +723,7 @@ public:
     typedef Values::key_type KeyType;
     /// Cosntructor.
     /// @param name name assigned to parsed value in returned value map
-    FirstAlphaNumParser( const String& name ) : name_( name ) {}
+    FirstAlphaNumParser( const String& name = String()) : name_( name ) {}
     /// IParser::Parse implementation: checks if the first character is a letter
     /// then uses the included SequenceParser to parse additional input.
     bool Parse( InStream& is ) {

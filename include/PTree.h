@@ -115,8 +115,13 @@ public:
         return f;
     }
    
-    //recursive evaluation: current data is passed to eval function in SECOND
-    //parameter
+    //Evaluation order:
+    //if node has children:
+    //  initialize result <- F(first children, node data)
+    //  at each iteration result <- (result, child->Eval)
+    //if node has NO children:
+    //  initialize result with Init specialization: result <- Init(type)
+    //  return F(result, node data)
     template < typename FunctionMapT >
     typename Result<
         typename FunctionMapT::value_type::second_type >::Type
@@ -137,31 +142,38 @@ public:
         }
         return r;
     }
-//    //Deferred execution: stores evaluation path and data in function
-//    //closure, valid until all tree nodes are not deleted
-//    template < typename DataT, typename FunctionMapT >
-//    std::function< DataT() > EvalFun(const FunctionMapT& fm)  {
-//        using Type = typename FunctionMapT::value_type::first_type;
-//        assert(fm.find(GetType< Type, T >(data_)) != fm.end());
-//        auto f = fm.find(GetType< Type, T >(data_));
-//        DataT r = InitData< DataT, Type >();
-//        std::function< DataT() > F;
-//        if(children_.size() > 0) {
-//            typename std::vector< WTree< T >* >::iterator i = children_.begin();
-//            F = [i, f, r, &fm]() {
-//                return f(i->EvalFun(fm)(), r);
-//            };
-//            ++i;
-//            for(i; i != children_.end(); ++i) {
-//                F = [f, F, i, &fm] {
-//                    return f(i->EvalFun(fm)(), F());
-//                };
-//            }
-//        } else {
-//            r = f(r, GetData< DataT, T >(data_));
-//        }
-//        return F;
-//    }
+    //Deferred execution: stores evaluation path and data in function
+    //closure, valid until all tree nodes are not deleted
+    template < typename FunctionMapT >
+    std::function< typename Result<
+        typename FunctionMapT::value_type::second_type >::Type () >
+    EvalFun(const FunctionMapT& fm)  {
+        using DataT = typename Result<
+            typename FunctionMapT::value_type::second_type >::Type;
+        using Type = typename FunctionMapT::value_type::first_type;
+        assert(fm.find(GetType(data_)) != fm.end());
+        auto f = fm.find(GetType(data_))->second;
+        DataT r = Init(GetType(data_));
+        std::function< DataT() > F;
+        if(children_.size() > 0) {
+            typename std::vector< WTree< T >* >::iterator i = children_.begin();
+            F = [i, f, r, &fm]() {
+                return f(i->EvalFun(fm)(), r);
+            };
+            ++i;
+            for(i; i != children_.end(); ++i) {
+                F = [f, F, i, &fm] {
+                    return f(i->EvalFun(fm)(), F());
+                };
+            }
+        } else {
+            const DataT c = GetData(data_);
+            F = [f, r, &fm, c]() {
+                return f(r, c);
+            };
+        }
+        return F;
+    }
     const WTree< T >* Root() const {
         if(parent_ == nullptr) return this;
         return parent_->Root();
