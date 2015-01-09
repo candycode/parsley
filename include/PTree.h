@@ -117,11 +117,11 @@ public:
    
     //Evaluation order:
     //if node has children:
-    //  initialize result <- F(first children, node data)
-    //  at each iteration result <- (result, child->Eval)
+    //  initialize result <- value of first child
+    //  at each iteration result <- F(result, child->Eval)
     //if node has NO children:
     //  initialize result with Init specialization: result <- Init(type)
-    //  return F(result, node data)
+    //  return F(node data, result)
     template < typename FunctionMapT >
     typename Result<
         typename FunctionMapT::value_type::second_type >::Type
@@ -133,12 +133,12 @@ public:
             typename FunctionMapT::value_type::second_type >::Type;
         DataT r = Init(GetType(data_));
         if(children_.size() > 0) {
-            r = f((*children_.begin())->template Eval(fm), GetData(data_));
+            r = (*children_.begin())->Eval(fm);
             typename std::vector< WTree< T >* >::iterator i = children_.begin();
             ++i;
             for(; i != children_.end(); ++i) r = f(r, (*i)->Eval(fm));
         } else {
-            r = f(r, GetData(data_));
+            r = f(GetData(data_), r);
         }
         return r;
     }
@@ -234,9 +234,10 @@ public:
     }
     STree(const WM& wm) : weights_(wm) {}
     STree() = default;
-    STree& Add(const T& data, int weight) {
-        if(!tree_) {
+    STree& Add(const T& data, WT weight) {
+        if(!root_) {
             tree_ = new WTree< T >(data, weight);
+            if(ScopeBegin(data)) offset_ = OFFT(weight);
         } else {
             tree_ = tree_->Insert(data, weight, offset_);
         }

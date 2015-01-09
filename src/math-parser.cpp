@@ -23,12 +23,12 @@ namespace {
 using real_t = double;
 
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, POWER, START, VARIABLE, ASSIGN, ASSIGNMENT,
-           RVARIABLE};
+           NUMBER, POW, POWER, START, LVALUE, ASSIGN, ASSIGNMENT,
+           RVALUE};
 std::map< TERM, int > weights = {
     {NUMBER, 10},
-    {VARIABLE, 10},
-    {RVARIABLE, 10},
+    {LVALUE, 10},
+    {RVALUE, 10},
     {ASSIGN, 9 },
     {OP, 100},
     {CP, 100},
@@ -69,7 +69,7 @@ TERM GetType(const Term& t) { return t.type; }
 using namespace parsley;
 using AST = parsley::STree< Term, std::map< TERM, int > >;
 
-//variable handling: only using evaluation function supporting numbers
+//LVALUE handling: only using evaluation function supporting numbers
 //use var -> real key -> real value
 using VarToKey = std::map< string, real_t >;
 using KeyToVaue = std::map< real_t, real_t >;
@@ -89,17 +89,27 @@ real_t GenKey() {
 bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     if(es == EvalState::BEGIN || v.empty()) return true;
     if(es == EvalState::FAIL) return false;
-    if(t == VARIABLE || t == RVARIABLE) {
-        if(ctx.varkey.find(v.begin()->second) != ctx.varkey.end()) {return true;
+    if(t == LVALUE) {
+        if(ctx.varkey.find(v.begin()->second) != ctx.varkey.end()) {
+            const real_t k = ctx.varkey.find(v.begin()->second)->second;
+            //cout << "ADDING RVALUE\n";
+            if(es == EvalState::RECUR) ctx.ast.Add({RVALUE, k});
+            else ctx.ast.Add({LVALUE, k});
         } else {
             const real_t k = GenKey();
             ctx.varkey[v.begin()->second] = k;
             ctx.keyvalue[k] = real_t();
             ctx.ast.Add({t, k});
         }
-    } else  if(t == ASSIGN) {
-        ctx.ast.Add({t, std::numeric_limits<real_t>::quiet_NaN()});
+    } else if(t == RVALUE) {
+        if(ctx.varkey.find(v.begin()->second) == ctx.varkey.end()) {
+            return false;
+        } else {
+            const real_t k = ctx.varkey.find(v.begin()->second)->second;
+            ctx.ast.Add({t, k});
+        }
     } else if(t == NUMBER) ctx.ast.Add({t, v.begin()->second});
+    else if(t == CP) return true; //not adding marker of scope end
     else ctx.ast.Add({t, Init(t)});
     return true;
 };
@@ -142,13 +152,13 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     //non-terminal - note the top-down definition through deferred calls using
     //the 'c' helper function
     
-    g[START]   = n(ASSIGNMENT) / n(EXPR);
+    g[START]   = n(EXPR);
     g[EXPR]    = n(SUM);
     g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
     g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
-    g[VALUE]   = n(RVARIABLE) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
-    g[ASSIGNMENT]  = (n(VARIABLE), n(ASSIGN), n(EXPR));
+    g[VALUE]   = n(NUMBER) / (n(OP), n(EXPR), n(CP));
+    g[ASSIGNMENT]  = (n(LVALUE), n(ASSIGN), n(EXPR));
     using FP = FloatParser;
     using CS = ConstStringParser;
     using VS = FirstAlphaNumParser;
@@ -162,8 +172,8 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[DIV]    = mt(DIV,    CS("/"));
     g[POW]    = mt(POW,    CS("^"));
     g[ASSIGN] = mt(ASSIGN, CS("<-"));
-    g[VARIABLE] = mt(VARIABLE, VS());
-    g[RVARIABLE] = mt(RVARIABLE, VS());
+    g[LVALUE] = mt(LVALUE, VS());
+    g[RVALUE] = mt(RVALUE, VS());
     
     return g;
 }
@@ -180,43 +190,38 @@ real_t MathParser(const string& expr) {
     ActionMap am;
     Set(am, HandleTerm, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE,
-        VARIABLE, ASSIGN, ASSIGNMENT, RVARIABLE);
+        LVALUE, ASSIGN, ASSIGNMENT, RVALUE);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
     using Op = std::function< real_t (real_t, real_t) >;
     using Ops = std::map< TERM, Op >;
-    const real_t INVALID_KEY = real_t(-1);
-    //second eval parameter starts with value from current node associated
-    //with TERM id, first parameter is what has been already evaluated or
-    //initialized
     Ops ops = {
-        {NUMBER, [](real_t, real_t n) { return n; }},
+        {NUMBER, [](real_t n, real_t) { return n; }},
         {PLUS, [](real_t v1, real_t v2) { return v1 + v2; }},
         {MINUS, [](real_t v1, real_t v2) { return v1 - v2; }},
         {MUL, [](real_t v1, real_t v2) { return v1 * v2; }},
         {DIV, [](real_t v1, real_t v2) { return v1 / v2; }},
         {POW, [](real_t v1, real_t v2) { return pow(v1,v2); }},
-        {OP, [](real_t v, real_t ) { return v; }},
+        {OP, [](real_t v, real_t a) { return v; }},
         {CP, [](real_t v, real_t ) { return v; }},
         //HACK TO AVOID USING AN EVAL FUNCTION THAT TAKES FULL Term
         //INSTANCES AND SUPPORTS DATA OTHER THAN double
-        {ASSIGN, [&ctx, INVALID_KEY](real_t key, real_t value ) {
-            if(isnan(value)) return key;
+        {ASSIGN, [&ctx](real_t key, real_t value ) {
             ctx.keyvalue[key] = value;
             return value;
         }},
-        {VARIABLE, [&ctx](real_t, real_t k) {
+        {LVALUE, [&ctx](real_t k, real_t ) {
             return k;
         }},
-        {RVARIABLE, [&ctx](real_t, real_t k) {
+        {RVALUE, [&ctx](real_t k, real_t ) {
             return ctx.keyvalue[k];
         }}
             
     };
     
     const real_t ret = ctx.ast.Eval(ops);
-    cout << ctx.varkey["x"] << ' ' << ctx.keyvalue[ctx.varkey["x"]] << endl;
+    //cout << ctx.varkey["x"] << ' ' << ctx.keyvalue[ctx.varkey["x"]] << endl;
     return ret;
 }
 

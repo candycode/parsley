@@ -6,7 +6,7 @@ namespace parsley {
 
 using NonTerminal = Parser;
 
-enum class EvalState {BEGIN, PASS, FAIL};
+enum class EvalState {BEGIN, PASS, FAIL, RECUR};
 
 using EvalFun = std::function< bool (InStream&) >;
 
@@ -28,11 +28,17 @@ MakeTermEval(KeyT k,
              bool cback = true) {
     std::size_t sp = std::numeric_limits<std::size_t>::max();
     bool last = false;
-    return [cback, last, sp, k, &em, p, &am, &c](InStreamT& is)
+    Values values;
+    return [values, cback, last, sp, k, &em, p, &am, &c](InStreamT& is)
     mutable -> bool {
-        if(is.tellg() == sp) return last;
         assert(em.find(k) != em.end());
         assert(am.find(k) != am.end());
+        if(is.tellg() == sp) {
+            if(cback) {
+                last = am[k](k, values, c, EvalState::RECUR);
+            }
+            return last;
+        }
         bool ret = true;
         std::size_t i = is.tellg();
         if(cback) {
@@ -44,12 +50,14 @@ MakeTermEval(KeyT k,
                 const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
                 ret = ret && am[k](k, p.GetValues(), c, s);
             }
+            values = p.GetValues();
         } else {
             ret = ret && em.find(k)->second(is);
             if(cback) {
                 const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
                 ret = ret && am[k](k, Values(), c, s);
             }
+            values = Values();
         }
         sp = i;
         last = ret;
@@ -65,6 +73,7 @@ template < typename F, typename...Fs >
 EvalFun OR(F f, Fs...fs) {
     return [=](InStream& is)  {
         bool pass = false;
+        //REWIND r(pass, is);
         pass = f(is);
         if(pass) return true;
         return OR(fs...)(is);
