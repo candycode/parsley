@@ -262,6 +262,7 @@ public:
         return root_->Apply(f);
     }
     void SetWeights(const WM& wm) { weights_ = wm; }
+    void Reset() { root_.reset(nullptr); offset_ = Offset(0); tree_ = nullptr; }
 private:
     using Tree = WTree< T, WT, OFFT>;
     using TPtr = std::unique_ptr< Tree > ;
@@ -269,7 +270,7 @@ private:
     WM weights_;
     TPtr root_;
     Tree* tree_ = nullptr;
-    Offset offset_ = 0;
+    Offset offset_ = Offset(0);
 };
 }
 

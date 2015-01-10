@@ -23,12 +23,10 @@ namespace {
 using real_t = double;
 
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, POWER, START, LVALUE, ASSIGN, ASSIGNMENT,
-           RVALUE};
+           NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT};
 std::map< TERM, int > weights = {
     {NUMBER, 10},
-    {LVALUE, 10},
-    {RVALUE, 10},
+    {VAR, 10},
     {ASSIGN, 9 },
     {OP, 100},
     {CP, 100},
@@ -79,6 +77,7 @@ struct Ctx {
     AST ast;
     VarToKey varkey;
     KeyToVaue keyvalue;
+    real_t assignKey;
 };
 
 real_t GenKey() {
@@ -89,23 +88,14 @@ real_t GenKey() {
 bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     if(es == EvalState::BEGIN || v.empty()) return true;
     if(es == EvalState::FAIL) return false;
-    if(t == LVALUE) {
+    if(t == VAR) {
         if(ctx.varkey.find(v.begin()->second) != ctx.varkey.end()) {
             const real_t k = ctx.varkey.find(v.begin()->second)->second;
-            //cout << "ADDING RVALUE\n";
-            if(es == EvalState::RECUR) ctx.ast.Add({RVALUE, k});
-            else ctx.ast.Add({LVALUE, k});
+            ctx.ast.Add({t, k});
         } else {
             const real_t k = GenKey();
             ctx.varkey[v.begin()->second] = k;
             ctx.keyvalue[k] = real_t();
-            ctx.ast.Add({t, k});
-        }
-    } else if(t == RVALUE) {
-        if(ctx.varkey.find(v.begin()->second) == ctx.varkey.end()) {
-            return false;
-        } else {
-            const real_t k = ctx.varkey.find(v.begin()->second)->second;
             ctx.ast.Add({t, k});
         }
     } else if(t == NUMBER) ctx.ast.Add({t, v.begin()->second});
@@ -157,8 +147,22 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
     g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
-    g[VALUE]   = n(NUMBER) / (n(OP), n(EXPR), n(CP));
-    g[ASSIGNMENT]  = (n(LVALUE), n(ASSIGN), n(EXPR));
+    g[VALUE]   = n(ASSIGNMENT) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
+    g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
+    ///TODO support for multi-arg functions:
+    //redefinitions of open and close parethesis are used to signal
+    //the begin/end of argument list;
+    //eval function of ',' separator takes care of adding result of expression
+    //into Context::ArgumentArray
+    //eval function of FOP ('(') puts result of first child (if any) into
+    //Context::ArgumentArray
+    //eval function of FUNNAME invokes function passing Context::ArgumentArray
+    //to function, usually a wrapper which forwards calls to actual math
+    //function f(const vector<duble>& v) -> atan(v[0], v[1]);
+    //it is possible to have one arg array per function and therefore also
+    //memoize by caching last used parameters
+    //g[FUN]         = (n(FUNNAME), n(FOP), ZO((n(EXPR), *(n(ARGSEP), (EXPR)))),
+    //                   n(FCP));
     using FP = FloatParser;
     using CS = ConstStringParser;
     using VS = FirstAlphaNumParser;
@@ -172,8 +176,7 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[DIV]    = mt(DIV,    CS("/"));
     g[POW]    = mt(POW,    CS("^"));
     g[ASSIGN] = mt(ASSIGN, CS("<-"));
-    g[LVALUE] = mt(LVALUE, VS());
-    g[RVALUE] = mt(RVALUE, VS());
+    g[VAR]    = mt(VAR, VS());
     
     return g;
 }
@@ -182,15 +185,14 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
 }
 
 
-real_t MathParser(const string& expr) {
+real_t MathParser(const string& expr, Ctx& ctx) {
     istringstream iss(expr);
     InStream is(iss, [](Char c) {return c == ' ' || c == '\t';});
-    Ctx ctx;
     ctx.ast.SetWeights(weights);
     ActionMap am;
     Set(am, HandleTerm, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE,
-        LVALUE, ASSIGN, ASSIGNMENT, RVALUE);
+        ASSIGN, ASSIGNMENT, VAR);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
@@ -208,29 +210,27 @@ real_t MathParser(const string& expr) {
         //HACK TO AVOID USING AN EVAL FUNCTION THAT TAKES FULL Term
         //INSTANCES AND SUPPORTS DATA OTHER THAN double
         {ASSIGN, [&ctx](real_t key, real_t value ) {
-            ctx.keyvalue[key] = value;
+            ctx.keyvalue[ctx.assignKey] = value;
             return value;
         }},
-        {LVALUE, [&ctx](real_t k, real_t ) {
-            return k;
-        }},
-        {RVALUE, [&ctx](real_t k, real_t ) {
+        {VAR, [&ctx](real_t k, real_t v) {
+            ctx.assignKey = k;
             return ctx.keyvalue[k];
         }}
-            
     };
     
     const real_t ret = ctx.ast.Eval(ops);
-    //cout << ctx.varkey["x"] << ' ' << ctx.keyvalue[ctx.varkey["x"]] << endl;
     return ret;
 }
 
 int main(int, char**) {
+    //REPL, exit when input is empty
     string me;
+    Ctx ctx;
     while(getline(cin, me)) {
         if(me.empty()) break;
-        cout << MathParser(me) << endl;
-       
+        cout << MathParser(me, ctx) << endl;
+        ctx.ast.Reset();
     }
     return 0;
 }
