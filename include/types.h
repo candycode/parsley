@@ -48,9 +48,24 @@ typedef InStream::streamoff StreamOff;
 typedef InStream::char_type Char;
 typedef String ValueID;
 typedef String ParserID;
-//@todo consider using an unordered_map
+//@todo consider using an unordered_map or making it configurable
 typedef std::map< ValueID, Any > Values;
-
+template < typename MapT >
+    const typename MapT::value_type::second_type&
+Get(const MapT& v, typename MapT::value_type::first_type vid) {
+    assert(v.find(vid) != v.end());
+    return v.find(vid)->second;
+}
+template < typename MapT >
+const typename MapT::value_type::second_type&
+Get(const MapT& v) {
+    assert(!v.empty());
+    return v.begin()->second;
+}
+template < typename MapT >
+bool In(const typename MapT::value_type::first_type& k, const MapT& m) {
+    return m.find(k) != m.end();
+}
 // wrappers useful for future unicode support
 ///@todo consder using the std::sto* functions
 inline double ToFloat( const char* str ) { return ::atof( str ); }

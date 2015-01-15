@@ -65,7 +65,7 @@ public:
     ///@param is input stream.
     ///@param f filter: proceed until function does not return true
     template < typename F >
-    InChStream( IT& is, const F& f = [](char_type) {return true;}) :
+    InChStream( IT& is, const F& f) :
                             isp_( &is ), lines_( 0 ),
                             lineChars_( 0 ), eolIt_( eols_.begin() ),
                             locale_( is.getloc() ), gets_(0), ungets_(0),
@@ -78,6 +78,8 @@ public:
         is.rdbuf()->pubsetbuf( 0, 0 );
 #endif
     }
+    InChStream(IT& is) :
+        InChStream(is, [](typename IT::char_type ) { return false; }) {}
     typedef typename IT::char_type char_type;
     typedef typename IT::streampos streampos;
     typedef typename IT::streamoff streamoff;

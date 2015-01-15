@@ -23,7 +23,9 @@ namespace {
 using real_t = double;
 
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT};
+           NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT
+};
+    
 std::map< TERM, int > weights = {
     {NUMBER, 10},
     {VAR, 10},
@@ -78,31 +80,123 @@ struct Ctx {
     VarToKey varkey;
     KeyToVaue keyvalue;
     real_t assignKey;
+    std::vector< real_t > values;
+    TERM op = TERM();
 };
 
+void Reset(Ctx& c) {
+    c.ast.Reset();
+    c.values.clear();
+    c.op = TERM();
+}
+    
 real_t GenKey() {
     static real_t k = real_t(0);
     return k++;
 }
     
 bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
-    if(es == EvalState::BEGIN || v.empty()) return true;
+    if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
+    
     if(t == VAR) {
-        if(ctx.varkey.find(v.begin()->second) != ctx.varkey.end()) {
-            const real_t k = ctx.varkey.find(v.begin()->second)->second;
+        if(In(Get(v), ctx.varkey)) {
+            const real_t k = Get(ctx.varkey, Get(v));
             ctx.ast.Add({t, k});
         } else {
             const real_t k = GenKey();
-            ctx.varkey[v.begin()->second] = k;
+            ctx.varkey[Get(v)] = k;
             ctx.keyvalue[k] = real_t();
             ctx.ast.Add({t, k});
         }
-    } else if(t == NUMBER) ctx.ast.Add({t, v.begin()->second});
+    } else if(t == NUMBER) {
+        ctx.ast.Add({t, Get(v)});
+    }
     else if(t == CP) return true; //not adding marker of scope end
-    else ctx.ast.Add({t, Init(t)});
+    else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
+    
+//build both tree and perform real-time evaluation using captures of
+//SUM, PRODUCT etc.: values are stored into the context as they are read
+//and each time an operation is encountered the first element of the
+//value array is replaced with the result of the operation applied to
+//the value array
+bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
+    if(es == EvalState::BEGIN) return true;
+    if(es == EvalState::FAIL) return false;
+    if(t == VAR) {
+        if(In(Get(v), ctx.varkey)) {
+            const real_t k = Get(ctx.varkey,Get(v));
+            ctx.ast.Add({t, k});
+            ctx.values.push_back(k);
+            ctx.assignKey = k;
+            ctx.values.push_back(ctx.keyvalue[k]);
+        } else {
+            const real_t k = GenKey();
+            ctx.varkey[Get(v)] = k;
+            ctx.keyvalue[k] = real_t();
+            ctx.ast.Add({t, k});
+            ctx.assignKey = k;
+            ctx.values.push_back(real_t());
+        }
+    } else if(t == NUMBER) {
+        ctx.values.push_back(Get(v));
+        ctx.ast.Add({t, Get(v)});
+    }
+    else if(t == CP); //not adding marker of scope end
+    else if(t == SUM) {
+        if(ctx.values.size() > 0) {
+            real_t r = real_t(0);
+            if(ctx.op == PLUS) {
+                for(auto i: ctx.values) r += i;
+            } else if(ctx.op == MINUS) {
+                r = ctx.values[0];
+                for(std::vector< real_t >::iterator i = ++ctx.values.begin();
+                    i != ctx.values.end();
+                    ++i)
+                    r -= *i;
+            }
+            ctx.values[0] = r;
+            ctx.values.resize(1);
+        }
+        
+    } else if(t == PRODUCT) {
+        if(ctx.values.size() > 0) {
+            real_t r = real_t(1);
+            if(ctx.op == MUL) {
+                for(auto i: ctx.values) r *= i;
+            } else if(ctx.op == DIV) {
+                r = ctx.values[0];
+                for(std::vector< real_t >::iterator i = ++ctx.values.begin();
+                    i != ctx.values.end();
+                    ++i)
+                    r /= *i;
+            } else if(ctx.op == POW) {
+                r = ctx.values[0];
+                for(std::vector< real_t >::iterator i = ++ctx.values.begin();
+                    i != ctx.values.end();
+                    ++i)
+                    r = pow(r, *i);
+            }
+            ctx.values[0] = r;
+            ctx.values.resize(1);
+        }
+
+    } else if(t == ASSIGN) {
+        assert(ctx.values.size() > 1);
+        ctx.keyvalue[ctx.values[0]] = ctx.values[1];
+    }
+    else if(t == EXPR) { cout << ">> " << ctx.values.front() << endl; }
+    else {
+        if(!v.empty()) {
+            ctx.ast.Add({t, Init(t)});
+            ctx.op = t;
+        }
+    }
+    return true;
+};
+    
 
 #define DEFINE_HASH(T) \
 namespace std { \
@@ -136,15 +230,16 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     
     ParsingRules g; // grammar
     auto n  = MAKE_CALL(TERM, g, am, ctx);
+    auto c  = MAKE_CBCALL(TERM, g, am, ctx);
     auto mt = MAKE_EVAL(TERM, g, am, ctx);
     
     //grammar definition
     //non-terminal - note the top-down definition through deferred calls using
     //the 'c' helper function
     
-    g[START]   = n(EXPR);
-    g[EXPR]    = n(SUM);
-    g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
+    g[START]   = c(EXPR);
+    g[EXPR]    = c(SUM);
+    g[SUM]     = (c(PRODUCT), *((n(PLUS) / n(MINUS)), c(PRODUCT)));
     g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
     g[VALUE]   = n(ASSIGNMENT) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
@@ -180,17 +275,22 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     
     return g;
 }
- 
+
+    
 
 }
 
-
 real_t MathParser(const string& expr, Ctx& ctx) {
     istringstream iss(expr);
-    InStream is(iss, [](Char c) {return c == ' ' || c == '\t';});
+    InStream is(iss);//, [](Char c) {return c == ' ' || c == '\t';});
     ctx.ast.SetWeights(weights);
     ActionMap am;
-    Set(am, HandleTerm, NUMBER,
+#ifndef INLINE_EVAL
+    auto HT = HandleTerm;
+#else
+    auto HT = HandleTerm2;
+#endif
+    Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE,
         ASSIGN, ASSIGNMENT, VAR);
     ParsingRules g = GenerateParser(am, ctx);
@@ -223,6 +323,7 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     return ret;
 }
 
+
 int main(int, char**) {
     //REPL, exit when input is empty
     string me;
@@ -230,10 +331,23 @@ int main(int, char**) {
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << MathParser(me, ctx) << endl;
-        ctx.ast.Reset();
+        Reset(ctx);
     }
     return 0;
 }
 
+//ops[ast.Root()->Data().type](ast.Root(), map);
+//ops[SUM] = [&m](WTRee* p) {
+//    for(auto i: p->children_) {
+//        
+//    }
+//}
+//using one additional level of indirection it is possible to capture
+//operations and perform real-time evaluation
+//
+//[SUM] = n(CSUM)
+//[CSUM] = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
+//callback[SUM] is called when SUM->CSUM validates and if [NUMBER] loads
+//e.g. into the context then sum can directly evaluate the stored numbers
 
 

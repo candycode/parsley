@@ -42,13 +42,17 @@ MakeTermEval(KeyT k,
             ret = ret && p.Parse(is);
             if(cback) {
                 const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
-                ret = ret && am[k](k, p.GetValues(), c, s);
+                //short circuit evaluation, use am[...] as first arg
+                //if not callback not called with FAIL if ret is false
+                ret = am[k](k, p.GetValues(), c, s) && ret;
             }
         } else {
             ret = ret && em.find(k)->second(is);
             if(cback) {
                 const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
-                ret = ret && am[k](k, Values(), c, s);
+                //short circuit evaluation, use am[...] as first arg
+                //if not callback not called with FAIL if ret is false
+                ret = am[k](k, Values(), c, s) && ret;
             }
         }
         sp = i;
