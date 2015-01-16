@@ -80,6 +80,9 @@ struct Ctx {
     VarToKey varkey;
     KeyToVaue keyvalue;
     real_t assignKey;
+    
+    //The following two members are only required for just-in-time evaluation
+    //performed from within HandleTerm2 function
     std::vector< real_t > values;
     TERM op = TERM();
 };
@@ -116,15 +119,30 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
+
     
+bool Op(TERM t) {
+    return t == PLUS
+           || t == MINUS
+           || t == MUL
+           || t == DIV
+           || t == POW
+           || t == ASSIGN;
+}
 //build both tree and perform real-time evaluation using captures of
 //SUM, PRODUCT etc.: values are stored into the context as they are read
 //and each time an operation is encountered the first element of the
 //value array is replaced with the result of the operation applied to
 //the value array
 bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
+    auto reset = [](real_t r, std::vector< real_t >& v) {
+        v[0] = r;
+        v.resize(1);
+    };
+    
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
+    ctx.op = Op(t) ? t : ctx.op;
     if(t == VAR) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey,Get(v));
@@ -150,15 +168,15 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             real_t r = real_t(0);
             if(ctx.op == PLUS) {
                 for(auto i: ctx.values) r += i;
+                reset(r, ctx.values);
             } else if(ctx.op == MINUS) {
                 r = ctx.values[0];
                 for(std::vector< real_t >::iterator i = ++ctx.values.begin();
                     i != ctx.values.end();
                     ++i)
                     r -= *i;
+                reset(r, ctx.values);
             }
-            ctx.values[0] = r;
-            ctx.values.resize(1);
         }
         
     } else if(t == PRODUCT) {
@@ -166,34 +184,34 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             real_t r = real_t(1);
             if(ctx.op == MUL) {
                 for(auto i: ctx.values) r *= i;
+                ctx.values[0] = r;
+                ctx.values.resize(1);
             } else if(ctx.op == DIV) {
                 r = ctx.values[0];
                 for(std::vector< real_t >::iterator i = ++ctx.values.begin();
                     i != ctx.values.end();
                     ++i)
                     r /= *i;
+                reset(r, ctx.values);
             } else if(ctx.op == POW) {
                 r = ctx.values[0];
                 for(std::vector< real_t >::iterator i = ++ctx.values.begin();
                     i != ctx.values.end();
                     ++i)
                     r = pow(r, *i);
+                reset(r, ctx.values);
             }
-            ctx.values[0] = r;
-            ctx.values.resize(1);
         }
 
-    } else if(t == ASSIGN) {
-        assert(ctx.values.size() > 1);
-        ctx.keyvalue[ctx.values[0]] = ctx.values[1];
-    }
-    else if(t == EXPR) { cout << ">> " << ctx.values.front() << endl; }
-    else {
-        if(!v.empty()) {
-            ctx.ast.Add({t, Init(t)});
-            ctx.op = t;
+    } else if(t == ASSIGNMENT) {
+        if(ctx.op == ASSIGN) {
+            assert(ctx.values.size() > 1);
+            ctx.keyvalue[ctx.assignKey] = ctx.values[1];
+            reset(ctx.values[1], ctx.values);
         }
     }
+    else if(t == EXPR) { cout << ">> " << ctx.values.front() << endl; }
+    else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
     
