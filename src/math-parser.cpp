@@ -147,7 +147,6 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey,Get(v));
             ctx.ast.Add({t, k});
-            ctx.values.push_back(k);
             ctx.assignKey = k;
             ctx.values.push_back(ctx.keyvalue[k]);
         } else {
@@ -210,7 +209,6 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             reset(ctx.values[1], ctx.values);
         }
     }
-    else if(t == EXPR) { cout << ">> " << ctx.values.front() << endl; }
     else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
@@ -254,13 +252,17 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     //grammar definition
     //non-terminal - note the top-down definition through deferred calls using
     //the 'c' helper function
-    
+    // c -> callback invoked also for non-terminal states
+    // n -> callback invoked only for non terminal states
+    // 'c' is required to captures operations such as 1 + 2: callback is invoked
+    // after parsing 1 + 2 and can therefore be used to directly evaluate term
+    // sonce both operands and operation type have been stored into context
     g[START]   = c(EXPR);
     g[EXPR]    = c(SUM);
-    g[SUM]     = (c(PRODUCT), *((n(PLUS) / n(MINUS)), c(PRODUCT)));
+    g[SUM]     = (c(PRODUCT), *((n(PLUS) / n(MINUS)) & c(PRODUCT)));
     g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
-    g[VALUE]   = n(ASSIGNMENT) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
+    g[VALUE]   = c(ASSIGNMENT) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
     ///TODO support for multi-arg functions:
     //redefinitions of open and close parethesis are used to signal
@@ -336,8 +338,11 @@ real_t MathParser(const string& expr, Ctx& ctx) {
             return ctx.keyvalue[k];
         }}
     };
-    
+
     const real_t ret = ctx.ast.Eval(ops);
+#ifdef INLINE_EVAL
+    assert(ctx.values[0] == ret);
+#endif
     return ret;
 }
 
