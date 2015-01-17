@@ -85,11 +85,17 @@ struct Ctx {
     //performed from within HandleTerm2 function
     std::vector< real_t > values;
     TERM op = TERM();
+    
+    //The following is onlu required for deferred evaluation function built
+    //in HandleTerm3
+    using EvaluateFunction = std::function< real_t () >;
+    std::vector< EvaluateFunction > functions;
 };
 
 void Reset(Ctx& c) {
     c.ast.Reset();
     c.values.clear();
+    c.functions.clear();
     c.op = TERM();
 }
     
@@ -135,11 +141,10 @@ bool Op(TERM t) {
 //value array is replaced with the result of the operation applied to
 //the value array
 bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
-    auto reset = [](real_t r, std::vector< real_t >& v) {
-        v[0] = r;
-        v.resize(1);
+    auto reset = [](real_t r, std::vector< real_t >& a) {
+        a[0] = r;
+        a.resize(1);
     };
-    
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
     ctx.op = Op(t) ? t : ctx.op;
@@ -183,8 +188,7 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             real_t r = real_t(1);
             if(ctx.op == MUL) {
                 for(auto i: ctx.values) r *= i;
-                ctx.values[0] = r;
-                ctx.values.resize(1);
+                reset(r, ctx.values);
             } else if(ctx.op == DIV) {
                 r = ctx.values[0];
                 for(std::vector< real_t >::iterator i = ++ctx.values.begin();
@@ -211,9 +215,109 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     }
     else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
-};
+}
     
+//build both tree and perform real-time evaluation using captures of
+//SUM, PRODUCT etc.: values are stored into the context as they are read
+//and each time an operation is encountered the first element of the
+//value array is replaced with the result of the operation applied to
+//the value array
+bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
+    auto freset = [](const Ctx::EvaluateFunction& f,
+                     std::vector< Ctx::EvaluateFunction >& a) {
+        a[0] = f;
+        a.resize(1);
+    };
+    if(es == EvalState::BEGIN) return true;
+    if(es == EvalState::FAIL) return false;
+    ctx.op = Op(t) ? t : ctx.op;
+    if(t == VAR) {
+        if(In(Get(v), ctx.varkey)) {
+            const real_t k = Get(ctx.varkey,Get(v));
+            ctx.ast.Add({t, k});
+            ctx.assignKey = k;
+            ctx.functions.push_back([&ctx, k](){ return ctx.keyvalue[k]; });
+        } else {
+            const real_t k = GenKey();
+            ctx.varkey[Get(v)] = k;
+            ctx.keyvalue[k] = real_t();
+            ctx.ast.Add({t, k});
+            ctx.assignKey = k;
+            ctx.functions.push_back([](){
+                return std::numeric_limits< real_t >::quiet_NaN();
+            });
+        }
+    } else if(t == NUMBER) {
+        ctx.ast.Add({t, Get(v)});
+        const real_t r = Get(v);
+        ctx.functions.push_back([r]() { return r; });
+    }
+    else if(t == CP); //not adding marker of scope end
+    else if(t == SUM) {
+        if(ctx.functions.size() > 0) {
+            if(ctx.op == PLUS) {
+                Ctx::EvaluateFunction f = [](){ return real_t(0); };
+                for(auto j: ctx.functions) f = [&ctx, f, j]() {
+                    return f() + j();
+                };
+                freset(f, ctx.functions);
+            } else if(ctx.op == MINUS) {
+                Ctx::EvaluateFunction f = ctx.functions.front();
+                for(std::vector< Ctx::EvaluateFunction >::iterator i
+                    = ++ctx.functions.begin();
+                    i != ctx.functions.end();
+                    ++i)
+                    f = [&ctx, f, i](){ return f() - (*i)(); };
+                freset(f, ctx.functions);
+            }
+        }
+        
+    } else if(t == PRODUCT) {
+        if(ctx.functions.size() > 0) {
+            if(ctx.op == MUL) {
+                Ctx::EvaluateFunction f = []() { return real_t(1); };
+                for(auto i: ctx.functions) f = [&ctx, f, i]() {
+                    return f() * i();
+                };
+                freset(f, ctx.functions);
+            } else if(ctx.op == DIV) {
+                Ctx::EvaluateFunction f = ctx.functions[0];
+                for(std::vector< Ctx::EvaluateFunction >::iterator i
+                    = ++ctx.functions.begin();
+                    i != ctx.functions.end();
+                    ++i)
+                    f = [&ctx, f, i]() { return f() / (*i)(); };
+                freset(f, ctx.functions);
+            } else if(ctx.op == POW) {
+                Ctx::EvaluateFunction f = ctx.functions[0];
+                for(std::vector< Ctx::EvaluateFunction >::iterator i
+                    = ++ctx.functions.begin();
+                    i != ctx.functions.end();
+                    ++i)
+                    f = [&ctx, f, i]() { return pow(f(), (*i)()); };
+                freset(f, ctx.functions);
+            }
+        }
+        
+    } else if(t == ASSIGNMENT) {
+        if(ctx.op == ASSIGN) {
+            assert(ctx.functions.size() > 1);
+            const real_t k = ctx.assignKey;
+            const Ctx::EvaluateFunction v = ctx.functions[1];
+            Ctx::EvaluateFunction f = [&ctx, k, v]() {
+                const real_t r = v();
+                ctx.keyvalue[k] = r;
+                return r;
+            };
+            freset(f, ctx.functions);
+        }
+    }
+    else if(!v.empty()) ctx.ast.Add({t, Init(t)});
+    return true;
+}
 
+    
+    
 #define DEFINE_HASH(T) \
 namespace std { \
 template <> \
@@ -256,11 +360,19 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     // n -> callback invoked only for non terminal states
     // 'c' is required to captures operations such as 1 + 2: callback is invoked
     // after parsing 1 + 2 and can therefore be used to directly evaluate term
-    // sonce both operands and operation type have been stored into context
-    g[START]   = c(EXPR);
+    // once both operands and operation type have been stored into context
+    //pattern is:
+    //grammar[STATE_ID] = c(OPERATION_TO_HANDLE_WITH_CALLBAK)... | ... (...,...)
+    //grammar[STATE_TO_HANDLE_WITH_CALLBAK] = ...
+    //this way you have a callback invoked after all the operations associated
+    //with STATE_TO_HANDLE_WITH_CALLBAK have been completed it is therefore
+    //possible to handle operations after all operands and operators have been
+    //parsed instead of having a callback invoked when an operator is found
+    //with no knowledge of what lies on its right side
+    g[START]   = n(EXPR);
     g[EXPR]    = c(SUM);
     g[SUM]     = (c(PRODUCT), *((n(PLUS) / n(MINUS)) & c(PRODUCT)));
-    g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
+    g[PRODUCT] = (c(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
     g[VALUE]   = c(ASSIGNMENT) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
@@ -305,10 +417,12 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     InStream is(iss);//, [](Char c) {return c == ' ' || c == '\t';});
     ctx.ast.SetWeights(weights);
     ActionMap am;
-#ifndef INLINE_EVAL
-    auto HT = HandleTerm;
-#else
+#ifdef INLINE_EVAL
     auto HT = HandleTerm2;
+#elif FUN_EVAL
+    auto HT = HandleTerm3;
+#else
+    auto HT = HandleTerm;
 #endif
     Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE,
@@ -342,6 +456,8 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     const real_t ret = ctx.ast.Eval(ops);
 #ifdef INLINE_EVAL
     assert(ctx.values[0] == ret);
+#elif FUN_EVAL
+    assert(ctx.functions[0]() == ret);
 #endif
     return ret;
 }
@@ -353,7 +469,7 @@ int main(int, char**) {
     Ctx ctx;
     while(getline(cin, me)) {
         if(me.empty()) break;
-        cout << MathParser(me, ctx) << endl;
+        cout << "> " << MathParser(me, ctx) << endl;
         Reset(ctx);
     }
     return 0;
