@@ -25,6 +25,53 @@ using real_t = double;
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
            NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT
 };
+
+
+template < typename T, typename W >
+std::map< T, W > GenWeightedTerms(const std::vector< std::vector< T > >& vt,
+                                  const std::vector< T >& scope,
+                                  W start = W(0),
+                                  const W& step = W(1000)) {
+    std::map< T, W > m;
+    for(auto& i: vt) {
+        for(auto& j: i) {
+            m.insert(j, start);
+        }
+        start += step;
+    }
+    for(auto& i: scope) {
+        m.insert(i, start);
+    }
+    return m;
+}
+
+//template < typename T, typename W >
+//    std::map< T, W > InsertWeightedTerms(const std::map< T, W >& m,
+//                                         W w,
+//                                         const std::vector< T >& v
+//                                     ) {
+//        const W f = m.begin()->second;
+//        W l = f;
+//        for(auto i: m) {
+//            if(i.second != f) {
+//                l = i.second;
+//                break;
+//            }
+//        }
+//        const W step = l - f;
+//        W c = m.begin().second;
+//        for(auto i: m) {
+//            if(i.second == c) {
+//                t.push_back(i.first)
+//            } else {
+//                vt.push_back(t);
+//                t.resize(0);
+//                c = i.second;
+//                t.push_back(i.first);
+//            }
+//        }
+//        
+//}
     
 std::map< TERM, int > weights = {
     {NUMBER, 10},
@@ -115,7 +162,7 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         } else {
             const real_t k = GenKey();
             ctx.varkey[Get(v)] = k;
-            ctx.keyvalue[k] = real_t();
+            ctx.keyvalue[k] = std::numeric_limits<real_t>::quiet_NaN();
             ctx.ast.Add({t, k});
         }
     } else if(t == NUMBER) {
@@ -160,7 +207,7 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             ctx.keyvalue[k] = real_t();
             ctx.ast.Add({t, k});
             ctx.assignKey = k;
-            ctx.values.push_back(real_t());
+            ctx.values.push_back(std::numeric_limits<real_t>::quiet_NaN());
         }
     } else if(t == NUMBER) {
         ctx.values.push_back(Get(v));
