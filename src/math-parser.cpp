@@ -20,7 +20,6 @@
 
 using namespace std;
 
-
 namespace {
 //==========================================================================
 using real_t = double;
@@ -91,11 +90,12 @@ struct Ctx {
     std::vector< real_t > values;
     TERM op = TERM();
     
-    //The following is onlu required for deferred evaluation function built
+    //The following is only required for deferred evaluation function built
     //in HandleTerm3
     using EvaluateFunction = std::function< real_t () >;
     std::vector< EvaluateFunction > functions;
     
+    //Reuquired by both HandleTerm 2 and 3
     size_t scope = 0;
     stack< TERM > opstack;
     
@@ -108,6 +108,8 @@ void Reset(Ctx& c) {
     c.op = TERM();
     c.scope = size_t(0);
 }
+
+    
     
 real_t GenKey() {
     static real_t k = real_t(0);
@@ -145,6 +147,10 @@ bool Op(TERM t) {
            || t == POW
            || t == ASSIGN;
 }
+    
+bool ScopeOpen(TERM t)  { return t == OP; }
+bool ScopeClose(TERM t) { return t == CP; }
+    
 //build both tree and perform real-time evaluation using captures of
 //SUM, PRODUCT etc.: values are stored into the context as they are read
 //and each time an operation is encountered the first element of the
@@ -242,8 +248,7 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     };
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
-    TERM op = ctx.op;
-    ctx.op = Op(t) ? t : ctx.op;
+    if(Op(t)) ctx.opstack.push(t);
     if(t == VAR) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey,Get(v));
@@ -264,20 +269,16 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         ctx.ast.Add({t, Get(v)});
         const real_t r = Get(v);
         ctx.functions.push_back([r]() { return r; });
-    }
-    else if(t == OP) {
+    } else if(ScopeOpen(t)) {
         ++ctx.scope;
-        ctx.opstack.push(ctx.op);
-    }
-    else if(t == CP) {
+    } else if(ScopeClose(t)) {
         --ctx.scope;
         if(ctx.scope == std::numeric_limits< std::size_t >::max())
             return false;
-        ctx.op = ctx.opstack.top();
-        ctx.opstack.pop();
     } else if(t == SUM) {
-        if(ctx.functions.size() - ctx.scope > 0) {
-            if(ctx.op == PLUS) {
+        if(ctx.functions.size() - ctx.scope > 0 && !ctx.opstack.empty()) {
+            const TERM op = ctx.opstack.top();
+            if(op == PLUS) {
                 Ctx::EvaluateFunction f = [](){ return real_t(0); };
                 for(size_t i = ctx.scope; i != ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
@@ -286,7 +287,8 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
                     };
                 }
                 freset(f, ctx.functions, ctx.scope);
-            } else if(ctx.op == MINUS) {
+                ctx.opstack.pop();
+            } else if(op == MINUS) {
                 Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
                 for(size_t i = ctx.scope + 1;
                     i != ctx.functions.size(); ++i) {
@@ -294,12 +296,14 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
                     f = [f, fi](){ return f() - fi(); };
                 }
                 freset(f, ctx.functions, ctx.scope);
+                ctx.opstack.pop();
             }
         }
         
     } else if(t == PRODUCT) {
-        if(ctx.functions.size() - ctx.scope > 0) {
-            if(ctx.op == MUL) {
+        if(ctx.functions.size() - ctx.scope > 0 && !ctx.opstack.empty()) {
+            const TERM op = ctx.opstack.top();
+            if(op == MUL) {
                 Ctx::EvaluateFunction f = []() { return real_t(1); };
                 for(size_t i = ctx.scope; i != ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
@@ -308,25 +312,29 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
                     };
                 }
                 freset(f, ctx.functions, ctx.scope);
-            } else if(ctx.op == DIV) {
+                ctx.opstack.pop();
+            } else if(op == DIV) {
                 Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
                 for(size_t i = ctx.scope + 1; i != ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() { return f() / fi(); };
                 }
                 freset(f, ctx.functions, ctx.scope);
-            } else if(ctx.op == POW) {
+                ctx.opstack.pop();
+            } else if(op == POW) {
                 Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
                 for(size_t i = ctx.scope + 1; i != ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() { return pow(f(), fi()); };
                 }
                 freset(f, ctx.functions, ctx.scope);
+                ctx.opstack.pop();
             }
         }
         
     } else if(t == ASSIGNMENT) {
-        if(ctx.op == ASSIGN) {
+        const TERM op = ctx.opstack.top();
+        if(op == ASSIGN) {
             assert(ctx.functions.size() - ctx.scope > 1);
             const real_t k = ctx.assignKey;
             const Ctx::EvaluateFunction v = ctx.functions[ctx.scope + 1];
@@ -337,6 +345,7 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
                 return r;
             };
             freset(f, ctx.functions, ctx.scope);
+            ctx.opstack.pop();
         }
     }
     else if(!v.empty()) ctx.ast.Add({t, Init(t)});
