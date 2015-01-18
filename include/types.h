@@ -36,6 +36,7 @@
 #include <string>
 #include <cctype>
 #include <map>
+#include <vector>
 #include "InStream.h"
 #include "Any.h"
 
@@ -66,6 +67,63 @@ template < typename MapT >
 bool In(const typename MapT::value_type::first_type& k, const MapT& m) {
     return m.find(k) != m.end();
 }
+    
+template < typename T, typename W, typename M = std::map< T, W > >
+M GenWeightedTerms(const std::vector< std::vector< T > >& vt,
+                   const std::vector< T >& scope,
+                   W start = W(0),
+                   const W& step = W(1000)) {
+    std::map< T, W > m;
+    for(auto& i: vt) {
+        for(auto& j: i) {
+            m.insert(std::make_pair(j, start));
+        }
+        start += step;
+    }
+    for(auto& i: scope) {
+        m.insert(std::make_pair(i, start));
+    }
+    return m;
+}
+
+template < typename T, typename W, typename M >
+M InsertWeightedTerms(const M& m,
+                      T term, //insert before term
+                      const std::vector< T >& v
+                                     ) {
+    assert(m.find(term) != m.end());
+    const W w = m.find(term).second;
+    const W f = m.begin()->second;
+    W l = f;
+    for(auto i: m) {
+        if(i.second != f) {
+            l = i.second;
+            break;
+        }
+    }
+    const W step = l - f;
+    W c = m.begin().second;
+    std::vector< T > t;
+    std::vector< std::vector< T > > vt;
+    bool added = false;
+    for(auto i: m) {
+        if(i.second == w && !added) {
+            vt.push_back(v);
+            added = true;
+        }
+        if(i.second == c) {
+            t.push_back(i.first);
+        } else {
+            vt.push_back(t);
+            t.resize(0);
+            c = i.second;
+            t.push_back(i.first);
+        }
+    }
+    return GenWeightedTerms< T, W, M >(vt, std::vector< T >(), f, step);
+}
+    
+    
 // wrappers useful for future unicode support
 ///@todo consder using the std::sto* functions
 inline double ToFloat( const char* str ) { return ::atof( str ); }

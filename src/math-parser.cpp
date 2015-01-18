@@ -6,6 +6,7 @@
 #include <parsers.h>
 #include <functional>
 #include <cmath>
+#include <stack>
 
 #include <peg.h>
 #ifdef HASH_MAP
@@ -15,6 +16,8 @@
 #endif
 #include <InStream.h>
 #include <PTree.h>
+#include <types.h>
+
 using namespace std;
 
 
@@ -23,69 +26,25 @@ namespace {
 using real_t = double;
 
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT
+           NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT, SCOPED
 };
 
 
-template < typename T, typename W >
-std::map< T, W > GenWeightedTerms(const std::vector< std::vector< T > >& vt,
-                                  const std::vector< T >& scope,
-                                  W start = W(0),
-                                  const W& step = W(1000)) {
-    std::map< T, W > m;
-    for(auto& i: vt) {
-        for(auto& j: i) {
-            m.insert(j, start);
-        }
-        start += step;
-    }
-    for(auto& i: scope) {
-        m.insert(i, start);
-    }
-    return m;
-}
-
-//template < typename T, typename W >
-//    std::map< T, W > InsertWeightedTerms(const std::map< T, W >& m,
-//                                         W w,
-//                                         const std::vector< T >& v
-//                                     ) {
-//        const W f = m.begin()->second;
-//        W l = f;
-//        for(auto i: m) {
-//            if(i.second != f) {
-//                l = i.second;
-//                break;
-//            }
-//        }
-//        const W step = l - f;
-//        W c = m.begin().second;
-//        for(auto i: m) {
-//            if(i.second == c) {
-//                t.push_back(i.first)
-//            } else {
-//                vt.push_back(t);
-//                t.resize(0);
-//                c = i.second;
-//                t.push_back(i.first);
-//            }
-//        }
-//        
-//}
+using namespace parsley;
     
-std::map< TERM, int > weights = {
-    {NUMBER, 10},
-    {VAR, 10},
-    {ASSIGN, 9 },
-    {OP, 100},
-    {CP, 100},
-    {POW, 8},
-    {MUL, 7},
-    {DIV, 7},
-    {MINUS, 6},
-    {PLUS, 5}
-};
-
+//order by priority low -> high and specify scope operators '(', ')'
+std::map< TERM, int > weights
+    = GenWeightedTerms< TERM, int >(
+       {{PLUS},
+        {MINUS},
+        {MUL, DIV},
+        {POW},
+        {ASSIGN},
+        {VAR, NUMBER}},
+        //scope operators
+        {OP, CP});
+    
+    
 struct Term {
     TERM type;
     real_t value;
@@ -113,8 +72,7 @@ TERM GetType(const Term& t) { return t.type; }
 //}
     
     
-using namespace parsley;
-using AST = parsley::STree< Term, std::map< TERM, int > >;
+using AST = STree< Term, std::map< TERM, int > >;
 
 //LVALUE handling: only using evaluation function supporting numbers
 //use var -> real key -> real value
@@ -137,6 +95,10 @@ struct Ctx {
     //in HandleTerm3
     using EvaluateFunction = std::function< real_t () >;
     std::vector< EvaluateFunction > functions;
+    
+    size_t scope = 0;
+    stack< TERM > opstack;
+    
 };
 
 void Reset(Ctx& c) {
@@ -144,6 +106,7 @@ void Reset(Ctx& c) {
     c.values.clear();
     c.functions.clear();
     c.op = TERM();
+    c.scope = size_t(0);
 }
     
 real_t GenKey() {
@@ -271,12 +234,15 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
 //the value array
 bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     auto freset = [](const Ctx::EvaluateFunction& f,
-                     std::vector< Ctx::EvaluateFunction >& a) {
-        a[0] = f;
-        a.resize(1);
+                     std::vector< Ctx::EvaluateFunction >& a,
+                     size_t scopeLevel) {
+        assert(a.size() > scopeLevel);
+        a[scopeLevel] = f;
+        a.resize(scopeLevel + 1);
     };
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
+    TERM op = ctx.op;
     ctx.op = Op(t) ? t : ctx.op;
     if(t == VAR) {
         if(In(Get(v), ctx.varkey)) {
@@ -299,64 +265,78 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         const real_t r = Get(v);
         ctx.functions.push_back([r]() { return r; });
     }
-    else if(t == CP); //not adding marker of scope end
-    else if(t == SUM) {
-        if(ctx.functions.size() > 0) {
+    else if(t == OP) {
+        ++ctx.scope;
+        ctx.opstack.push(ctx.op);
+    }
+    else if(t == CP) {
+        --ctx.scope;
+        if(ctx.scope == std::numeric_limits< std::size_t >::max())
+            return false;
+        ctx.op = ctx.opstack.top();
+        ctx.opstack.pop();
+    } else if(t == SUM) {
+        if(ctx.functions.size() - ctx.scope > 0) {
             if(ctx.op == PLUS) {
                 Ctx::EvaluateFunction f = [](){ return real_t(0); };
-                for(auto j: ctx.functions) f = [&ctx, f, j]() {
-                    return f() + j();
-                };
-                freset(f, ctx.functions);
+                for(size_t i = ctx.scope; i != ctx.functions.size(); ++i) {
+                    auto fi = ctx.functions[i];
+                    f = [f, fi]() {
+                        return f() + fi();
+                    };
+                }
+                freset(f, ctx.functions, ctx.scope);
             } else if(ctx.op == MINUS) {
-                Ctx::EvaluateFunction f = ctx.functions.front();
-                for(std::vector< Ctx::EvaluateFunction >::iterator i
-                    = ++ctx.functions.begin();
-                    i != ctx.functions.end();
-                    ++i)
-                    f = [&ctx, f, i](){ return f() - (*i)(); };
-                freset(f, ctx.functions);
+                Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
+                for(size_t i = ctx.scope + 1;
+                    i != ctx.functions.size(); ++i) {
+                    auto fi = ctx.functions[i];
+                    f = [f, fi](){ return f() - fi(); };
+                }
+                freset(f, ctx.functions, ctx.scope);
             }
         }
         
     } else if(t == PRODUCT) {
-        if(ctx.functions.size() > 0) {
+        if(ctx.functions.size() - ctx.scope > 0) {
             if(ctx.op == MUL) {
                 Ctx::EvaluateFunction f = []() { return real_t(1); };
-                for(auto i: ctx.functions) f = [&ctx, f, i]() {
-                    return f() * i();
-                };
-                freset(f, ctx.functions);
+                for(size_t i = ctx.scope; i != ctx.functions.size(); ++i) {
+                    auto fi = ctx.functions[i];
+                    f = [f, fi]() {
+                        return f() * fi();
+                    };
+                }
+                freset(f, ctx.functions, ctx.scope);
             } else if(ctx.op == DIV) {
-                Ctx::EvaluateFunction f = ctx.functions[0];
-                for(std::vector< Ctx::EvaluateFunction >::iterator i
-                    = ++ctx.functions.begin();
-                    i != ctx.functions.end();
-                    ++i)
-                    f = [&ctx, f, i]() { return f() / (*i)(); };
-                freset(f, ctx.functions);
+                Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
+                for(size_t i = ctx.scope + 1; i != ctx.functions.size(); ++i) {
+                    auto fi = ctx.functions[i];
+                    f = [f, fi]() { return f() / fi(); };
+                }
+                freset(f, ctx.functions, ctx.scope);
             } else if(ctx.op == POW) {
-                Ctx::EvaluateFunction f = ctx.functions[0];
-                for(std::vector< Ctx::EvaluateFunction >::iterator i
-                    = ++ctx.functions.begin();
-                    i != ctx.functions.end();
-                    ++i)
-                    f = [&ctx, f, i]() { return pow(f(), (*i)()); };
-                freset(f, ctx.functions);
+                Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
+                for(size_t i = ctx.scope + 1; i != ctx.functions.size(); ++i) {
+                    auto fi = ctx.functions[i];
+                    f = [f, fi]() { return pow(f(), fi()); };
+                }
+                freset(f, ctx.functions, ctx.scope);
             }
         }
         
     } else if(t == ASSIGNMENT) {
         if(ctx.op == ASSIGN) {
-            assert(ctx.functions.size() > 1);
+            assert(ctx.functions.size() - ctx.scope > 1);
             const real_t k = ctx.assignKey;
-            const Ctx::EvaluateFunction v = ctx.functions[1];
-            Ctx::EvaluateFunction f = [&ctx, k, v]() {
+            const Ctx::EvaluateFunction v = ctx.functions[ctx.scope + 1];
+            std::reference_wrapper<real_t> ref = ctx.keyvalue[k];
+            Ctx::EvaluateFunction f = [ref, k, v]() {
                 const real_t r = v();
-                ctx.keyvalue[k] = r;
+                ref.get() = r;
                 return r;
             };
-            freset(f, ctx.functions);
+            freset(f, ctx.functions, ctx.scope);
         }
     }
     else if(!v.empty()) ctx.ast.Add({t, Init(t)});
@@ -464,16 +444,16 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     InStream is(iss);//, [](Char c) {return c == ' ' || c == '\t';});
     ctx.ast.SetWeights(weights);
     ActionMap am;
-#ifdef INLINE_EVAL
+#if defined(INLINE_EVAL)
     auto HT = HandleTerm2;
-#elif FUN_EVAL
+#elif defined(FUN_EVAL)
     auto HT = HandleTerm3;
 #else
     auto HT = HandleTerm;
 #endif
     Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE,
-        ASSIGN, ASSIGNMENT, VAR);
+        ASSIGN, ASSIGNMENT, VAR, SCOPED);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
@@ -501,10 +481,10 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     };
 
     const real_t ret = ctx.ast.Eval(ops);
-#ifdef INLINE_EVAL
+#if defined(INLINE_EVAL)
     assert(ctx.values[0] == ret);
-#elif FUN_EVAL
-    assert(ctx.functions[0]() == ret);
+#elif defined(FUN_EVAL)
+    assert(ctx.functions.front()() == ret);
 #endif
     return ret;
 }
@@ -514,6 +494,7 @@ int main(int, char**) {
     //REPL, exit when input is empty
     string me;
     Ctx ctx;
+    //cout << MathParser("1+2", ctx) << endl;
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << "> " << MathParser(me, ctx) << endl;
