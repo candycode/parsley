@@ -9,11 +9,8 @@
 #include <stack>
 
 #include <peg.h>
-#ifdef HASH_MAP
 #include <unordered_map>
-#else
 #include <map>
-#endif
 #include <InStream.h>
 #include <PTree.h>
 #include <types.h>
@@ -27,6 +24,14 @@ using real_t = double;
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
            NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT, SCOPED
 };
+
+
+//for debugging purposes only
+std::map< TERM, string > T2S =
+    {{PLUS, "PLUS"}, {MINUS, "MINUS"}, {MUL, "MUL"}, {DIV, "DIV"}};
+    
+std::map< TERM, int > ARITY =
+    {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}};
 
 
 using namespace parsley;
@@ -95,7 +100,7 @@ struct Ctx {
     using EvaluateFunction = std::function< real_t () >;
     std::vector< EvaluateFunction > functions;
     
-    //Reuquired by both HandleTerm 2 and 3
+    //Required by both HandleTerm 2 and 3
     size_t scope = 0;
     stack< TERM > opstack;
     
@@ -248,25 +253,25 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     };
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
-    if(Op(t)) ctx.opstack.push(t);
+    if(Op(t)) {
+        cout << ">PUSH " << T2S[t] << endl;
+        ctx.opstack.push(t);
+    }
     if(t == VAR) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey,Get(v));
-            ctx.ast.Add({t, k});
             ctx.assignKey = k;
             ctx.functions.push_back([&ctx, k](){ return ctx.keyvalue[k]; });
         } else {
             const real_t k = GenKey();
             ctx.varkey[Get(v)] = k;
             ctx.keyvalue[k] = real_t();
-            ctx.ast.Add({t, k});
             ctx.assignKey = k;
             ctx.functions.push_back([](){
                 return std::numeric_limits< real_t >::quiet_NaN();
             });
         }
     } else if(t == NUMBER) {
-        ctx.ast.Add({t, Get(v)});
         const real_t r = Get(v);
         ctx.functions.push_back([r]() { return r; });
     } else if(ScopeOpen(t)) {
@@ -278,56 +283,69 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(t == SUM) {
         if(ctx.functions.size() - ctx.scope > 0 && !ctx.opstack.empty()) {
             const TERM op = ctx.opstack.top();
+            const size_t start = In(op, ARITY) ?
+                ctx.functions.size() - ARITY[op]
+                : 0;
             if(op == PLUS) {
+                cout << ">OP PLUS" << endl;
                 Ctx::EvaluateFunction f = [](){ return real_t(0); };
-                for(size_t i = ctx.scope; i != ctx.functions.size(); ++i) {
+                cout << "// " << ctx.scope << endl;
+                for(size_t i = start; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() {
                         return f() + fi();
                     };
                 }
-                freset(f, ctx.functions, ctx.scope);
+                freset(f, ctx.functions, start);
                 ctx.opstack.pop();
+                cout << ">POP PLUS" << endl;
             } else if(op == MINUS) {
-                Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
-                for(size_t i = ctx.scope + 1;
-                    i != ctx.functions.size(); ++i) {
+                cout << ">OP MINUS" << endl;
+                Ctx::EvaluateFunction f = ctx.functions[start];
+                for(size_t i = start + 1;
+                    i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi](){ return f() - fi(); };
                 }
-                freset(f, ctx.functions, ctx.scope);
+                freset(f, ctx.functions, start);
                 ctx.opstack.pop();
+                cout << ">POP MINUS result: " << f() << endl;
             }
         }
         
     } else if(t == PRODUCT) {
         if(ctx.functions.size() - ctx.scope > 0 && !ctx.opstack.empty()) {
             const TERM op = ctx.opstack.top();
+            const size_t start = In(op, ARITY) ?
+                ctx.functions.size() - ARITY[op]
+                : 0;
             if(op == MUL) {
+                cout << ">OP MUL" << endl;
                 Ctx::EvaluateFunction f = []() { return real_t(1); };
-                for(size_t i = ctx.scope; i != ctx.functions.size(); ++i) {
+                for(size_t i = start; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() {
                         return f() * fi();
                     };
                 }
-                freset(f, ctx.functions, ctx.scope);
+                freset(f, ctx.functions, start);
                 ctx.opstack.pop();
+                cout << ">POP MUL result: " << f() << endl;
             } else if(op == DIV) {
-                Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
-                for(size_t i = ctx.scope + 1; i != ctx.functions.size(); ++i) {
+                Ctx::EvaluateFunction f = ctx.functions[start];
+                for(size_t i = start + 1; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() { return f() / fi(); };
                 }
-                freset(f, ctx.functions, ctx.scope);
+                freset(f, ctx.functions, start);
                 ctx.opstack.pop();
             } else if(op == POW) {
-                Ctx::EvaluateFunction f = ctx.functions[ctx.scope];
-                for(size_t i = ctx.scope + 1; i != ctx.functions.size(); ++i) {
+                Ctx::EvaluateFunction f = ctx.functions[start];
+                for(size_t i = start + 1; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() { return pow(f(), fi()); };
                 }
-                freset(f, ctx.functions, ctx.scope);
+                freset(f, ctx.functions, start);
                 ctx.opstack.pop();
             }
         }
@@ -348,7 +366,6 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             ctx.opstack.pop();
         }
     }
-    else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 }
 
@@ -444,8 +461,6 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     return g;
 }
 
-    
-
 }
 
 real_t MathParser(const string& expr, Ctx& ctx) {
@@ -489,13 +504,14 @@ real_t MathParser(const string& expr, Ctx& ctx) {
         }}
     };
 
-    const real_t ret = ctx.ast.Eval(ops);
+   // const real_t ret = ctx.ast.Eval(ops);
 #if defined(INLINE_EVAL)
-    assert(ctx.values[0] == ret);
+    cout << ctx.values.front()() << endl;
 #elif defined(FUN_EVAL)
-    assert(ctx.functions.front()() == ret);
+    cout << ">>>>> " << ctx.functions.front()() << " <<<<"<< endl;
+    //assert(ctx.functions.front()() == ret);
 #endif
-    return ret;
+    return 0;//ctx.ast.Eval(ops);
 }
 
 
@@ -506,7 +522,7 @@ int main(int, char**) {
     //cout << MathParser("1+2", ctx) << endl;
     while(getline(cin, me)) {
         if(me.empty()) break;
-        cout << "> " << MathParser(me, ctx) << endl;
+        cout << MathParser(me, ctx) << endl;
         Reset(ctx);
     }
     return 0;
