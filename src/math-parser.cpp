@@ -31,7 +31,7 @@ std::map< TERM, string > T2S =
     {{PLUS, "PLUS"}, {MINUS, "MINUS"}, {MUL, "MUL"}, {DIV, "DIV"}};
     
 std::map< TERM, int > ARITY =
-    {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}};
+    {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}, {ASSIGN, 2}};
 
 
 using namespace parsley;
@@ -101,9 +101,7 @@ struct Ctx {
     std::vector< EvaluateFunction > functions;
     
     //Required by both HandleTerm 2 and 3
-    size_t scope = 0;
     stack< TERM > opstack;
-    
 };
 
 void Reset(Ctx& c) {
@@ -111,7 +109,7 @@ void Reset(Ctx& c) {
     c.values.clear();
     c.functions.clear();
     c.op = TERM();
-    c.scope = size_t(0);
+    c.opstack = stack< TERM >();
 }
 
     
@@ -143,6 +141,9 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     return true;
 };
 
+
+bool ScopeOpen(TERM t)  { return t == OP; }
+bool ScopeClose(TERM t) { return t == CP; }
     
 bool Op(TERM t) {
     return t == PLUS
@@ -150,11 +151,9 @@ bool Op(TERM t) {
            || t == MUL
            || t == DIV
            || t == POW
-           || t == ASSIGN;
+           || t == ASSIGN
+           || ScopeOpen(t);
 }
-    
-bool ScopeOpen(TERM t)  { return t == OP; }
-bool ScopeClose(TERM t) { return t == CP; }
     
 //build both tree and perform real-time evaluation using captures of
 //SUM, PRODUCT etc.: values are stored into the context as they are read
@@ -253,10 +252,7 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     };
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
-    if(Op(t)) {
-        cout << ">PUSH " << T2S[t] << endl;
-        ctx.opstack.push(t);
-    }
+    if(Op(t)) ctx.opstack.push(t);
     if(t == VAR) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey,Get(v));
@@ -267,29 +263,24 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             ctx.varkey[Get(v)] = k;
             ctx.keyvalue[k] = real_t();
             ctx.assignKey = k;
-            ctx.functions.push_back([](){
-                return std::numeric_limits< real_t >::quiet_NaN();
-            });
+//            ctx.functions.push_back([](){
+//                return std::numeric_limits< real_t >::quiet_NaN();
+//            });
         }
     } else if(t == NUMBER) {
         const real_t r = Get(v);
         ctx.functions.push_back([r]() { return r; });
-    } else if(ScopeOpen(t)) {
-        ++ctx.scope;
     } else if(ScopeClose(t)) {
-        --ctx.scope;
-        if(ctx.scope == std::numeric_limits< std::size_t >::max())
-            return false;
+        if(ctx.opstack.empty() || !ScopeOpen(ctx.opstack.top())) return false;
+           ctx.opstack.pop();
     } else if(t == SUM) {
-        if(ctx.functions.size() - ctx.scope > 0 && !ctx.opstack.empty()) {
+        if(ctx.functions.size() > 0 && !ctx.opstack.empty()) {
             const TERM op = ctx.opstack.top();
             const size_t start = In(op, ARITY) ?
                 ctx.functions.size() - ARITY[op]
                 : 0;
             if(op == PLUS) {
-                cout << ">OP PLUS" << endl;
                 Ctx::EvaluateFunction f = [](){ return real_t(0); };
-                cout << "// " << ctx.scope << endl;
                 for(size_t i = start; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() {
@@ -298,9 +289,7 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
                 }
                 freset(f, ctx.functions, start);
                 ctx.opstack.pop();
-                cout << ">POP PLUS" << endl;
             } else if(op == MINUS) {
-                cout << ">OP MINUS" << endl;
                 Ctx::EvaluateFunction f = ctx.functions[start];
                 for(size_t i = start + 1;
                     i < ctx.functions.size(); ++i) {
@@ -309,18 +298,16 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
                 }
                 freset(f, ctx.functions, start);
                 ctx.opstack.pop();
-                cout << ">POP MINUS result: " << f() << endl;
             }
         }
         
     } else if(t == PRODUCT) {
-        if(ctx.functions.size() - ctx.scope > 0 && !ctx.opstack.empty()) {
+        if(ctx.functions.size() > 0 && !ctx.opstack.empty()) {
             const TERM op = ctx.opstack.top();
             const size_t start = In(op, ARITY) ?
                 ctx.functions.size() - ARITY[op]
                 : 0;
             if(op == MUL) {
-                cout << ">OP MUL" << endl;
                 Ctx::EvaluateFunction f = []() { return real_t(1); };
                 for(size_t i = start; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
@@ -330,7 +317,6 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
                 }
                 freset(f, ctx.functions, start);
                 ctx.opstack.pop();
-                cout << ">POP MUL result: " << f() << endl;
             } else if(op == DIV) {
                 Ctx::EvaluateFunction f = ctx.functions[start];
                 for(size_t i = start + 1; i < ctx.functions.size(); ++i) {
@@ -351,18 +337,22 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         }
         
     } else if(t == ASSIGNMENT) {
-        const TERM op = ctx.opstack.top();
-        if(op == ASSIGN) {
-            assert(ctx.functions.size() - ctx.scope > 1);
+        //assignment is defined as a single variable or variable + assignment
+        //expression, in case of single variable (i.e. no ASSIGN on stack)
+        //there is no further action to be taken
+        if(!ctx.opstack.empty()
+           && ctx.opstack.top() == ASSIGN) {
+            assert(ctx.functions.size() > 0);
             const real_t k = ctx.assignKey;
-            const Ctx::EvaluateFunction v = ctx.functions[ctx.scope + 1];
+            const size_t start = ctx.functions.size() - 1;
+            const Ctx::EvaluateFunction v = ctx.functions[start];
             std::reference_wrapper<real_t> ref = ctx.keyvalue[k];
             Ctx::EvaluateFunction f = [ref, k, v]() {
                 const real_t r = v();
                 ref.get() = r;
                 return r;
             };
-            freset(f, ctx.functions, ctx.scope);
+            freset(f, ctx.functions, start);
             ctx.opstack.pop();
         }
     }
@@ -427,7 +417,8 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[SUM]     = (c(PRODUCT), *((n(PLUS) / n(MINUS)) & c(PRODUCT)));
     g[PRODUCT] = (c(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
-    g[VALUE]   = c(ASSIGNMENT) / n(NUMBER) / (n(OP), n(EXPR), n(CP));
+    g[VALUE]   = n(SCOPED) / c(ASSIGNMENT) / n(NUMBER);
+    g[SCOPED]  = (n(OP), n(EXPR), n(CP));
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
     ///TODO support for multi-arg functions:
     //redefinitions of open and close parethesis are used to signal
@@ -506,12 +497,13 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 
    // const real_t ret = ctx.ast.Eval(ops);
 #if defined(INLINE_EVAL)
-    cout << ctx.values.front()() << endl;
+    return ctx.values.front();
 #elif defined(FUN_EVAL)
-    cout << ">>>>> " << ctx.functions.front()() << " <<<<"<< endl;
+    return ctx.functions.front()();
     //assert(ctx.functions.front()() == ret);
+#else
+    return ctx.ast.Eval(ops);
 #endif
-    return 0;//ctx.ast.Eval(ops);
 }
 
 
@@ -519,10 +511,9 @@ int main(int, char**) {
     //REPL, exit when input is empty
     string me;
     Ctx ctx;
-    //cout << MathParser("1+2", ctx) << endl;
     while(getline(cin, me)) {
         if(me.empty()) break;
-        cout << MathParser(me, ctx) << endl;
+        cout << "> " << MathParser(me, ctx) << endl;
         Reset(ctx);
     }
     return 0;
