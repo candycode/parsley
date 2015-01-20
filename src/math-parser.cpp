@@ -29,13 +29,15 @@ enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
 //for debugging purposes only
 std::map< TERM, string > T2S =
     {{PLUS, "PLUS"}, {MINUS, "MINUS"}, {MUL, "MUL"}, {DIV, "DIV"}};
-    
+
+//operator arity, required only for non syntax tree based approaches
 std::map< TERM, int > ARITY =
     {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}, {ASSIGN, 2}};
 
 
 using namespace parsley;
-    
+
+//operator priority
 //order by priority low -> high and specify scope operators '(', ')'
 std::map< TERM, int > weights
     = GenWeightedTerms< TERM, int >(
@@ -48,7 +50,7 @@ std::map< TERM, int > weights
         //scope operators
         {OP, CP});
     
-    
+//Term data
 struct Term {
     TERM type;
     real_t value;
@@ -75,15 +77,16 @@ TERM GetType(const Term& t) { return t.type; }
 //};
 //}
     
-    
+//Syntax tree type used by HandleTerm callback only
 using AST = STree< Term, std::map< TERM, int > >;
 
+//Variables
 //LVALUE handling: only using evaluation function supporting numbers
 //use var -> real key -> real value
 using VarToKey = std::map< string, real_t >;
 using KeyToVaue = std::map< real_t, real_t >;
 
-    
+//Context
 struct Ctx {
     AST ast;
     VarToKey varkey;
@@ -93,7 +96,6 @@ struct Ctx {
     //The following two members are only required for just-in-time evaluation
     //performed from within HandleTerm2 function
     std::vector< real_t > values;
-    TERM op = TERM();
     
     //The following is only required for deferred evaluation function built
     //in HandleTerm3
@@ -108,7 +110,6 @@ void Reset(Ctx& c) {
     c.ast.Reset();
     c.values.clear();
     c.functions.clear();
-    c.op = TERM();
     c.opstack = stack< TERM >();
 }
 
@@ -154,94 +155,107 @@ bool Op(TERM t) {
            || t == ASSIGN
            || ScopeOpen(t);
 }
+
+//Note on variable handling: var name is parsed but nothing is added into
+//the value/function arrays, only the key matching the variable is stored
+//into the context
     
-//build both tree and perform real-time evaluation using captures of
-//SUM, PRODUCT etc.: values are stored into the context as they are read
-//and each time an operation is encountered the first element of the
-//value array is replaced with the result of the operation applied to
-//the value array
+//Just in time evaluation
 bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
-    auto reset = [](real_t r, std::vector< real_t >& a) {
-        a[0] = r;
-        a.resize(1);
+    auto reset = [](real_t r,
+                    std::vector< real_t >& a,
+                    size_t scopeLevel) {
+        assert(a.size() > scopeLevel);
+        a[scopeLevel] = r;
+        a.resize(scopeLevel + 1);
     };
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
-    ctx.op = Op(t) ? t : ctx.op;
+    if(Op(t)) ctx.opstack.push(t);
     if(t == VAR) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey,Get(v));
-            ctx.ast.Add({t, k});
             ctx.assignKey = k;
             ctx.values.push_back(ctx.keyvalue[k]);
         } else {
             const real_t k = GenKey();
             ctx.varkey[Get(v)] = k;
             ctx.keyvalue[k] = real_t();
-            ctx.ast.Add({t, k});
             ctx.assignKey = k;
-            ctx.values.push_back(std::numeric_limits<real_t>::quiet_NaN());
         }
     } else if(t == NUMBER) {
-        ctx.values.push_back(Get(v));
-        ctx.ast.Add({t, Get(v)});
-    }
-    else if(t == CP); //not adding marker of scope end
-    else if(t == SUM) {
-        if(ctx.values.size() > 0) {
-            real_t r = real_t(0);
-            if(ctx.op == PLUS) {
-                for(auto i: ctx.values) r += i;
-                reset(r, ctx.values);
-            } else if(ctx.op == MINUS) {
-                r = ctx.values[0];
-                for(std::vector< real_t >::iterator i = ++ctx.values.begin();
-                    i != ctx.values.end();
-                    ++i)
-                    r -= *i;
-                reset(r, ctx.values);
+        const real_t r = Get(v);
+        ctx.values.push_back(r);
+    } else if(ScopeClose(t)) {
+        if(ctx.opstack.empty() || !ScopeOpen(ctx.opstack.top())) return false;
+        ctx.opstack.pop();
+    } else if(t == SUMTERM) {
+        if(ctx.values.size() > 0 && !ctx.opstack.empty()) {
+            const TERM op = ctx.opstack.top();
+            const size_t start = In(op, ARITY) ?
+            ctx.values.size() - ARITY[op]
+            : 0;
+            if(op == PLUS) {
+                real_t r = ctx.values[start];
+                for(size_t i = start + 1; i < ctx.values.size(); ++i)
+                    r += ctx.values[i];
+                reset(r, ctx.values, start);
+                ctx.opstack.pop();
+            } else if(op == MINUS) {
+                real_t r = ctx.values[start];
+                for(size_t i = start + 1; i < ctx.values.size(); ++i)
+                    r -= ctx.values[i];
+                reset(r, ctx.values, start);
+                ctx.opstack.pop();
             }
         }
         
-    } else if(t == PRODUCT) {
-        if(ctx.values.size() > 0) {
-            real_t r = real_t(1);
-            if(ctx.op == MUL) {
-                for(auto i: ctx.values) r *= i;
-                reset(r, ctx.values);
-            } else if(ctx.op == DIV) {
-                r = ctx.values[0];
-                for(std::vector< real_t >::iterator i = ++ctx.values.begin();
-                    i != ctx.values.end();
-                    ++i)
-                    r /= *i;
-                reset(r, ctx.values);
-            } else if(ctx.op == POW) {
-                r = ctx.values[0];
-                for(std::vector< real_t >::iterator i = ++ctx.values.begin();
-                    i != ctx.values.end();
-                    ++i)
-                    r = pow(r, *i);
-                reset(r, ctx.values);
+    } else if(t == PRODTERM) {
+        if(ctx.values.size() > 0 && !ctx.opstack.empty()) {
+            const TERM op = ctx.opstack.top();
+            const size_t start = In(op, ARITY) ?
+            ctx.values.size() - ARITY[op]
+            : 0;
+            if(op == MUL) {
+                real_t r = ctx.values[start];
+                for(size_t i = start + 1; i < ctx.values.size(); ++i)
+                    r *= ctx.values[i];
+                reset(r, ctx.values, start);
+                ctx.opstack.pop();
+            } else if(op == DIV) {
+                real_t r = ctx.values[start];
+                for(size_t i = start + 1; i < ctx.values.size(); ++i)
+                    r /= ctx.values[i];
+                reset(r, ctx.values, start);
+            } else if(op == POW) {
+                real_t r = ctx.values[start];
+                for(size_t i = start + 1; i < ctx.values.size(); ++i)
+                    r = pow(r, ctx.values[i]);
+                reset(r, ctx.values, start);
             }
         }
-
+        
     } else if(t == ASSIGNMENT) {
-        if(ctx.op == ASSIGN) {
-            assert(ctx.values.size() > 1);
-            ctx.keyvalue[ctx.assignKey] = ctx.values[1];
-            reset(ctx.values[1], ctx.values);
+        //assignment is defined as a single variable or variable + assignment
+        //expression, in case of single variable (i.e. no ASSIGN on stack)
+        //there is no further action to be taken
+        if(!ctx.opstack.empty()
+           && ctx.opstack.top() == ASSIGN) {
+            assert(ctx.values.size() > 0);
+            const real_t k = ctx.assignKey;
+            ctx.keyvalue[k] = ctx.values.back();
         }
     }
-    else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 }
     
-//build both tree and perform real-time evaluation using captures of
-//SUM, PRODUCT etc.: values are stored into the context as they are read
-//and each time an operation is encountered the first element of the
-//value array is replaced with the result of the operation applied to
-//the value array
+//Generate expression evaluation function through pattern:
+//    f = [f, fi]() {
+//        return f() + fi();
+//    };
+//where fi is the function at position i in the function array;
+//traversal path gets unrolled into functions+closured, therefore no
+//loop is executed during actual evaluation
 bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     auto freset = [](const Ctx::EvaluateFunction& f,
                      std::vector< Ctx::EvaluateFunction >& a,
@@ -257,15 +271,13 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey,Get(v));
             ctx.assignKey = k;
-            ctx.functions.push_back([&ctx, k](){ return ctx.keyvalue[k]; });
+            std::reference_wrapper< const real_t > ref(ctx.keyvalue[k]);
+            ctx.functions.push_back([ref](){ return ref.get(); });
         } else {
             const real_t k = GenKey();
             ctx.varkey[Get(v)] = k;
             ctx.keyvalue[k] = real_t();
             ctx.assignKey = k;
-//            ctx.functions.push_back([](){
-//                return std::numeric_limits< real_t >::quiet_NaN();
-//            });
         }
     } else if(t == NUMBER) {
         const real_t r = Get(v);
