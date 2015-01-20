@@ -21,12 +21,13 @@ namespace {
 //==============================================================================
 using real_t = double;
 
+///Term type
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
            NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT, SUMTERM, PRODTERM
 };
 
 
-//for debugging purposes only
+///for debugging purposes only
 std::map< TERM, string > T2S =
     {{PLUS, "PLUS"}, {MINUS, "MINUS"}, {MUL, "MUL"}, {DIV, "DIV"}};
 
@@ -37,8 +38,8 @@ std::map< TERM, int > ARITY =
 
 using namespace parsley;
 
-//operator priority
-//order by priority low -> high and specify scope operators '(', ')'
+///operator priority
+///order by priority low -> high and specify scope operators '(', ')'
 std::map< TERM, int > weights
     = GenWeightedTerms< TERM, int >(
        {{PLUS},
@@ -50,7 +51,7 @@ std::map< TERM, int > weights
         //scope operators
         {OP, CP});
     
-//Term data
+///Term data
 struct Term {
     TERM type;
     real_t value;
@@ -58,7 +59,9 @@ struct Term {
 };
 
 //required customization points
+///Returns @c true if term represent the beginning of a new scope
 bool ScopeBegin(const Term& t) { return t.type == OP; }
+///Returns @c true if term represent the beginning of a new scope
 bool ScopeEnd(const Term& t) { return t.type == CP; }
 real_t GetData(const Term& t) { return t.value; }
 real_t Init(TERM tid) {
@@ -93,19 +96,23 @@ struct Ctx {
     KeyToVaue keyvalue;
     real_t assignKey;
     
-    //The following two members are only required for just-in-time evaluation
+    //Only required for just-in-time evaluation
     //performed from within HandleTerm2 function
+    //stores partial evaluation results, at the end of the evaluation
+    //result is stored into first element
     std::vector< real_t > values;
     
-    //The following is only required for deferred evaluation function built
+    //Only required for deferred evaluation function built
     //in HandleTerm3
+    //stores functions performing partial evaluation
+    //function evaluating entire expression is found in first element of array
     using EvaluateFunction = std::function< real_t () >;
     std::vector< EvaluateFunction > functions;
     
     //Required by both HandleTerm 2 and 3
     stack< TERM > opstack;
 };
-
+//restore context to initial state
 void Reset(Ctx& c) {
     c.ast.Reset();
     c.values.clear();
@@ -113,13 +120,13 @@ void Reset(Ctx& c) {
     c.opstack = stack< TERM >();
 }
 
-    
-    
+//generate new key used for variable->value mapping
 real_t GenKey() {
     static real_t k = real_t(0);
     return k++;
 }
-    
+
+//Parser callback 1, simply add terms to syntax tree
 bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
@@ -142,10 +149,11 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     return true;
 };
 
-
+///True when term is the id matching the open scope
 bool ScopeOpen(TERM t)  { return t == OP; }
+///True then term is the id matching the closing scope
 bool ScopeClose(TERM t) { return t == CP; }
-    
+///True if term is an operation
 bool Op(TERM t) {
     return t == PLUS
            || t == MINUS
@@ -155,12 +163,11 @@ bool Op(TERM t) {
            || t == ASSIGN
            || ScopeOpen(t);
 }
-
 //Note on variable handling: var name is parsed but nothing is added into
 //the value/function arrays, only the key matching the variable is stored
 //into the context
-    
-//Just in time evaluation
+
+///Parser callback 2: Just in time evaluation
 bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     auto reset = [](real_t r,
                     std::vector< real_t >& a,
@@ -248,14 +255,15 @@ bool HandleTerm2(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     }
     return true;
 }
-    
-//Generate expression evaluation function through pattern:
-//    f = [f, fi]() {
-//        return f() + fi();
-//    };
-//where fi is the function at position i in the function array;
-//traversal path gets unrolled into functions+closured, therefore no
-//loop is executed during actual evaluation
+
+///Parser callback 3: deferred evaluation function
+///Generate expression evaluation function through pattern:
+///    f = [f, fi]() {
+///        return f() + fi();
+///    };
+///where fi is the function at position i in the function array;
+///traversal path gets unrolled into functions+closured, therefore no
+///loop is executed during actual evaluation
 bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     auto freset = [](const Ctx::EvaluateFunction& f,
                      std::vector< Ctx::EvaluateFunction >& a,
@@ -372,7 +380,8 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
 }
 
     
-    
+///In case a hash map is used it is required to provide a hash  key generation
+///function
 #define DEFINE_HASH(T) \
 namespace std { \
 template <> \
@@ -387,6 +396,7 @@ return std::hash<int>()(int(k)); \
 }; \
 }
 
+///Parser callback type
 using ActionFun = std::function< bool (TERM, const Values&, Ctx&, EvalState) >;
     
 #ifdef HASH_MAP
@@ -400,7 +410,7 @@ using ActionFun = std::function< bool (TERM, const Values&, Ctx&, EvalState) >;
     using ActionMap = std::map< TERM, ActionFun  >;
 #endif
     
-   
+///Generate parser table map: each element represent a parsing rule
 ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     
     ParsingRules g; // grammar
@@ -436,7 +446,10 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
     g[VALUE]   = (n(OP), n(EXPR), n(CP)) / c(ASSIGNMENT) / n(NUMBER);
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
-    ///TODO support for multi-arg functions:
+//    g[FUNCTION] = (n(FUNNAME), n(FOP), ZO(c(ARG),*c(ARGS)), n(FCP));
+//    g[ARGS]     = (n(SEP), n(ARG));
+//    g[ARG]      = n(EXPR);
+    ///@todo support for multi-arg functions:
     //redefinitions of open and close parethesis are used to signal
     //the begin/end of argument list;
     //eval function of ',' separator takes care of adding result of expression
@@ -470,6 +483,7 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
 
 }
 
+///Parse expression and return evaluated result
 real_t MathParser(const string& expr, Ctx& ctx) {
     istringstream iss(expr);
     InStream is(iss);//, [](Char c) {return c == ' ' || c == '\t';});
@@ -522,7 +536,7 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 #endif
 }
 
-
+///Entry point
 int main(int, char**) {
     //REPL, exit when input is empty
     string me;
