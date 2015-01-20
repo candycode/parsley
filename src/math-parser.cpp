@@ -18,11 +18,11 @@
 using namespace std;
 
 namespace {
-//==========================================================================
+//==============================================================================
 using real_t = double;
 
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, POWER, START, VAR, ASSIGN, ASSIGNMENT, SCOPED
+           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT, SUMTERM, PRODTERM
 };
 
 
@@ -273,15 +273,15 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(ScopeClose(t)) {
         if(ctx.opstack.empty() || !ScopeOpen(ctx.opstack.top())) return false;
            ctx.opstack.pop();
-    } else if(t == SUM) {
+    } else if(t == SUMTERM) {
         if(ctx.functions.size() > 0 && !ctx.opstack.empty()) {
             const TERM op = ctx.opstack.top();
             const size_t start = In(op, ARITY) ?
                 ctx.functions.size() - ARITY[op]
                 : 0;
             if(op == PLUS) {
-                Ctx::EvaluateFunction f = [](){ return real_t(0); };
-                for(size_t i = start; i < ctx.functions.size(); ++i) {
+                Ctx::EvaluateFunction f = ctx.functions[start];
+                for(size_t i = start + 1; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() {
                         return f() + fi();
@@ -301,15 +301,15 @@ bool HandleTerm3(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             }
         }
         
-    } else if(t == PRODUCT) {
+    } else if(t == PRODTERM) {
         if(ctx.functions.size() > 0 && !ctx.opstack.empty()) {
             const TERM op = ctx.opstack.top();
             const size_t start = In(op, ARITY) ?
                 ctx.functions.size() - ARITY[op]
                 : 0;
             if(op == MUL) {
-                Ctx::EvaluateFunction f = []() { return real_t(1); };
-                for(size_t i = start; i < ctx.functions.size(); ++i) {
+                Ctx::EvaluateFunction f = ctx.functions[start];
+                for(size_t i = start + 1; i < ctx.functions.size(); ++i) {
                     auto fi = ctx.functions[i];
                     f = [f, fi]() {
                         return f() * fi();
@@ -413,12 +413,16 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     //parsed instead of having a callback invoked when an operator is found
     //with no knowledge of what lies on its right side
     g[START]   = n(EXPR);
-    g[EXPR]    = c(SUM);
-    g[SUM]     = (c(PRODUCT), *((n(PLUS) / n(MINUS)) & c(PRODUCT)));
-    g[PRODUCT] = (c(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
-    g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
-    g[VALUE]   = n(SCOPED) / c(ASSIGNMENT) / n(NUMBER);
-    g[SCOPED]  = (n(OP), n(EXPR), n(CP));
+    g[EXPR]    = n(SUM);
+    //c(SUMTERM) and c(PRODTERM) are only required for non-tree based evaluation
+    //because a callback needs to be invoked each time a "+ 3"
+    //expression is parsed in order to be able to properly add a function or
+    //compute a value each time an operator is encountered
+    g[SUM]     = (n(PRODUCT), *c(SUMTERM));
+    g[SUMTERM] = ((n(PLUS) / n(MINUS)), n(PRODUCT));
+    g[PRODUCT] = (n(VALUE), *c(PRODTERM));
+    g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
+    g[VALUE]   = (n(OP), n(EXPR), n(CP)) / c(ASSIGNMENT) / n(NUMBER);
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
     ///TODO support for multi-arg functions:
     //redefinitions of open and close parethesis are used to signal
@@ -467,8 +471,8 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     auto HT = HandleTerm;
 #endif
     Set(am, HT, NUMBER,
-        EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE,
-        ASSIGN, ASSIGNMENT, VAR, SCOPED);
+        EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, VALUE,
+        ASSIGN, ASSIGNMENT, VAR, SUMTERM, PRODTERM);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
