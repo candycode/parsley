@@ -15,6 +15,8 @@
 #include <PTree.h>
 #include <types.h>
 
+#include <tuple>
+
 using namespace std;
 
 namespace {
@@ -23,7 +25,8 @@ using real_t = double;
 
 ///Term type
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT, SUMTERM, PRODTERM
+           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT, SUMTERM, PRODTERM,
+           FUNCTION, ARG, ARGS, FBEGIN, FEND, FNAME, FSEP
 };
 
 
@@ -36,20 +39,43 @@ std::map< TERM, int > ARITY =
     {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}, {ASSIGN, 2}};
 
 
+//Tree evaluation is performed through function composition of previous
+//traversal result with new result:
+// for c in children
+//    r = f(r, eval(c))
+using F1Arg = double (double);
+template < typename F, typename T, int... I >
+std::function< T(T, T) > MkFun(const F& f) {
+    std::vector< T > args;
+    args.reserve(sizeof...(I));
+    const size_t ARITY = sizeof...(I);
+    return  [args, f, ARITY](T r, T n) mutable {
+        if(args.empty()) args.push_back(r);
+        args.push_back(n);
+        if(args.size() == ARITY) {
+            n = f(args[I]...);
+            args.resize(0);
+        }
+        return n;
+    };
+}
+    
+
 using namespace parsley;
 
 ///operator priority
 ///order by priority low -> high and specify scope operators '(', ')'
 std::map< TERM, int > weights
     = GenWeightedTerms< TERM, int >(
-       {{PLUS},
+        {{FSEP},
+        {PLUS},
         {MINUS},
         {MUL, DIV},
         {POW},
         {ASSIGN},
         {VAR, NUMBER}},
         //scope operators
-        {OP, CP});
+        {OP, CP, FBEGIN, FEND});
     
 ///Term data
 struct Term {
@@ -65,7 +91,8 @@ bool ScopeBegin(const Term& t) { return t.type == OP; }
 bool ScopeEnd(const Term& t) { return t.type == CP; }
 real_t GetData(const Term& t) { return t.value; }
 real_t Init(TERM tid) {
-    if(tid == ASSIGN) return std::numeric_limits<real_t>::quiet_NaN();
+    if(tid == ASSIGN || tid == FBEGIN)
+        return std::numeric_limits<real_t>::quiet_NaN();
     return tid == MUL
     || tid == DIV
     || tid == POW ? real_t(1) : real_t(0); };
@@ -87,14 +114,17 @@ using AST = STree< Term, std::map< TERM, int > >;
 //LVALUE handling: only using evaluation function supporting numbers
 //use var -> real key -> real value
 using VarToKey = std::map< string, real_t >;
-using KeyToVaue = std::map< real_t, real_t >;
-
+using KeyToValue = std::map< real_t, real_t >;
+using FunToKey = std::map< string, real_t >;
+    
 //Context
 struct Ctx {
     AST ast;
     VarToKey varkey;
-    KeyToVaue keyvalue;
+    KeyToValue keyvalue;
     real_t assignKey;
+    FunToKey fkey;
+    KeyToValue fkeyvalue;
     
     //Only required for just-in-time evaluation
     //performed from within HandleTerm2 function
@@ -141,6 +171,12 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             ctx.keyvalue[k] = std::numeric_limits<real_t>::quiet_NaN();
             ctx.ast.Add({t, k});
         }
+    } else if(t == FBEGIN){
+        const std::string fname = v.find("name")->second;
+        const real_t k = Get(ctx.fkey, fname);
+        ctx.ast.Add({t, k});
+    } else if(t == FSEP) {
+        ctx.ast.Rewind(FBEGIN);
     } else if(t == NUMBER) {
         ctx.ast.Add({t, Get(v)});
     }
@@ -446,9 +482,9 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
     g[VALUE]   = (n(OP), n(EXPR), n(CP)) / c(ASSIGNMENT) / n(NUMBER);
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
-//    g[FUNCTION] = (n(FUNNAME), n(FOP), ZO(c(ARG),*c(ARGS)), n(FCP));
-//    g[ARGS]     = (n(SEP), n(ARG));
-//    g[ARG]      = n(EXPR);
+    g[FUNCTION] = (n(FBEGIN), ZO((c(ARG),*c(ARGS))), n(FEND));
+    g[ARGS]     = (n(FSEP), c(ARG));
+    g[ARG]      = n(EXPR);
     ///@todo support for multi-arg functions:
     //redefinitions of open and close parethesis are used to signal
     //the begin/end of argument list;
@@ -477,6 +513,10 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[POW]    = mt(POW,    CS("^"));
     g[ASSIGN] = mt(ASSIGN, CS("<-"));
     g[VAR]    = mt(VAR, VS());
+    g[FBEGIN] = mt(FBEGIN, (VS("name"), CS("(")));
+    g[FEND]   = mt(FEND, CS(")"));
+    g[FSEP]   = mt(FSEP, CS(","));
+    
     
     return g;
 }
@@ -522,7 +562,20 @@ real_t MathParser(const string& expr, Ctx& ctx) {
         {VAR, [&ctx](real_t k, real_t v) {
             ctx.assignKey = k;
             return ctx.keyvalue[k];
+        }},
+        {FBEGIN, [&ctx](real_t k, real_t v) {
+            ctx.fkey.push(k);
+            ctc.fargs.push(std::vector< real_t >());
+        }},
+        {ARG, [&ctx](real_t v, real_t) {
+            ctx.fargs.top().push_back(v);
+        }},
+        {FEND, [&ctx](real_t, real_t) {
+            ctx.functions[ctx.fkey](ctx.args);
+            ctx.fkey.pop();
+            ctx.args.pop();
         }}
+            
     };
 
    // const real_t ret = ctx.ast.Eval(ops);
@@ -530,14 +583,32 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     return ctx.values.front();
 #elif defined(FUN_EVAL)
     return ctx.functions.front()();
-    //assert(ctx.functions.front()() == ret);
 #else
     return ctx.ast.Eval(ops);
 #endif
 }
 
+
+//template < typename F, typename R, typename...ArgsT >
+//std::function< R(ArgsT...) > MakeComposableTFun(const F& f) {
+//    std::tuple< ArgsT... > args;
+//    int count = 0;
+//    const size_t ARITY = sizeof...(ArgsT);
+//    return  [args, f, ARITY](auto r, auto n) mutable {
+//        if(count == 0) std::g
+//        if(count == ARITY) {
+//            n = f(args[I]...);
+//            count = 0;
+//        }
+//        return n;
+//    };
+//}
+
+
 ///Entry point
 int main(int, char**) {
+   
+    return 0;
     //REPL, exit when input is empty
     string me;
     Ctx ctx;

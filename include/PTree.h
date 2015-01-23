@@ -108,6 +108,13 @@ public:
         else if(ScopeEnd(d)) offset -= off;
         return ret;
     }
+    //move to node with weight == to
+    WTree* Rewind(Weight w, Offset& offset) {
+        WTree* ret = nullptr;
+        w = w + offset;
+        if(w >= weight_ || !parent_) return this;
+        else return Rewind(w - offset, offset);
+    }
     template < typename F >
     F Apply(F f) {
         f(data_);
@@ -132,13 +139,12 @@ public:
         using DataT = typename Result<
             typename FunctionMapT::value_type::second_type >::Type;
         DataT r = Init(GetType(data_));
+        r = f(GetData(data_), r);
         if(children_.size() > 0) {
             r = (*children_.begin())->Eval(fm);
             typename std::vector< WTree< T >* >::iterator i = children_.begin();
             ++i;
             for(; i != children_.end(); ++i) r = f(r, (*i)->Eval(fm));
-        } else {
-            r = f(GetData(data_), r);
         }
         return r;
     }
@@ -248,6 +254,12 @@ public:
     STree& Add(const T& data) {
         assert(weights_.find(GetType(data)) != weights_.end());
         return Add(data, weights_.find(GetType(data))->second);
+    }
+    STree& Rewind(WT weight) {
+        assert(root_);
+        assert(tree_);
+        tree_->Rewind(weight, offset_);
+        return *this;
     }
     template < typename FunctionMapT >
     typename Result<
