@@ -14,6 +14,8 @@
 #include <InStream.h>
 #include <PTree.h>
 #include <types.h>
+//following is required for parser composition: (P1,P2) -> P1 & P2 -> AndParser
+#include <parser_operators.h>
 
 #include <tuple>
 
@@ -73,7 +75,7 @@ std::map< TERM, int > weights
         {MUL, DIV},
         {POW},
         {ASSIGN},
-        {VAR, NUMBER}},
+        {VAR, NUMBER, ARG}},
         //scope operators
         {OP, CP, FBEGIN, FEND});
     
@@ -82,6 +84,7 @@ struct Term {
     TERM type;
     real_t value;
     Term(TERM t, real_t v) : type(t), value(v) {}
+    Term() = default;
 };
 
 //required customization points
@@ -116,15 +119,25 @@ using AST = STree< Term, std::map< TERM, int > >;
 using VarToKey = std::map< string, real_t >;
 using KeyToValue = std::map< real_t, real_t >;
 using FunToKey = std::map< string, real_t >;
+using Function = real_t (real_t, real_t);
+using KeyToFun = std::map< real_t, Function >;
+using Invokable = std::function< real_t (const std::vector< real_t >&) >;
     
 //Context
 struct Ctx {
     AST ast;
+    //variable handling
     VarToKey varkey;
     KeyToValue keyvalue;
     real_t assignKey;
-    FunToKey fkey;
-    KeyToValue fkeyvalue;
+    //function handling
+    //function name to key map
+    FunToKey funkey;
+    //function key to function map
+    std::map< real_t, Invokable  > keyfun;
+    std::stack< real_t > funstack;
+    std::stack< std::vector< real_t > > funargstack;
+    
     
     //Only required for just-in-time evaluation
     //performed from within HandleTerm2 function
@@ -172,8 +185,8 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             ctx.ast.Add({t, k});
         }
     } else if(t == FBEGIN){
-        const std::string fname = v.find("name")->second;
-        const real_t k = Get(ctx.fkey, fname);
+        const std::string fname = Get(v, "name");// v.find("name")->second;
+        const real_t k = Get(ctx.funkey, fname);
         ctx.ast.Add({t, k});
     } else if(t == FSEP) {
         ctx.ast.Rewind(FBEGIN);
@@ -476,13 +489,14 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     //because a callback needs to be invoked each time a "+ 3"
     //expression is parsed in order to be able to properly add a function or
     //compute a value each time an operator is encountered
-    g[SUM]     = (n(PRODUCT), *c(SUMTERM));
-    g[SUMTERM] = ((n(PLUS) / n(MINUS)), n(PRODUCT));
-    g[PRODUCT] = (n(VALUE), *c(PRODTERM));
+    g[SUM]      = (n(PRODUCT), *c(SUMTERM));
+    g[SUMTERM]  = ((n(PLUS) / n(MINUS)), n(PRODUCT));
+    g[PRODUCT]  = (n(VALUE), *c(PRODTERM));
     g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
-    g[VALUE]   = (n(OP), n(EXPR), n(CP)) / c(ASSIGNMENT) / n(NUMBER);
+    g[VALUE]    = (n(OP), n(EXPR), n(CP))
+                  / n(FUNCTION) / c(ASSIGNMENT) / n(NUMBER);
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
-    g[FUNCTION] = (n(FBEGIN), ZO((c(ARG),*c(ARGS))), n(FEND));
+    g[FUNCTION] = (n(FBEGIN), ZO((c(ARG),*n(ARGS))), n(FEND));
     g[ARGS]     = (n(FSEP), c(ARG));
     g[ARG]      = n(EXPR);
     ///@todo support for multi-arg functions:
@@ -513,10 +527,9 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[POW]    = mt(POW,    CS("^"));
     g[ASSIGN] = mt(ASSIGN, CS("<-"));
     g[VAR]    = mt(VAR, VS());
-    g[FBEGIN] = mt(FBEGIN, (VS("name"), CS("(")));
+    g[FBEGIN] = mt(FBEGIN, (VS("name") > CS("(")));
     g[FEND]   = mt(FEND, CS(")"));
     g[FSEP]   = mt(FSEP, CS(","));
-    
     
     return g;
 }
@@ -538,7 +551,8 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 #endif
     Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, VALUE,
-        ASSIGN, ASSIGNMENT, VAR, SUMTERM, PRODTERM);
+        ASSIGN, ASSIGNMENT, VAR, SUMTERM, PRODTERM, FBEGIN, FEND, ARG,
+        FSEP, FUNCTION, FEND);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
@@ -564,18 +578,21 @@ real_t MathParser(const string& expr, Ctx& ctx) {
             return ctx.keyvalue[k];
         }},
         {FBEGIN, [&ctx](real_t k, real_t v) {
-            ctx.fkey.push(k);
-            ctc.fargs.push(std::vector< real_t >());
+            ctx.funstack.push(k);
+            ctx.funargstack.push(std::vector< real_t >());
+            return k;
         }},
         {ARG, [&ctx](real_t v, real_t) {
-            ctx.fargs.top().push_back(v);
+            ctx.funargstack.top().push_back(v);
+            return v;
         }},
         {FEND, [&ctx](real_t, real_t) {
-            ctx.functions[ctx.fkey](ctx.args);
-            ctx.fkey.pop();
-            ctx.args.pop();
+            const real_t r =
+                ctx.keyfun[ctx.funstack.top()](ctx.funargstack.top());
+            ctx.funstack.pop();
+            ctx.funargstack.pop();
+            return r;
         }}
-            
     };
 
    // const real_t ret = ctx.ast.Eval(ops);
@@ -605,13 +622,44 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 //}
 
 
+std::map< real_t, Invokable > CreateFunctions() {
+    using Args = std::vector< real_t >;
+    std::map< real_t, Invokable > ret = {
+        {0, [](const Args& args) {
+            assert(args.size() > 0);
+            return std::sin(args[0]);
+        }},
+        {1, [](const Args& args) {
+            assert(args.size() > 0);
+            return std::cos(args[0]);
+        }},
+        {2, [](const Args& args) {
+            assert(args.size() > 1);
+            return std::pow(args[0], args[1]);
+        }}
+  
+    };
+    return ret;
+}
+
+std::map< std::string, real_t > CreateFunMap() {
+    return {{"sin", 0}, {"cos", 1}, {"pow", 2}};
+}
+
 ///Entry point
 int main(int, char**) {
-   
-    return 0;
+//    Parser P = (FirstAlphaNumParser("name"), ConstStringParser("("));
+//    istringstream ISS("sin(2)");
+//    InStream IS(ISS);
+//    P.Parse(IS);
+//    cout << "............ " << P.GetValues().begin()->second << endl;
+//    exit(0);
+
     //REPL, exit when input is empty
     string me;
     Ctx ctx;
+    ctx.funkey = CreateFunMap();
+    ctx.keyfun = CreateFunctions();
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << "> " << MathParser(me, ctx) << endl;

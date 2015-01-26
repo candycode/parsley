@@ -32,7 +32,7 @@ MakeTermEval(KeyT k,
     mutable -> bool {
         if(is.tellg() == sp) return last;
         assert(em.find(k) != em.end());
-        assert(am.find(k) != am.end());
+        if(cback) assert(am.find(k) != am.end());
         bool ret = true;
         std::size_t i = is.tellg();
         if(cback) {

@@ -110,7 +110,6 @@ public:
     }
     //move to node with weight == to
     WTree* Rewind(Weight w, Offset& offset) {
-        WTree* ret = nullptr;
         w = w + offset;
         if(w >= weight_ || !parent_) return this;
         else return Rewind(w - offset, offset);
@@ -121,7 +120,15 @@ public:
         for(auto i: children_) i->Apply(f);
         return f;
     }
-   
+    //scoped apply: functor is applied to current node first then to children,
+    //then to current node again at the end
+    enum class APPLY {BEGIN, END};
+    template < typename F >
+    F ScopedApply(F&& f) {
+        F a = f(data_, APPLY::BEGIN);
+        for(auto i: children_) a = i->ScopedApply(a);
+        return a(data_, APPLY::END);
+    }
     //Evaluation order:
     //if node has children:
     //  initialize result <- value of first child
@@ -148,6 +155,24 @@ public:
         }
         return r;
     }
+    //Iterative eval function: at each node the result of children evaluation
+    //is stored into array together with data value at current node; function
+    //is then called with array
+    template < typename FunctionMapT >
+    auto EvalArgs(const FunctionMapT& fm) -> decltype(GetData(T())) {
+        using Type = typename FunctionMapT::value_type::first_type;
+        assert(fm.find(GetType(data_)) != fm.end());
+        auto f = fm.find(GetType(data_))->second;
+        using DataT = typename Result<
+            typename FunctionMapT::value_type::second_type >::Type;
+        std::vector< DataT > args;
+        args.reserve(1 + children_.size());
+        args.push_back(GetData(data_));
+        typename std::vector< WTree< T >* >::iterator i = children_.begin();
+        for(; i != children_.end(); ++i) args.push_back(i->EvalArgs(fm));
+        return Get(GetType(data_), fm)(args);
+    }
+#if 0
     //Deferred execution: stores evaluation path and data in function
     //closure, valid until all tree nodes are not deleted
     template < typename FunctionMapT >
@@ -178,8 +203,9 @@ public:
                 return f(r, c);
             };
         }
-        return F;
+        return
     }
+#endif
     const WTree< T >* Root() const {
         if(parent_ == nullptr) return this;
         return parent_->Root();
