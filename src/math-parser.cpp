@@ -27,8 +27,7 @@ using real_t = double;
 
 ///Term type
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT, SUMTERM, PRODTERM,
-           FUNCTION, ARG, ARGS, FBEGIN, FEND, FNAME, FSEP
+           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT, SUMTERM, PRODTERM
 };
 
 
@@ -41,43 +40,20 @@ std::map< TERM, int > ARITY =
     {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}, {ASSIGN, 2}};
 
 
-//Tree evaluation is performed through function composition of previous
-//traversal result with new result:
-// for c in children
-//    r = f(r, eval(c))
-using F1Arg = double (double);
-template < typename F, typename T, int... I >
-std::function< T(T, T) > MkFun(const F& f) {
-    std::vector< T > args;
-    args.reserve(sizeof...(I));
-    const size_t ARITY = sizeof...(I);
-    return  [args, f, ARITY](T r, T n) mutable {
-        if(args.empty()) args.push_back(r);
-        args.push_back(n);
-        if(args.size() == ARITY) {
-            n = f(args[I]...);
-            args.resize(0);
-        }
-        return n;
-    };
-}
-    
-
 using namespace parsley;
 
 ///operator priority
 ///order by priority low -> high and specify scope operators '(', ')'
 std::map< TERM, int > weights
     = GenWeightedTerms< TERM, int >(
-        {{FSEP},
-        {PLUS},
+        {{PLUS},
         {MINUS},
         {MUL, DIV},
         {POW},
         {ASSIGN},
-        {VAR, NUMBER, ARG}},
+        {VAR, NUMBER}},
         //scope operators
-        {OP, CP, FBEGIN, FEND});
+        {OP, CP});
     
 ///Term data
 struct Term {
@@ -94,12 +70,13 @@ bool ScopeBegin(const Term& t) { return t.type == OP; }
 bool ScopeEnd(const Term& t) { return t.type == CP; }
 real_t GetData(const Term& t) { return t.value; }
 real_t Init(TERM tid) {
-    if(tid == ASSIGN || tid == FBEGIN)
+    if(tid == ASSIGN)
         return std::numeric_limits<real_t>::quiet_NaN();
     return tid == MUL
     || tid == DIV
     || tid == POW ? real_t(1) : real_t(0); };
 TERM GetType(const Term& t) { return t.type; }
+
 //in case functions implementing operators are not of standard
 //C function type and do not define 'return_type' it is required to also
 //specialize Return<T> to allow for return type deduction
@@ -121,7 +98,9 @@ using KeyToValue = std::map< real_t, real_t >;
 using FunToKey = std::map< string, real_t >;
 using Function = real_t (real_t, real_t);
 using KeyToFun = std::map< real_t, Function >;
-using Invokable = std::function< real_t (const std::vector< real_t >&) >;
+using Invokable = std::function< Function >;
+using VarKey = real_t;
+using FunKey = real_t;
     
 //Context
 struct Ctx {
@@ -130,14 +109,6 @@ struct Ctx {
     VarToKey varkey;
     KeyToValue keyvalue;
     real_t assignKey;
-    //function handling
-    //function name to key map
-    FunToKey funkey;
-    //function key to function map
-    std::map< real_t, Invokable  > keyfun;
-    std::stack< real_t > funstack;
-    std::stack< std::vector< real_t > > funargstack;
-    
     
     //Only required for just-in-time evaluation
     //performed from within HandleTerm2 function
@@ -184,16 +155,10 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
             ctx.keyvalue[k] = std::numeric_limits<real_t>::quiet_NaN();
             ctx.ast.Add({t, k});
         }
-    } else if(t == FBEGIN){
-        const std::string fname = Get(v, "name");// v.find("name")->second;
-        const real_t k = Get(ctx.funkey, fname);
-        ctx.ast.Add({t, k});
-    } else if(t == FSEP) {
-        ctx.ast.Rewind(FBEGIN);
     } else if(t == NUMBER) {
         ctx.ast.Add({t, Get(v)});
     }
-    else if(t == CP) return true; //not adding marker of scope end
+    else if(t == CP) return true;
     else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
@@ -493,12 +458,8 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[SUMTERM]  = ((n(PLUS) / n(MINUS)), n(PRODUCT));
     g[PRODUCT]  = (n(VALUE), *c(PRODTERM));
     g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
-    g[VALUE]    = (n(OP), n(EXPR), n(CP))
-                  / n(FUNCTION) / c(ASSIGNMENT) / n(NUMBER);
+    g[VALUE]    = (n(OP), n(EXPR), n(CP)) / c(ASSIGNMENT) / n(NUMBER);
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
-    g[FUNCTION] = (n(FBEGIN), ZO((c(ARG),*n(ARGS))), n(FEND));
-    g[ARGS]     = (n(FSEP), c(ARG));
-    g[ARG]      = n(EXPR);
     ///@todo support for multi-arg functions:
     //redefinitions of open and close parethesis are used to signal
     //the begin/end of argument list;
@@ -527,9 +488,6 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[POW]    = mt(POW,    CS("^"));
     g[ASSIGN] = mt(ASSIGN, CS("<-"));
     g[VAR]    = mt(VAR, VS());
-    g[FBEGIN] = mt(FBEGIN, (VS("name") > CS("(")));
-    g[FEND]   = mt(FEND, CS(")"));
-    g[FSEP]   = mt(FSEP, CS(","));
     
     return g;
 }
@@ -551,8 +509,7 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 #endif
     Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, VALUE,
-        ASSIGN, ASSIGNMENT, VAR, SUMTERM, PRODTERM, FBEGIN, FEND, ARG,
-        FSEP, FUNCTION, FEND);
+        ASSIGN, ASSIGNMENT, VAR, SUMTERM, PRODTERM);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
@@ -570,28 +527,13 @@ real_t MathParser(const string& expr, Ctx& ctx) {
         //HACK TO AVOID USING AN EVAL FUNCTION THAT TAKES FULL Term
         //INSTANCES AND SUPPORTS DATA OTHER THAN double
         {ASSIGN, [&ctx](real_t key, real_t value ) {
+            cout << "ASSIGN " << ctx.assignKey << endl;
             ctx.keyvalue[ctx.assignKey] = value;
             return value;
         }},
         {VAR, [&ctx](real_t k, real_t v) {
             ctx.assignKey = k;
             return ctx.keyvalue[k];
-        }},
-        {FBEGIN, [&ctx](real_t k, real_t v) {
-            ctx.funstack.push(k);
-            ctx.funargstack.push(std::vector< real_t >());
-            return k;
-        }},
-        {ARG, [&ctx](real_t v, real_t) {
-            ctx.funargstack.top().push_back(v);
-            return v;
-        }},
-        {FEND, [&ctx](real_t, real_t) {
-            const real_t r =
-                ctx.keyfun[ctx.funstack.top()](ctx.funargstack.top());
-            ctx.funstack.pop();
-            ctx.funargstack.pop();
-            return r;
         }}
     };
 
@@ -601,6 +543,14 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 #elif defined(FUN_EVAL)
     return ctx.functions.front()();
 #else
+#ifdef PRINT_TREE
+    int s = 0;
+    ctx.ast.Apply([s](const Term& t) mutable{
+        if(ScopeBegin(t)) s += 2;
+        else if(ScopeEnd(t)) s -= 2;
+        cout << string(s, '.') << t.type << endl;
+    });
+#endif
     return ctx.ast.Eval(ops);
 #endif
 }
@@ -622,44 +572,12 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 //}
 
 
-std::map< real_t, Invokable > CreateFunctions() {
-    using Args = std::vector< real_t >;
-    std::map< real_t, Invokable > ret = {
-        {0, [](const Args& args) {
-            assert(args.size() > 0);
-            return std::sin(args[0]);
-        }},
-        {1, [](const Args& args) {
-            assert(args.size() > 0);
-            return std::cos(args[0]);
-        }},
-        {2, [](const Args& args) {
-            assert(args.size() > 1);
-            return std::pow(args[0], args[1]);
-        }}
-  
-    };
-    return ret;
-}
-
-std::map< std::string, real_t > CreateFunMap() {
-    return {{"sin", 0}, {"cos", 1}, {"pow", 2}};
-}
-
 ///Entry point
 int main(int, char**) {
-//    Parser P = (FirstAlphaNumParser("name"), ConstStringParser("("));
-//    istringstream ISS("sin(2)");
-//    InStream IS(ISS);
-//    P.Parse(IS);
-//    cout << "............ " << P.GetValues().begin()->second << endl;
-//    exit(0);
 
     //REPL, exit when input is empty
     string me;
     Ctx ctx;
-    ctx.funkey = CreateFunMap();
-    ctx.keyfun = CreateFunctions();
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << "> " << MathParser(me, ctx) << endl;
@@ -681,5 +599,80 @@ int main(int, char**) {
 //[CSUM] = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
 //callback[SUM] is called when SUM->CSUM validates and if [NUMBER] loads
 //e.g. into the context then sum can directly evaluate the stored numbers
+
+/////Generate parser table map: each element represent a parsing rule  function
+//ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
+//    
+//    ParsingRules g; // grammar
+//    auto n  = MAKE_CALL(TERM, g, am, ctx);
+//    auto c  = MAKE_CBCALL(TERM, g, am, ctx);
+//    auto mt = MAKE_EVAL(TERM, g, am, ctx);
+//    
+//    //grammar definition
+//    //non-terminal - note the top-down definition through deferred calls using
+//    //the 'c' helper function
+//    // c -> callback invoked also for non-terminal states
+//    // n -> callback invoked only for non terminal states
+//    // 'c' is required to captures operations such as 1 + 2: callback is invoked
+//    // after parsing 1 + 2 and can therefore be used to directly evaluate term
+//    // once both operands and operation type have been stored into context
+//    //pattern is:
+//    //grammar[STATE_ID] = c(OPERATION_TO_HANDLE_WITH_CALLBAK)... | ... (...,...)
+//    //grammar[STATE_TO_HANDLE_WITH_CALLBAK] = ...
+//    //this way you have a callback invoked after all the operations associated
+//    //with STATE_TO_HANDLE_WITH_CALLBAK have been completed it is therefore
+//    //possible to handle operations after all operands and operators have been
+//    //parsed instead of having a callback invoked when an operator is found
+//    //with no knowledge of what lies on its right side
+//    g[START]   = n(EXPR);
+//    g[EXPR]    = n(SUM);
+//    //c(SUMTERM) and c(PRODTERM) are only required for non-tree based evaluation
+//    //because a callback needs to be invoked each time a "+ 3"
+//    //expression is parsed in order to be able to properly add a function or
+//    //compute a value each time an operator is encountered
+//    g[SUM]      = (n(PRODUCT), *c(SUMTERM));
+//    g[SUMTERM]  = ((n(PLUS) / n(MINUS)), n(PRODUCT));
+//    g[PRODUCT]  = (n(VALUE), *c(PRODTERM));
+//    g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
+//    g[VALUE]    = (n(OP), n(EXPR), n(CP))
+//    / n(FUNCTION) / c(ASSIGNMENT) / n(NUMBER);
+//    g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
+//    g[FUNCTION] = (n(FBEGIN), ZO((n(ARG),*n(ARGS))), n(FEND));
+//    g[ARGS]     = (n(FSEP), n(ARG));
+//    g[ARG]      = n(EXPR);
+//    ///@todo support for multi-arg functions:
+//    //redefinitions of open and close parethesis are used to signal
+//    //the begin/end of argument list;
+//    //eval function of ',' separator takes care of adding result of expression
+//    //into Context::ArgumentArray
+//    //eval function of FOP ('(') puts result of first child (if any) into
+//    //Context::ArgumentArray
+//    //eval function of FUNNAME invokes function passing Context::ArgumentArray
+//    //to function, usually a wrapper which forwards calls to actual math
+//    //function f(const vector<duble>& v) -> atan(v[0], v[1]);
+//    //it is possible to have one arg array per function and therefore also
+//    //memoize by caching last used parameters
+//    //g[FUN]         = (n(FUNNAME), n(FOP), ZO((n(EXPR), *(n(ARGSEP), (EXPR)))),
+//    //                   n(FCP));
+//    using FP = FloatParser;
+//    using CS = ConstStringParser;
+//    using VS = FirstAlphaNumParser;
+//    //terminal
+//    g[NUMBER] = mt(NUMBER, FP());
+//    g[OP]     = mt(OP,     CS("("));
+//    g[CP]     = mt(CP,     CS(")"));
+//    g[PLUS]   = mt(PLUS,   CS("+"));
+//    g[MINUS]  = mt(MINUS,  CS("-"));
+//    g[MUL]    = mt(MUL,    CS("*"));
+//    g[DIV]    = mt(DIV,    CS("/"));
+//    g[POW]    = mt(POW,    CS("^"));
+//    g[ASSIGN] = mt(ASSIGN, CS("<-"));
+//    g[VAR]    = mt(VAR, VS());
+//    g[FBEGIN] = mt(FBEGIN, (VS("name") > CS("(")));
+//    g[FEND]   = mt(FEND, CS(")"));
+//    g[FSEP]   = mt(FSEP, CS(","));
+//    
+//    return g;
+//}
 
 

@@ -112,7 +112,7 @@ public:
     WTree* Rewind(Weight w, Offset& offset) {
         w = w + offset;
         if(w >= weight_ || !parent_) return this;
-        else return Rewind(w - offset, offset);
+        else return parent_->Rewind(w - offset, offset);
     }
     template < typename F >
     F Apply(F f) {
@@ -142,17 +142,17 @@ public:
     Eval(const FunctionMapT& fm)  {
         using Type = typename FunctionMapT::value_type::first_type;
         assert(fm.find(GetType(data_)) != fm.end());
-        auto f = fm.find(GetType(data_))->second;
+        auto& f = fm.find(GetType(data_))->second;
         using DataT = typename Result<
             typename FunctionMapT::value_type::second_type >::Type;
         DataT r = Init(GetType(data_));
-        r = f(GetData(data_), r);
         if(children_.size() > 0) {
             r = (*children_.begin())->Eval(fm);
-            typename std::vector< WTree< T >* >::iterator i = children_.begin();
+            typename std::vector< WTree< T >* >::iterator i
+                = children_.begin();
             ++i;
             for(; i != children_.end(); ++i) r = f(r, (*i)->Eval(fm));
-        }
+        } else r = f(GetData(data_), r);
         return r;
     }
     //Iterative eval function: at each node the result of children evaluation
@@ -284,7 +284,7 @@ public:
     STree& Rewind(WT weight) {
         assert(root_);
         assert(tree_);
-        tree_->Rewind(weight, offset_);
+        tree_ = tree_->Rewind(weight, offset_);
         return *this;
     }
     template < typename FunctionMapT >
