@@ -37,6 +37,8 @@
 
 namespace parsley {
 
+enum class APPLY {BEGIN, END};    
+    
 template < typename F >
 struct Result {
     using Type = typename F::result_type;
@@ -122,7 +124,6 @@ public:
     }
     //scoped apply: functor is applied to current node first then to children,
     //then to current node again at the end
-    enum class APPLY {BEGIN, END};
     template < typename F >
     F ScopedApply(F&& f) {
         F a = f(data_, APPLY::BEGIN);
