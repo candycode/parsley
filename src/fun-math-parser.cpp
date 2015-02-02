@@ -265,9 +265,6 @@ public:
                         else args_.push_back(GenKey());
                     }
                     else args_.push_back(vlut_.get()[t.value]);
-                    f_.push([this](const Args& args) {
-                        return args[0];
-                    });
                     break;
                 case OP:
                     f_.push([](const Args& args) { return args[0]; });
@@ -278,7 +275,9 @@ public:
                     break;
             }
             last_ = t.type;
-        } else if(stage == APPLY::END && t.type != NUMBER) {
+        } else if(stage == APPLY::END
+                  && t.type != NUMBER
+                  && t.type != VAR) {
             if(t.type == ASSIGN) {
                 vlut_.get()[args_[0]] = args_[1];
                 args_[0] = args_[1];
