@@ -157,9 +157,10 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         }
     } else if(t == NUMBER) {
         ctx.ast.Add({t, Get(v)});
-    }
-    else if(t == CP) return true;
-    else if(!v.empty()) ctx.ast.Add({t, Init(t)});
+    } else if(t == CP) {
+        ctx.ast.OffsetDec(CP);
+        return true;
+    } else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
 

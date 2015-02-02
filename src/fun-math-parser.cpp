@@ -27,7 +27,7 @@ using real_t = double;
 
 ///Term type
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT, SUMTERM, PRODTERM
+           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT
 };
 
 
@@ -62,7 +62,8 @@ struct Term {
     Term(TERM t, real_t v) : type(t), value(v) {}
     Term() = default;
 };
-
+    
+    
 //required customization points
 ///Returns @c true if term represent the beginning of a new scope
 bool ScopeBegin(const Term& t) { return t.type == OP; }
@@ -90,19 +91,45 @@ TERM GetType(const Term& t) { return t.type; }
 //Syntax tree type used by HandleTerm callback only
 using AST = STree< Term, std::map< TERM, int > >;
 
-//Variables
-//LVALUE handling: only using evaluation function supporting numbers
-//use var -> real key -> real value
-using VarToKey = std::map< string, real_t >;
-using KeyToValue = std::map< real_t, real_t >;
-using FunToKey = std::map< string, real_t >;
-using Function = real_t (real_t, real_t);
-using KeyToFun = std::map< real_t, Function >;
-using Invokable = std::function< Function >;
-using VarKey = real_t;
-using FunKey = real_t;
-    
+using Args = std::vector< real_t >;
+using F = std::function< real_t (const Args&) >;
+using FunLUT = std::unordered_map<real_t, F >;
+using VarLUT = std::unordered_map<real_t, real_t >;
+using Name2Key = std::unordered_map< std::string, real_t >;
+using Op2Key = std::unordered_map< TERM, real_t >;
 
+    
+    
+    
+//Context
+struct Ctx {
+    AST ast;
+    Name2Key fn = {
+        {"sin", 0},
+        {"cos", 1},
+        {"pow", 2}
+    };
+    FunLUT fl = {
+        {0, [](const Args& args) { return args[0] + args[1]; }},
+        {1, [](const Args& args) { return args[0] - args[1]; }},
+        {2, [](const Args& args) { return args[0] * args[1]; }},
+        {3, [](const Args& args) { return args[0] / args[1]; }},
+        {4, [](const Args& args) { return sin(args[0]); }},
+        {5, [](const Args& args) { return cos(args[0]); }},
+        {6, [](const Args& args) { return pow(args[0], args[1]); }}
+    };
+    Op2Key ops = {
+        {PLUS, 0},
+        {MINUS, 1},
+        {MUL, 2},
+        {DIV, 3},
+        {POW, 4}
+    };
+    Name2Key varkey;
+    VarLUT vl;
+};
+    
+    
 //generate new key used for variable->value mapping
 real_t GenKey() {
     static real_t k = real_t(0);
@@ -121,14 +148,15 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         } else {
             const real_t k = GenKey();
             ctx.varkey[Get(v)] = k;
-            ctx.keyvalue[k] = std::numeric_limits<real_t>::quiet_NaN();
+            ctx.vl[k] = std::numeric_limits<real_t>::quiet_NaN();
             ctx.ast.Add({t, k});
         }
     } else if(t == NUMBER) {
         ctx.ast.Add({t, Get(v)});
-    }
-    else if(t == CP) return true;
-    else if(!v.empty()) ctx.ast.Add({t, Init(t)});
+    } else if(t == CP) {
+        ctx.ast.OffsetDec(CP);
+        return true;
+    } else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
 
@@ -207,30 +235,10 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     //with no knowledge of what lies on its right side
     g[START]   = n(EXPR);
     g[EXPR]    = n(SUM);
-    //c(SUMTERM) and c(PRODTERM) are only required for non-tree based evaluation
-    //because a callback needs to be invoked each time a "+ 3"
-    //expression is parsed in order to be able to properly add a function or
-    //compute a value each time an operator is encountered
-    g[SUM]      = (n(PRODUCT), *c(SUMTERM));
-    g[SUMTERM]  = ((n(PLUS) / n(MINUS)), n(PRODUCT));
-    g[PRODUCT]  = (n(VALUE), *c(PRODTERM));
-    g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
+    g[SUM]      = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
+    g[PRODUCT]  = (n(VALUE), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     g[VALUE]    = (n(OP), n(EXPR), n(CP)) / c(ASSIGNMENT) / n(NUMBER);
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
-    ///@todo support for multi-arg functions:
-    //redefinitions of open and close parethesis are used to signal
-    //the begin/end of argument list;
-    //eval function of ',' separator takes care of adding result of expression
-    //into Context::ArgumentArray
-    //eval function of FOP ('(') puts result of first child (if any) into
-    //Context::ArgumentArray
-    //eval function of FUNNAME invokes function passing Context::ArgumentArray
-    //to function, usually a wrapper which forwards calls to actual math
-    //function f(const vector<duble>& v) -> atan(v[0], v[1]);
-    //it is possible to have one arg array per function and therefore also
-    //memoize by caching last used parameters
-    //g[FUN]         = (n(FUNNAME), n(FOP), ZO((n(EXPR), *(n(ARGSEP), (EXPR)))),
-    //                   n(FCP));
     using FP = FloatParser;
     using CS = ConstStringParser;
     using VS = FirstAlphaNumParser;
@@ -303,6 +311,10 @@ public:
         return *this;
     }
     const Args& Values() const { return args_; }
+    const real_t Result() const {
+        assert(args_.size());
+        return args_.front();
+    }
 private:
     TERM last_ = TERM();
     Args args_;
@@ -311,49 +323,12 @@ private:
     VLUTRef vlut_;
 };
 
-using Args = std::vector< real_t >;
-using F = std::function< real_t (const Args&) >;
-using FunLUT = std::unordered_map<real_t, F >;
-using VarLUT = std::unordered_map<real_t, F >;
-using Name2Key = std::unordered_map< std::string, real_t >;
-using Op2Key = std::unordered_map< TERM, real_t >;
-
-Name2Key fn = {
-    {"sin", 0},
-    {"cos", 1},
-    {"pow", 2}
-};
-
-FunLUT fl = {
-    {0, [](const Args& args) { return args[0] + args[1]; }},
-    {1, [](const Args& args) { return args[0] - args[1]; }},
-    {2, [](const Args& args) { return args[0] * args[1]; }},
-    {3, [](const Args& args) { return args[0] / args[1]; }},
-    {4, [](const Args& args) { return sin(args[0]); }},
-    {5, [](const Args& args) { return cos(args[0]); }},
-    {6, [](const Args& args) { return pow(args[0], args[1]); }}
-};
-
-Op2Key ops = {
-    {PLUS, 0},
-    {MINUS, 1},
-    {MUL, 2},
-    {DIV, 3},
-    {POW, 4}
-};
 
 
-//Context
-struct Ctx {
-    AST ast;
-};
 
 //restore context to initial state
 void Reset(Ctx& c) {
     c.ast.Reset();
-    c.values.clear();
-    c.functions.clear();
-    c.opstack = stack< TERM >();
 }
 
 
@@ -373,12 +348,12 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 #endif
     Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, VALUE,
-        ASSIGN, ASSIGNMENT, VAR, SUMTERM, PRODTERM);
+        ASSIGN, ASSIGNMENT, VAR);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
     
-    return ctx.ast.ScopedEval(EvalFrame(ctx.funlut, ctx.varlut));
+    return ctx.ast.ScopedApply(EvalFrame(ctx.fl, ctx.vl)).Result();
 }
 
 
@@ -390,7 +365,6 @@ int main(int, char**) {
     //REPL, exit when input is empty
     string me;
     Ctx ctx;
-    ctx.funlut = fl;
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << "> " << MathParser(me, ctx) << endl;

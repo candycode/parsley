@@ -126,7 +126,7 @@ public:
     //then to current node again at the end
     template < typename F >
     F ScopedApply(F&& f) {
-        F a = f(data_, APPLY::BEGIN);
+        auto a = f(data_, APPLY::BEGIN);
         for(auto i: children_) a = i->ScopedApply(a);
         return a(data_, APPLY::END);
     }
@@ -299,6 +299,12 @@ public:
     F Apply(F f) {
         assert(root_);
         return root_->Apply(f);
+    }
+    void OffsetInc(typename WM::value_type::first_type t) {
+        offset_ += weights_[t];
+    }
+    void OffsetDec(typename WM::value_type::first_type t) {
+        offset_ -= weights_[t];
     }
     void SetWeights(const WM& wm) { weights_ = wm; }
     void Reset() { root_.reset(nullptr); offset_ = Offset(0); tree_ = nullptr; }
