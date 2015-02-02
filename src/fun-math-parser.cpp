@@ -63,19 +63,6 @@ struct Term {
 };
     
     
-//required customization points
-///Returns @c true if term represent the beginning of a new scope
-bool ScopeBegin(const Term& t) { return t.type == OP; }
-///Returns @c true if term represent the beginning of a new scope
-bool ScopeEnd(const Term& t) { return t.type == CP; }
-real_t GetData(const Term& t) { return t.value; }
-real_t Init(TERM tid) {
-    if(tid == ASSIGN)
-        return std::numeric_limits<real_t>::quiet_NaN();
-    return tid == MUL
-    || tid == DIV
-    || tid == POW ? real_t(1) : real_t(0); };
-TERM GetType(const Term& t) { return t.type; }
 
 //in case functions implementing operators are not of standard
 //C function type and do not define 'return_type' it is required to also
@@ -128,7 +115,7 @@ struct Ctx {
         {MINUS, 1},
         {MUL, 2},
         {DIV, 3},
-        {POW, 4}
+        {POW, 6}
     };
     Name2Key varkey;
     VarLUT vl;
@@ -141,12 +128,38 @@ real_t GenKey() {
     return k++;
 }
 
+///True if term is an operation
+bool Op(TERM t) {
+    return t == PLUS
+    || t == MINUS
+    || t == MUL
+    || t == DIV
+    || t == POW
+    || t == ASSIGN;
+}
+    
+//required customization points
+///Returns @c true if term represent the beginning of a new scope
+bool ScopeBegin(const Term& t) { return t.type == OP; }
+///Returns @c true if term represent the beginning of a new scope
+bool ScopeEnd(const Term& t) { return t.type == CP; }
+real_t GetData(const Term& t) { return t.value; }
+real_t Init(TERM tid) {
+    if(tid == ASSIGN)
+        return std::numeric_limits<real_t>::quiet_NaN();
+    return tid == MUL
+    || tid == DIV
+    || tid == POW ? real_t(1) : real_t(0); };
+TERM GetType(const Term& t) { return t.type; }
+    
+    
 //Parser callback: simply add terms to syntax tree
 bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
-    
-    if(t == VAR) {
+    if(Op(t)) {
+        ctx.ast.Add({t, ctx.ops[t]});
+    } else if(t == VAR) {
         if(In(Get(v), ctx.varkey)) {
             const real_t k = Get(ctx.varkey, Get(v));
             ctx.ast.Add({t, k});
@@ -164,21 +177,7 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(!v.empty()) ctx.ast.Add({t, Init(t)});
     return true;
 };
-
-///True when term is the id matching the open scope
-bool ScopeOpen(TERM t)  { return t == OP; }
-///True then term is the id matching the closing scope
-bool ScopeClose(TERM t) { return t == CP; }
-///True if term is an operation
-bool Op(TERM t) {
-    return t == PLUS
-           || t == MINUS
-           || t == MUL
-           || t == DIV
-           || t == POW
-           || t == ASSIGN
-           || ScopeOpen(t);
-}
+    
     
 ///Parser callback type
 using ActionFun = std::function< bool (TERM, const Values&, Ctx&, EvalState) >;
@@ -258,7 +257,6 @@ public:
             switch(t.type) {
                 case NUMBER:
                     args_.push_back(t.value);
-                    f_.push([](const Args& args) { return args[0]; } );
                     break;
                 case VAR:
                     if(last_ == ASSIGN) {
@@ -271,11 +269,16 @@ public:
                         return args[0];
                     });
                     break;
-                default: f_.push(flut_.get()[t.value]);
+                case OP:
+                    f_.push([](const Args& args) { return args[0]; });
+                    break;
+                default: {
+                    f_.push(flut_.get()[t.value]);
+                }
                     break;
             }
             last_ = t.type;
-        } else if(stage == APPLY::END) {
+        } else if(stage == APPLY::END && t.type != NUMBER) {
             if(t.type == ASSIGN) {
                 vlut_.get()[args_[0]] = args_[1];
                 args_[0] = args_[1];
