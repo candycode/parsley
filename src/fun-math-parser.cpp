@@ -39,9 +39,8 @@ std::map< TERM, string > T2S =
 std::map< TERM, int > ARITY =
     {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}, {ASSIGN, 2}};
 
-
 using namespace parsley;
-
+    
 ///operator priority
 ///order by priority low -> high and specify scope operators '(', ')'
 std::map< TERM, int > weights
@@ -87,6 +86,15 @@ TERM GetType(const Term& t) { return t.type; }
 //    using Type = AReturnType;
 //};
 //}
+
+//using unordered_map with TERM type as key => hash function needed
+struct TERMHash {
+    std::size_t operator()(TERM k) const {
+        using std::size_t;
+        using std::hash;
+        return hash<int>()(int(k));
+    }
+};
     
 //Syntax tree type used by HandleTerm callback only
 using AST = STree< Term, std::map< TERM, int > >;
@@ -96,10 +104,7 @@ using F = std::function< real_t (const Args&) >;
 using FunLUT = std::unordered_map<real_t, F >;
 using VarLUT = std::unordered_map<real_t, real_t >;
 using Name2Key = std::unordered_map< std::string, real_t >;
-using Op2Key = std::unordered_map< TERM, real_t >;
-
-    
-    
+using Op2Key = std::unordered_map< TERM, real_t, TERMHash >;
     
 //Context
 struct Ctx {
@@ -136,7 +141,7 @@ real_t GenKey() {
     return k++;
 }
 
-//Parser callback 1, simply add terms to syntax tree
+//Parser callback: simply add terms to syntax tree
 bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     if(es == EvalState::BEGIN) return true;
     if(es == EvalState::FAIL) return false;
@@ -174,41 +179,14 @@ bool Op(TERM t) {
            || t == ASSIGN
            || ScopeOpen(t);
 }
-//Note on variable handling: var name is parsed but nothing is added into
-//the value/function arrays, only the key matching the variable is stored
-//into the context
-
     
-///In case a hash map is used it is required to provide a hash  key generation
-///function
-#define DEFINE_HASH(T) \
-namespace std { \
-template <> \
-struct hash< T > \
-{ \
-std::size_t operator()(T k) const \
-{ \
-using std::size_t; \
-using std::hash; \
-return std::hash<int>()(int(k)); \
-} \
-}; \
-}
-
 ///Parser callback type
 using ActionFun = std::function< bool (TERM, const Values&, Ctx&, EvalState) >;
     
-#ifdef HASH_MAP
-    DEFINE_HASH(TERM)
-#endif
-#ifdef HASH_MAP
-    using Map = std::unordered_map< TERM, EvalFun >;
-    using ActionMap = std::unordered_map< TERM, ActionFun >;
-#else
-    using ParsingRules = std::map< TERM, EvalFun >;
-    using ActionMap = std::map< TERM, ActionFun  >;
-#endif
-    
+
+using ParsingRules = std::map< TERM, EvalFun >;
+using ActionMap = std::map< TERM, ActionFun  >;
+
 ///Generate parser table map: each element represent a parsing rule
 ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     
@@ -257,10 +235,9 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     return g;
 }
 
-}
 
-
-
+///Per-node evaluation function: @todo consider putting context in class or
+///using a context hierarchy, used as stack-frame data holder
 class EvalFrame {
 private:
     using Args = std::vector< real_t >;
@@ -274,6 +251,8 @@ public:
     EvalFrame(FunLUT& f, VarLUT& v) : flut_(f), vlut_(v) {}
     EvalFrame(const EvalFrame&) = default;
     EvalFrame(EvalFrame&&) = default;
+    EvalFrame& operator=(const EvalFrame&) = default;
+    EvalFrame& operator=(EvalFrame&&) = default;
     EvalFrame operator()(const Term& t, APPLY stage) {
         if(stage == APPLY::BEGIN) {
             switch(t.type) {
@@ -324,14 +303,10 @@ private:
 };
 
 
-
-
 //restore context to initial state
 void Reset(Ctx& c) {
     c.ast.Reset();
 }
-
-
 
 ///Parse expression and return evaluated result
 real_t MathParser(const string& expr, Ctx& ctx) {
@@ -339,24 +314,17 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     InStream is(iss);//, [](Char c) {return c == ' ' || c == '\t';});
     ctx.ast.SetWeights(weights);
     ActionMap am;
-#if defined(INLINE_EVAL)
-    auto HT = HandleTerm2;
-#elif defined(FUN_EVAL)
-    auto HT = HandleTerm3;
-#else
     auto HT = HandleTerm;
-#endif
     Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, VALUE,
         ASSIGN, ASSIGNMENT, VAR);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
-    
     return ctx.ast.ScopedApply(EvalFrame(ctx.fl, ctx.vl)).Result();
 }
 
-
+} //anonymous namespace
 
 
 ///Entry point

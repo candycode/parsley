@@ -125,8 +125,8 @@ public:
     //scoped apply: functor is applied to current node first then to children,
     //then to current node again at the end
     template < typename F >
-    F ScopedApply(F&& f) {
-        auto a = f(data_, APPLY::BEGIN);
+    F ScopedApply(F f) {
+        F a(std::move(f(data_, APPLY::BEGIN)));
         for(auto i: children_) a = i->ScopedApply(a);
         return a(data_, APPLY::END);
     }
@@ -139,7 +139,7 @@ public:
     //  return F(node data, result)
     template < typename FunctionMapT >
     typename Result<
-        typename FunctionMapT::value_type::second_type >::Type
+        typename FunctionMapT::value_type::second_type >::Typexs
     Eval(const FunctionMapT& fm)  {
         using Type = typename FunctionMapT::value_type::first_type;
         assert(fm.find(GetType(data_)) != fm.end());
@@ -299,6 +299,10 @@ public:
     F Apply(F f) {
         assert(root_);
         return root_->Apply(f);
+    }
+    template < typename F >
+    F ScopedApply(F&& f) {
+        return root_->ScopedApply(std::forward< F >(f));
     }
     void OffsetInc(typename WM::value_type::first_type t) {
         offset_ += weights_[t];
