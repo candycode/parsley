@@ -51,8 +51,7 @@ std::map< TERM, int > weights
         {MINUS},
         {MUL, DIV},
         {POW},
-        {FBEGIN},
-        {VAR, NUMBER}},
+        {VAR, NUMBER,FBEGIN}},
         //scope operators
         {OP, CP});
     
@@ -99,12 +98,15 @@ using Op2Key = std::unordered_map< TERM, real_t, TERMHash >;
 struct Ctx {
     AST ast;
     FunLUT fl = {
-        {0, [](const Args& args)
-            { real_t r = 0;
-                for(auto i: args) {cout << i << ' '; r += i;}
-                cout << endl;
-              return r;}},
-        {1, [](const Args& args) { return args[0] - args[1]; }},
+        {0, [](const Args& args) {
+            real_t r = 0;
+            for(auto i: args) r += i;
+            return r; }},
+        {1, [](const Args& args) {
+            real_t r = -args.front();
+            Args::const_iterator i = ++args.begin();
+            for(;i != args.end(); ++i, r -= *i);
+            return r; }},
         {2, [](const Args& args) { return args[0] * args[1]; }},
         {3, [](const Args& args) { return args[0] / args[1]; }},
         {4, [](const Args& args) { return sin(args[0]); }},
@@ -183,17 +185,16 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(t == CP) {
         ctx.ast.OffsetDec(CP);
         return true;
-    //function evaluation: f(a, b, c) -> f( (a) (b) (c) )
+    //function evaluation
     } else if(t == FBEGIN) {
         assert(In(v.find("name")->second, ctx.fn));
         ctx.ast.Add({t, Get(ctx.fn, v.find("name")->second)});
-        ctx.ast.OffsetInc(OP, 2);
+        ctx.ast.OffsetInc(OP);
         return true;
     } else if(t == FEND) {
-        ctx.ast.OffsetDec(CP, 2);
+        ctx.ast.OffsetDec(CP);
         return true;
     } else if(t == FSEP) {
-        //ctx.ast.OffsetDec(CP);
         return true;
     } else if(!v.empty()) {
         ctx.ast.Add({t, Init(t)});
@@ -237,8 +238,9 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[SUM]      = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
     g[PRODUCT]  = (n(VALUE), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     //warning: function has the same name format as a VAR, parse before!
-    g[VALUE]    = (n(OP), n(EXPR), n(CP)) / n(FUNCTION)
-                  / n(ASSIGNMENT) / n(NUMBER);
+    g[VALUE]    =
+                  (ZO(n(PLUS) / n(MINUS)), ((n(OP), n(EXPR), n(CP)) / n(FUNCTION)
+                  / n(NUMBER))) / n(ASSIGNMENT);
     g[FUNCTION] = (n(FBEGIN), ZO(n(EXPR) & *(n(FSEP) & n(EXPR))),n(FEND));
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
     using FP = FloatParser;
@@ -304,6 +306,14 @@ public:
                 case NUMBER:
                     args_.top().push_back(t.value);
                     break;
+                case ASSIGN:
+                    args_.push(Args());
+                    f_.push([this](const Args& args) {
+                        assert(args.size() > 1);
+                        vlut_.get()[args[args.size() - 2]] = args.back();
+                        return args.back();
+                    });
+                    break;
                 case VAR:
                     if(last_ == ASSIGN) {
                         if(vlut_.get().find(t.value) != vlut_.get().end())
@@ -320,19 +330,14 @@ public:
             }
             last_ = t.type;
         } else if(stage == APPLY::END
+                  //if data not yet in arg array execute function and update
+                  //accordingly
                   && t.type != NUMBER
                   && t.type != VAR) {
-            if(t.type == ASSIGN) {
-                const real_t ret = args_.top()[1];
-                vlut_.get()[args_.top()[0]] = ret;
-                args_.pop();
-                args_.top().push_back(ret);
-            } else {
                 const real_t ret = f_.top()(args_.top());
                 f_.pop();
                 args_.pop();
                 args_.top().push_back(ret);
-            }
         }
         return *this;
     }
@@ -369,7 +374,10 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     
-    if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
+    if(is.tellg() < expr.size()) {
+        cerr << "ERROR AT: " << is.tellg() << endl;
+        return std::numeric_limits< real_t >::quiet_NaN();
+    }
 #ifdef PRINT_TREE
     int s = 0;
     cout << '\n';
