@@ -90,6 +90,14 @@ public:
                 p->parent_ = *i;
                 ret = *i;
             }
+        } else if(weight == weight_) {
+            if(parent_) {
+                ret = parent_->Insert(d, weight, nullptr);
+            } else {
+                parent_ = new WTree(d, weight);
+                parent_->children_.push_back(this);
+                ret = parent_;
+            }
         } else {
             if(parent_) {
                 //offset_ is added by default at each invocation of
@@ -264,7 +272,7 @@ public:
         weight += offset_;
         if(ScopeBegin(data)) offset_ += weight;
         else if(ScopeEnd(data)) offset_ -= weight;
-        if(!scopeAdd) return *this;
+        if((ScopeBegin(data) || ScopeEnd(data)) && !scopeAdd) return *this;
         if(!root_) {
             tree_ = new WTree< T >(data, weight);
         } else {
@@ -276,7 +284,7 @@ public:
     }
     STree& Add(const T& data, bool scopeAdd = false) {
         assert(weights_.find(GetType(data)) != weights_.end());
-        return Add(data, weights_.find(GetType(data))->second);
+        return Add(data, weights_.find(GetType(data))->second, scopeAdd);
     }
     ///Rewind: no offset is taken into account, use Offset() to add
     ///offset before calling this method as needed
@@ -302,11 +310,11 @@ public:
     F ScopedApply(F&& f) {
         return root_->ScopedApply(std::forward< F >(f));
     }
-    void OffsetInc(typename WM::value_type::first_type t) {
-        offset_ += weights_[t];
+    void OffsetInc(typename WM::value_type::first_type t, int times = 1) {
+        offset_ += times * weights_[t];
     }
-    void OffsetDec(typename WM::value_type::first_type t) {
-        offset_ -= weights_[t];
+    void OffsetDec(typename WM::value_type::first_type t, int times = 1) {
+        offset_ -= times * weights_[t];
     }
     void SetWeights(const WM& wm) { weights_ = wm; }
     void Reset() { root_.reset(nullptr); offset_ = Offset(0); tree_ = nullptr; }

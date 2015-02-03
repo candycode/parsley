@@ -27,7 +27,8 @@ using real_t = double;
 
 ///Term type
 enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
-           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT
+           NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT,
+           FUNCTION, FBEGIN, FEND, FSEP
 };
 
 
@@ -45,11 +46,12 @@ using namespace parsley;
 ///order by priority low -> high and specify scope operators '(', ')'
 std::map< TERM, int > weights
     = GenWeightedTerms< TERM, int >(
-        {{PLUS},
+        {{ASSIGN},
+        {PLUS},
         {MINUS},
         {MUL, DIV},
         {POW},
-        {ASSIGN},
+        {FBEGIN},
         {VAR, NUMBER}},
         //scope operators
         {OP, CP});
@@ -96,19 +98,24 @@ using Op2Key = std::unordered_map< TERM, real_t, TERMHash >;
 //Context
 struct Ctx {
     AST ast;
-    Name2Key fn = {
-        {"sin", 0},
-        {"cos", 1},
-        {"pow", 2}
-    };
     FunLUT fl = {
-        {0, [](const Args& args) { return args[0] + args[1]; }},
+        {0, [](const Args& args)
+            { real_t r = 0;
+                for(auto i: args) {cout << i << ' '; r += i;}
+                cout << endl;
+              return r;}},
         {1, [](const Args& args) { return args[0] - args[1]; }},
         {2, [](const Args& args) { return args[0] * args[1]; }},
         {3, [](const Args& args) { return args[0] / args[1]; }},
         {4, [](const Args& args) { return sin(args[0]); }},
         {5, [](const Args& args) { return cos(args[0]); }},
         {6, [](const Args& args) { return pow(args[0], args[1]); }}
+    };
+    Name2Key fn = {
+        {"sin", 4},
+        {"cos", 5},
+        {"pow", 6},
+        {"sum", 0}
     };
     Op2Key ops = {
         {PLUS, 0},
@@ -176,6 +183,18 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(t == CP) {
         ctx.ast.OffsetDec(CP);
         return true;
+    //function evaluation: f(a, b, c) -> f( (a) (b) (c) )
+    } else if(t == FBEGIN) {
+        assert(In(v.find("name")->second, ctx.fn));
+        ctx.ast.Add({t, Get(ctx.fn, v.find("name")->second)});
+        ctx.ast.OffsetInc(OP, 2);
+        return true;
+    } else if(t == FEND) {
+        ctx.ast.OffsetDec(CP, 2);
+        return true;
+    } else if(t == FSEP) {
+        //ctx.ast.OffsetDec(CP);
+        return true;
     } else if(!v.empty()) {
         ctx.ast.Add({t, Init(t)});
     }
@@ -217,7 +236,10 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[EXPR]    = n(SUM);
     g[SUM]      = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
     g[PRODUCT]  = (n(VALUE), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
-    g[VALUE]    = (n(OP), n(EXPR), n(CP)) / n(ASSIGNMENT) / n(NUMBER);
+    //warning: function has the same name format as a VAR, parse before!
+    g[VALUE]    = (n(OP), n(EXPR), n(CP)) / n(FUNCTION)
+                  / n(ASSIGNMENT) / n(NUMBER);
+    g[FUNCTION] = (n(FBEGIN), ZO(n(EXPR) & *(n(FSEP) & n(EXPR))),n(FEND));
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
     using FP = FloatParser;
     using CS = ConstStringParser;
@@ -233,6 +255,9 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[POW]    = mt(POW,    CS("^"));
     g[ASSIGN] = mt(ASSIGN, CS("<-"));
     g[VAR]    = mt(VAR, VS());
+    g[FBEGIN] = mt(FBEGIN, (VS("name"), CS("(")));
+    g[FEND]   = mt(FEND, CS(")"));
+    g[FSEP]   = mt(FSEP, CS(","));
     
     return g;
 }
@@ -340,7 +365,7 @@ real_t MathParser(const string& expr, Ctx& ctx) {
     auto HT = HandleTerm;
     Set(am, HT, NUMBER,
         EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, VALUE,
-        ASSIGN, ASSIGNMENT, VAR);
+        ASSIGN, ASSIGNMENT, VAR, FBEGIN, FEND, FSEP);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
     
@@ -352,7 +377,7 @@ real_t MathParser(const string& expr, Ctx& ctx) {
         if(t.type != NUMBER) s += 2;
         else if(ScopeEnd(t)) s -= 2;
         assert(s >= 0);
-        cout << string(s, '.') << t.type << endl;
+        cout << string(s, '.') << t.type << ' ' << t.value << endl;
     });
 #endif
 
@@ -370,6 +395,7 @@ int main(int, char**) {
     Ctx ctx;
 //    cout << MathParser("1+(2+3)", ctx);
 //    return 0;
+//    MathParser("sum(1,2)", ctx);
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << "> " << MathParser(me, ctx) << endl;
