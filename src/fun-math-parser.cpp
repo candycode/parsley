@@ -239,8 +239,9 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[PRODUCT]  = (n(VALUE), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
     //warning: function has the same name format as a VAR, parse before!
     g[VALUE]    =
-                  (ZO(n(PLUS) / n(MINUS)), ((n(OP), n(EXPR), n(CP)) / n(FUNCTION)
-                  / n(NUMBER))) / n(ASSIGNMENT);
+                (ZO(n(PLUS) / n(MINUS)), ((n(OP), n(EXPR), n(CP)) / n(FUNCTION)
+                / n(NUMBER)))
+                / n(ASSIGNMENT);
     g[FUNCTION] = (n(FBEGIN), ZO(n(EXPR) & *(n(FSEP) & n(EXPR))),n(FEND));
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
     using FP = FloatParser;
