@@ -127,8 +127,9 @@ public:
     //then to current node again at the end
     template < typename F >
     F ScopedApply(F f) {
-        for(auto i: children_) f = i->ScopedApply(f);
-        return f(data_, APPLY::END);
+        auto a(std::move(f(data_, APPLY::BEGIN)));
+        for(auto i: children_) a = i->ScopedApply(a);
+        return a(data_, APPLY::END);
     }
     //Evaluation order:
     //if node has children:
