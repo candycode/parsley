@@ -72,12 +72,8 @@ public:
     }
     WTree() = delete;
     WTree(const T& d, Weight w) : data_(d), weight_(w), parent_(nullptr) {}
-    WTree* Insert(const T& d, Weight weight, Offset& offset,
-                  WTree* caller = nullptr) {
+    WTree* Insert(const T& d, Weight weight, WTree* caller = nullptr) {
         WTree* ret = nullptr;
-        const Offset off = Offset(weight);
-        weight = weight + offset;
-
         if(weight > weight_) {
             if(std::find(children_.begin(), children_.end(), caller)
                == children_.end()) {
@@ -99,22 +95,19 @@ public:
                 //offset_ is added by default at each invocation of
                 //Insert: in case insert is invoked from within insert
                 //do remove offset_ offset
-                ret = parent_->Insert(d, weight - offset, offset, this);
+                ret = parent_->Insert(d, weight, this);
             } else {
                 parent_ = new WTree(d, weight);
                 parent_->children_.push_back(this);
                 ret = parent_;
             }
         }
-        if(ScopeBegin(d)) offset += off;
-        else if(ScopeEnd(d)) offset -= off;
         return ret;
     }
     //move to node with weight == to
-    WTree* Rewind(Weight w, Offset& offset) {
-        w = w + offset;
+    WTree* Rewind(Weight w) {
         if(w >= weight_ || !parent_) return this;
-        else return parent_->Rewind(w - offset, offset);
+        else return parent_->Rewind(w);
     }
     template < typename F >
     F Apply(F f) {
@@ -267,25 +260,30 @@ public:
     }
     STree(const WM& wm) : weights_(wm) {}
     STree() = default;
-    STree& Add(const T& data, WT weight) {
+    STree& Add(const T& data, WT weight, bool scopeAdd) {
+        weight += offset_;
+        if(ScopeBegin(data)) offset_ += weight;
+        else if(ScopeEnd(data)) offset_ -= weight;
+        if(!scopeAdd) return *this;
         if(!root_) {
             tree_ = new WTree< T >(data, weight);
-            if(ScopeBegin(data)) offset_ = OFFT(weight);
         } else {
-            tree_ = tree_->Insert(data, weight, offset_);
+            tree_ = tree_->Insert(data, weight);
         }
         root_.release();
         root_ = TPtr(tree_->Root());
         return *this;
     }
-    STree& Add(const T& data) {
+    STree& Add(const T& data, bool scopeAdd = false) {
         assert(weights_.find(GetType(data)) != weights_.end());
         return Add(data, weights_.find(GetType(data))->second);
     }
+    ///Rewind: no offset is taken into account, use Offset() to add
+    ///offset before calling this method as needed
     STree& Rewind(WT weight) {
         assert(root_);
         assert(tree_);
-        tree_ = tree_->Rewind(weight, offset_);
+        tree_ = tree_->Rewind(weight);
         return *this;
     }
     template < typename FunctionMapT >
@@ -312,6 +310,7 @@ public:
     }
     void SetWeights(const WM& wm) { weights_ = wm; }
     void Reset() { root_.reset(nullptr); offset_ = Offset(0); tree_ = nullptr; }
+    OFFT GetOffset() const { return offset_; }
 private:
     using Tree = WTree< T, WT, OFFT>;
     using TPtr = std::unique_ptr< Tree > ;

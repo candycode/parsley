@@ -17,8 +17,6 @@
 //following is required for parser composition: (P1,P2) -> P1 & P2 -> AndParser
 #include <parser_operators.h>
 
-#include <tuple>
-
 using namespace std;
 
 namespace {
@@ -546,31 +544,17 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 #else
 #ifdef PRINT_TREE
     int s = 0;
-    ctx.ast.Apply([s](const Term& t) mutable{
+    cout << '\n';
+    ctx.ast.Apply([s](const Term& t) mutable {
         if(ScopeBegin(t)) s += 2;
         else if(ScopeEnd(t)) s -= 2;
         cout << string(s, '.') << t.type << endl;
     });
 #endif
-    return ctx.ast.Eval(ops);
+    return 0;
+    //return ctx.ast.Eval(ops);
 #endif
 }
-
-
-//template < typename F, typename R, typename...ArgsT >
-//std::function< R(ArgsT...) > MakeComposableTFun(const F& f) {
-//    std::tuple< ArgsT... > args;
-//    int count = 0;
-//    const size_t ARITY = sizeof...(ArgsT);
-//    return  [args, f, ARITY](auto r, auto n) mutable {
-//        if(count == 0) std::g
-//        if(count == ARITY) {
-//            n = f(args[I]...);
-//            count = 0;
-//        }
-//        return n;
-//    };
-//}
 
 
 ///Entry point

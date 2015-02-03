@@ -134,8 +134,7 @@ bool Op(TERM t) {
     || t == MINUS
     || t == MUL
     || t == DIV
-    || t == POW
-    || t == ASSIGN;
+    || t == POW;
 }
     
 //required customization points
@@ -171,10 +170,15 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
         }
     } else if(t == NUMBER) {
         ctx.ast.Add({t, Get(v)});
+    } else if(t == OP) {
+        ctx.ast.OffsetInc(OP);
+        return true;
     } else if(t == CP) {
         ctx.ast.OffsetDec(CP);
         return true;
-    } else if(!v.empty()) ctx.ast.Add({t, Init(t)});
+    } else if(!v.empty()) {
+        ctx.ast.Add({t, Init(t)});
+    }
     return true;
 };
     
@@ -191,7 +195,6 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     
     ParsingRules g; // grammar
     auto n  = MAKE_CALL(TERM, g, am, ctx);
-    auto c  = MAKE_CBCALL(TERM, g, am, ctx);
     auto mt = MAKE_EVAL(TERM, g, am, ctx);
     
     //grammar definition
@@ -214,7 +217,7 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
     g[EXPR]    = n(SUM);
     g[SUM]      = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
     g[PRODUCT]  = (n(VALUE), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
-    g[VALUE]    = (n(OP), n(EXPR), n(CP)) / c(ASSIGNMENT) / n(NUMBER);
+    g[VALUE]    = (n(OP), n(EXPR), n(CP)) / n(ASSIGNMENT) / n(NUMBER);
     g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
     using FP = FloatParser;
     using CS = ConstStringParser;
@@ -237,9 +240,27 @@ ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
 
 ///Per-node evaluation function: @todo consider putting context in class or
 ///using a context hierarchy, used as stack-frame data holder
+///A stack of arg arrays is used to keep separate per-tree-level arguments, this
+///approach allows to be arity-free i.e. no need to specify the arity of each
+///operator/function: each function accepts a list of arguments as a vector
+///Alternative and more efficient option is to use a single vector to hold
+///all the arguments, in this case though the functions have to be modified
+///from
+/// process elaments 0, ...N
+///to
+/// process elements size - arity, ...size - arity + N
+///also the EvalFrame class needs to be aware of the arity of each function
+///to properly resize the array after each function application:
+///from
+/// args_.pop();
+/// args_.top().push_back(ret);
+///to
+/// args_.resize(args_.size() - arity_[function id]);
+/// args_.push_back(ret);
 class EvalFrame {
 private:
     using Args = std::vector< real_t >;
+    using ArgStack = std::stack< Args, vector< vector< real_t > > >;
     using Function = std::function< real_t (const Args&) >;
     using FunStack = std::stack< Function >;
     using FunLUT = std::unordered_map< real_t, Function >;
@@ -247,7 +268,7 @@ private:
     using FLUTRef = std::reference_wrapper< FunLUT >;
     using VLUTRef = std::reference_wrapper< VarLUT >;
 public:
-    EvalFrame(FunLUT& f, VarLUT& v) : flut_(f), vlut_(v) {}
+    EvalFrame(FunLUT& f, VarLUT& v) : flut_(f), vlut_(v) { args_.push(Args()); }
     EvalFrame(const EvalFrame&) = default;
     EvalFrame(EvalFrame&&) = default;
     EvalFrame& operator=(const EvalFrame&) = default;
@@ -256,49 +277,49 @@ public:
         if(stage == APPLY::BEGIN) {
             switch(t.type) {
                 case NUMBER:
-                    args_.push_back(t.value);
+                    args_.top().push_back(t.value);
                     break;
                 case VAR:
                     if(last_ == ASSIGN) {
                         if(vlut_.get().find(t.value) != vlut_.get().end())
-                            args_.push_back(t.value);
-                        else args_.push_back(GenKey());
+                            args_.top().push_back(t.value);
+                        else args_.top().push_back(GenKey());
                     }
-                    else args_.push_back(vlut_.get()[t.value]);
-                    break;
-                case OP:
-                    f_.push([](const Args& args) { return args[0]; });
+                    else args_.top().push_back(vlut_.get()[t.value]);
                     break;
                 default: {
+                    args_.push(Args());
                     f_.push(flut_.get()[t.value]);
                 }
-                    break;
+                break;
             }
             last_ = t.type;
         } else if(stage == APPLY::END
                   && t.type != NUMBER
                   && t.type != VAR) {
             if(t.type == ASSIGN) {
-                vlut_.get()[args_[0]] = args_[1];
-                args_[0] = args_[1];
-                args_.resize(1);
+                const real_t ret = args_.top()[1];
+                vlut_.get()[args_.top()[0]] = ret;
+                args_.pop();
+                args_.top().push_back(ret);
             } else {
-                const real_t ret = f_.top()(args_);
+                const real_t ret = f_.top()(args_.top());
                 f_.pop();
-                args_.resize(0);
-                args_.push_back(ret);
+                args_.pop();
+                args_.top().push_back(ret);
             }
         }
         return *this;
     }
-    const Args& Values() const { return args_; }
+    const Args& Values() const { return args_.top(); }
     const real_t Result() const {
-        assert(args_.size());
-        return args_.front();
+        assert(!args_.empty());
+        assert(!args_.top().empty());
+        return args_.top().front();
     }
 private:
     TERM last_ = TERM();
-    Args args_;
+    ArgStack args_;
     FunStack f_;
     FLUTRef flut_;
     VLUTRef vlut_;
@@ -322,7 +343,19 @@ real_t MathParser(const string& expr, Ctx& ctx) {
         ASSIGN, ASSIGNMENT, VAR);
     ParsingRules g = GenerateParser(am, ctx);
     g[START](is);
+    
     if(is.tellg() < expr.size()) cerr << "ERROR AT: " << is.tellg() << endl;
+#ifdef PRINT_TREE
+    int s = 0;
+    cout << '\n';
+    ctx.ast.Apply([s](const Term& t) mutable {
+        if(t.type != NUMBER) s += 2;
+        else if(ScopeEnd(t)) s -= 2;
+        assert(s >= 0);
+        cout << string(s, '.') << t.type << endl;
+    });
+#endif
+
     return ctx.ast.ScopedApply(EvalFrame(ctx.fl, ctx.vl)).Result();
 }
 
@@ -335,6 +368,8 @@ int main(int, char**) {
     //REPL, exit when input is empty
     string me;
     Ctx ctx;
+//    cout << MathParser("1+(2+3)", ctx);
+//    return 0;
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << "> " << MathParser(me, ctx) << endl;
