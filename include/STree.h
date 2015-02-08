@@ -49,13 +49,12 @@ struct Result< R (*)(Args...) > {
     using Type = R;
 };
     
-///@todo make it an inner class of STree and allow for typed weight
+///@todo make it an inner class of STree
 template < typename T, typename WeightT = int, typename OffT = WeightT >
 class WTree {
 public:
     using Weight = WeightT;
     using Offset = OffT;
-    using UUID = void*; //unique, per-process id
 public:
     WTree(const WTree& t) : data_(t.data_), weight_(t.weight_),
          parent_(nullptr) {
@@ -90,21 +89,17 @@ public:
                 p->parent_ = *i;
                 ret = *i;
             }
-        } else if(weight == weight_) {
-            if(parent_) {
-                ret = parent_->Insert(d, weight, nullptr);
-            } else {
-                parent_ = new WTree(d, weight);
-                parent_->children_.push_back(this);
-                ret = parent_;
-            }
+//        } else if(weight == weight_) {
+//            if(parent_) {
+//                ret = parent_->Insert(d, weight, nullptr);
+//            } else {
+//                parent_ = new WTree(d, weight);
+//                parent_->children_.push_back(this);
+//                ret = parent_;
+//            }
         } else {
-            if(parent_) {
-                //offset_ is added by default at each invocation of
-                //Insert: in case insert is invoked from within insert
-                //do remove offset_ offset
-                ret = parent_->Insert(d, weight, this);
-            } else {
+            if(parent_) ret = parent_->Insert(d, weight, this);
+            else {
                 parent_ = new WTree(d, weight);
                 parent_->children_.push_back(this);
                 ret = parent_;
@@ -127,9 +122,20 @@ public:
     //then to current node again at the end
     template < typename F >
     F ScopedApply(F f) {
-        auto a(std::move(f(data_, APPLY::BEGIN)));
+        auto a(f(data_, APPLY::BEGIN));
         for(auto i: children_) a = i->ScopedApply(a);
         return a(data_, APPLY::END);
+    }
+    //functional scoped apply: function is returned which traverses tree when
+    //invoked
+    template < typename F >
+    std::function< F () > FunScopedApply(F f) {
+        auto g = [f, this]() {
+            auto a(std::move(f(data_, APPLY::BEGIN)));
+            for(auto i: children_) a = i->ScopedApply(a);
+            return a(data_, APPLY::END);
+        };
+        return g;
     }
     //Evaluation order:
     //if node has children:
@@ -174,40 +180,6 @@ public:
         for(; i != children_.end(); ++i) args.push_back(i->EvalArgs(fm));
         return Get(GetType(data_), fm)(args);
     }
-#if 0
-    //Deferred execution: stores evaluation path and data in function
-    //closure, valid until all tree nodes are not deleted
-    template < typename FunctionMapT >
-    std::function< typename Result<
-        typename FunctionMapT::value_type::second_type >::Type () >
-    EvalFun(const FunctionMapT& fm)  {
-        using DataT = typename Result<
-            typename FunctionMapT::value_type::second_type >::Type;
-        using Type = typename FunctionMapT::value_type::first_type;
-        assert(fm.find(GetType(data_)) != fm.end());
-        auto f = fm.find(GetType(data_))->second;
-        DataT r = Init(GetType(data_));
-        std::function< DataT() > F;
-        if(children_.size() > 0) {
-            typename std::vector< WTree< T >* >::iterator i = children_.begin();
-            F = [i, f, r, &fm]() {
-                return f(i->EvalFun(fm)(), r);
-            };
-            ++i;
-            for(i; i != children_.end(); ++i) {
-                F = [f, F, i, &fm] {
-                    return f(i->EvalFun(fm)(), F());
-                };
-            }
-        } else {
-            const DataT c = GetData(data_);
-            F = [f, r, &fm, c]() {
-                return f(r, c);
-            };
-        }
-        return
-    }
-#endif
     const WTree< T >* Root() const {
         if(parent_ == nullptr) return this;
         return parent_->Root();
@@ -310,11 +282,11 @@ public:
     F ScopedApply(F&& f) {
         return root_->ScopedApply(std::forward< F >(f));
     }
-    void OffsetInc(typename WM::value_type::first_type t, int times = 1) {
-        offset_ += times * weights_[t];
+    void OffsetInc(typename WM::value_type::first_type t) {
+        offset_ += weights_[t];
     }
-    void OffsetDec(typename WM::value_type::first_type t, int times = 1) {
-        offset_ -= times * weights_[t];
+    void OffsetDec(typename WM::value_type::first_type t) {
+        offset_ -= weights_[t];
     }
     void SetWeights(const WM& wm) { weights_ = wm; }
     void Reset() { root_.reset(nullptr); offset_ = Offset(0); tree_ = nullptr; }

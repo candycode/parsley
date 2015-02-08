@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <map>
 #include <InStream.h>
-#include <PTree.h>
+#include <STree.h>
 #include <types.h>
 //following is required for parser composition: (P1,P2) -> P1 & P2 -> AndParser
 #include <parser_operators.h>
@@ -30,15 +30,6 @@ enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
            NUMBER, POW, START, VAR, ASSIGN, ASSIGNMENT,
            FUNCTION, FBEGIN, FEND, FSEP
 };
-
-
-///for debugging purposes only
-std::map< TERM, string > T2S =
-    {{PLUS, "PLUS"}, {MINUS, "MINUS"}, {MUL, "MUL"}, {DIV, "DIV"}};
-
-//operator arity, required only for non syntax tree based approaches
-std::map< TERM, int > ARITY =
-    {{PLUS, 2}, {MINUS, 2}, {MUL, 2}, {DIV, 2}, {POW, 2}, {ASSIGN, 2}};
 
 using namespace parsley;
     
@@ -147,19 +138,14 @@ bool Op(TERM t) {
 }
     
 //required customization points
-///Returns @c true if term represent the beginning of a new scope
-bool ScopeBegin(const Term& t) { return t.type == OP; }
-///Returns @c true if term represent the beginning of a new scope
-bool ScopeEnd(const Term& t) { return t.type == CP; }
+//not used in this case but required because of the methods of STree
+//used GetData to extract the return type at compile time
 real_t GetData(const Term& t) { return t.value; }
-real_t Init(TERM tid) {
-    if(tid == ASSIGN)
-        return std::numeric_limits<real_t>::quiet_NaN();
-    return tid == MUL
-    || tid == DIV
-    || tid == POW ? real_t(1) : real_t(0); };
 TERM GetType(const Term& t) { return t.type; }
-    
+//scope is handled directly from the parsing callback function by
+//explicitly increasing decreasing weight offset
+bool ScopeBegin(const Term&) { return false; }
+bool ScopeEnd(const Term&) { return false; }
     
 //Parser callback: simply add terms to syntax tree
 bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
@@ -197,7 +183,7 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(t == FSEP) {
         return true;
     } else if(!v.empty()) {
-        ctx.ast.Add({t, Init(t)});
+        ctx.ast.Add({t, real_t()});
     }
     return true;
 };
@@ -356,11 +342,7 @@ private:
     VLUTRef vlut_;
 };
 
-
-//restore context to initial state
-void Reset(Ctx& c) {
-    c.ast.Reset();
-}
+    
 
 ///Parse expression and return evaluated result
 real_t MathParser(const string& expr, Ctx& ctx) {
@@ -398,17 +380,15 @@ real_t MathParser(const string& expr, Ctx& ctx) {
 
 ///Entry point
 int main(int, char**) {
-
     //REPL, exit when input is empty
     string me;
     Ctx ctx;
-//    cout << MathParser("1+(2+3)", ctx);
-//    return 0;
-//    MathParser("sum(1,2)", ctx);
     while(getline(cin, me)) {
         if(me.empty()) break;
         cout << "> " << MathParser(me, ctx) << endl;
-        Reset(ctx);
+        //clear AST, tree is destroyed but previously defined variables are
+        //kept in context data
+        ctx.ast.Reset();
     }
     return 0;
 }

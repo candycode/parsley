@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <map>
 #include <InStream.h>
-#include <PTree.h>
+#include <STree.h>
 #include <types.h>
 //following is required for parser composition: (P1,P2) -> P1 & P2 -> AndParser
 #include <parser_operators.h>
