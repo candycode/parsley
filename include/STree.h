@@ -89,14 +89,14 @@ public:
                 p->parent_ = *i;
                 ret = *i;
             }
-//        } else if(weight == weight_) {
-//            if(parent_) {
-//                ret = parent_->Insert(d, weight, nullptr);
-//            } else {
-//                parent_ = new WTree(d, weight);
-//                parent_->children_.push_back(this);
-//                ret = parent_;
-//            }
+        } else if(weight == weight_) {
+            if(parent_) {
+                ret = parent_->Insert(d, weight, nullptr);
+            } else {
+                parent_ = new WTree(d, weight);
+                parent_->children_.push_back(this);
+                ret = parent_;
+            }
         } else {
             if(parent_) ret = parent_->Insert(d, weight, this);
             else {
