@@ -90,25 +90,52 @@ struct Ctx {
     AST ast;
     FunLUT fl = {
         {0, [](const Args& args) {
+            assert(args.size());
             real_t r = 0;
             for(auto i: args) r += i;
             return r; }},
         {1, [](const Args& args) {
+            assert(args.size());
             real_t r = -args.front();
             Args::const_iterator i = ++args.begin();
             for(;i != args.end(); ++i, r -= *i);
             return r; }},
-        {2, [](const Args& args) { return args[0] * args[1]; }},
-        {3, [](const Args& args) { return args[0] / args[1]; }},
-        {4, [](const Args& args) { return sin(args[0]); }},
-        {5, [](const Args& args) { return cos(args[0]); }},
-        {6, [](const Args& args) { return pow(args[0], args[1]); }}
+        {2, [](const Args& args) {
+            assert(args.size() > 1);
+            real_t r = 1;
+            for(auto i: args) r *= i;
+            return r; }},
+        {3, [](const Args& args) {
+            assert(args.size() > 1);
+            real_t r = args.front();
+            Args::const_iterator i = ++args.begin();
+            for(;i != args.end(); ++i, r /= *i);
+            return r; }},
+        {4, [](const Args& args) {
+            assert(args.size());
+            real_t r = sin(args.front());
+            return r; }},
+        {5, [](const Args& args) {
+            assert(args.size());
+            real_t r = cos(args.front());
+            return r; }},
+        {6, [](const Args& args) {
+            assert(args.size() > 1);
+            real_t b = args[0];
+            real_t e = args[1];
+            real_t r = pow(b, e);
+            Args::const_iterator i = ++args.begin();
+            ++i;
+            for(;i != args.end(); ++i) r = pow(r, *i);
+            return r; }}
     };
     Name2Key fn = {
         {"sin", 4},
         {"cos", 5},
         {"pow", 6},
-        {"sum", 0}
+        {"sum", 0},
+        {"sub", 1},
+        {"mul", 2}
     };
     Op2Key ops = {
         {PLUS, 0},
@@ -175,12 +202,14 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(t == FBEGIN) {
         assert(In(v.find("name")->second, ctx.fn));
         ctx.ast.Add({t, Get(ctx.fn, v.find("name")->second)});
+        ctx.ast.SaveOffset();
         ctx.ast.OffsetInc(OP);
         return true;
     } else if(t == FEND) {
-        ctx.ast.OffsetDec(CP);
+        ctx.ast.ResetOffset();
         return true;
     } else if(t == FSEP) {
+        ctx.ast.Rewind(FBEGIN);
         return true;
     } else if(!v.empty()) {
         ctx.ast.Add({t, real_t()});

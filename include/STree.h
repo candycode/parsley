@@ -33,6 +33,7 @@
 #include <cassert>
 #include <functional>
 #include <type_traits>
+#include <stack>
 
 
 namespace parsley {
@@ -88,14 +89,6 @@ public:
                 (*i)->children_.push_back(p);
                 p->parent_ = *i;
                 ret = *i;
-            }
-        } else if(weight == weight_) {
-            if(parent_) {
-                ret = parent_->Insert(d, weight, nullptr);
-            } else {
-                parent_ = new WTree(d, weight);
-                parent_->children_.push_back(this);
-                ret = parent_;
             }
         } else {
             if(parent_) ret = parent_->Insert(d, weight, this);
@@ -263,6 +256,7 @@ public:
     STree& Rewind(WT weight) {
         assert(root_);
         assert(tree_);
+        if(marks_.size() > 1) weight += offset_;
         tree_ = tree_->Rewind(weight);
         return *this;
     }
@@ -288,6 +282,8 @@ public:
     void OffsetDec(typename WM::value_type::first_type t) {
         offset_ -= weights_[t];
     }
+    void SaveOffset() { marks_.push(offset_); }
+    void ResetOffset() { offset_ = marks_.top(); marks_.pop(); }
     void SetWeights(const WM& wm) { weights_ = wm; }
     void Reset() { root_.reset(nullptr); offset_ = Offset(0); tree_ = nullptr; }
     OFFT GetOffset() const { return offset_; }
@@ -299,6 +295,7 @@ private:
     TPtr root_;
     Tree* tree_ = nullptr;
     Offset offset_ = Offset(0);
+    std::stack< Offset > marks_;
 };
 }
 
