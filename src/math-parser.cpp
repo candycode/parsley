@@ -551,8 +551,7 @@ real_t MathParser(const string& expr, Ctx& ctx) {
         cout << string(s, '.') << t.type << endl;
     });
 #endif
-    return 0;
-    //return ctx.ast.Eval(ops);
+    return ctx.ast.Eval(ops);
 #endif
 }
 

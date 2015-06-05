@@ -139,7 +139,7 @@ public:
     //  return F(node data, result)
     template < typename FunctionMapT >
     typename Result<
-        typename FunctionMapT::value_type::second_type >::Typexs
+        typename FunctionMapT::value_type::second_type >::Type
     Eval(const FunctionMapT& fm)  {
         using Type = typename FunctionMapT::value_type::first_type;
         assert(fm.find(GetType(data_)) != fm.end());
