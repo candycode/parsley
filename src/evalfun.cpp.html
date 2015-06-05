@@ -1,0 +1,420 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<!-- Created by htmlize-1.47 in css mode. -->
+<html>
+  <head>
+    <title>evalfun.cpp</title>
+    <style type="text/css">
+    <!--
+      body {
+        color: #c5c8c6;
+        background-color: #1d1f21;
+      }
+      .comment {
+        /* font-lock-comment-face */
+        color: #969896;
+        font-style: italic;
+      }
+      .comment-delimiter {
+        /* font-lock-comment-delimiter-face */
+        color: #969896;
+        font-style: italic;
+      }
+      .constant {
+        /* font-lock-constant-face */
+        color: #8abeb7;
+      }
+      .function-name {
+        /* font-lock-function-name-face */
+        color: #81a2be;
+      }
+      .keyword {
+        /* font-lock-keyword-face */
+        color: #b294bb;
+      }
+      .negation-char {
+        /* font-lock-negation-char-face */
+        color: #b5bd68;
+      }
+      .preprocessor {
+        /* font-lock-preprocessor-face */
+        color: #b294bb;
+      }
+      .string {
+        /* font-lock-string-face */
+        color: #b5bd68;
+      }
+      .type {
+        /* font-lock-type-face */
+        color: #f0c674;
+      }
+      .variable-name {
+        /* font-lock-variable-name-face */
+        color: #de935f;
+      }
+
+      a {
+        color: inherit;
+        background-color: inherit;
+        font: inherit;
+        text-decoration: inherit;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+    -->
+    </style>
+  </head>
+  <body>
+    <pre>
+<span class="comment-delimiter">////////////////////////////////////////////////////////////////////////////////</span><span class="comment">
+</span><span class="comment-delimiter">//</span><span class="comment">Parsley - parsing framework
+</span><span class="comment-delimiter">//</span><span class="comment">Copyright (c) 2010-2015, Ugo Varetto
+</span><span class="comment-delimiter">//</span><span class="comment">All rights reserved.
+</span><span class="comment-delimiter">//</span><span class="comment">
+</span><span class="comment-delimiter">//</span><span class="comment">Redistribution and use in source and binary forms, with or without
+</span><span class="comment-delimiter">//</span><span class="comment">modification, are permitted provided that the following conditions are met:
+</span><span class="comment-delimiter">//    </span><span class="comment">* Redistributions of source code must retain the above copyright
+</span><span class="comment-delimiter">//      </span><span class="comment">notice, this list of conditions and the following disclaimer.
+</span><span class="comment-delimiter">//    </span><span class="comment">* Redistributions in binary form must reproduce the above copyright
+</span><span class="comment-delimiter">//      </span><span class="comment">notice, this list of conditions and the following disclaimer in the
+</span><span class="comment-delimiter">//      </span><span class="comment">documentation and/or other materials provided with the distribution.
+</span><span class="comment-delimiter">//    </span><span class="comment">* Neither the name of the copyright holder nor the
+</span><span class="comment-delimiter">//      </span><span class="comment">names of its contributors may be used to endorse or promote products
+</span><span class="comment-delimiter">//      </span><span class="comment">derived from this software without specific prior written permission.
+</span><span class="comment-delimiter">//</span><span class="comment">
+</span><span class="comment-delimiter">//</span><span class="comment">THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+</span><span class="comment-delimiter">//</span><span class="comment">AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+</span><span class="comment-delimiter">//</span><span class="comment">IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+</span><span class="comment-delimiter">//</span><span class="comment">DISCLAIMED. IN NO EVENT SHALL UGO VARETTO BE LIABLE FOR ANY
+</span><span class="comment-delimiter">//</span><span class="comment">DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+</span><span class="comment-delimiter">//</span><span class="comment">(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+</span><span class="comment-delimiter">//</span><span class="comment">LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+</span><span class="comment-delimiter">//</span><span class="comment">ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+</span><span class="comment-delimiter">//</span><span class="comment">(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+</span><span class="comment-delimiter">//</span><span class="comment">SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+</span><span class="comment-delimiter">////////////////////////////////////////////////////////////////////////////////</span><span class="comment">
+</span>
+<span class="comment-delimiter">///</span><span class="comment">WORK IN PROGRESS: MINIMAL NEW IMPLEMENTATION OF RECURSIVE PEG PARSER
+</span><span class="comment-delimiter">//</span><span class="comment">(WITH INFINITE LOOKAHEAD)
+</span><span class="comment-delimiter">//</span><span class="comment">MEMOIZATION: minimal support; last stream position and result recorded
+</span><span class="comment-delimiter">//</span><span class="comment">at each parser application
+</span><span class="comment-delimiter">//</span><span class="comment">note that parsing is *not* context-free because advancement depends on both
+</span><span class="comment-delimiter">//</span><span class="comment">the grammar *and* the return value of the context-aware callback function
+</span>
+<span class="preprocessor">#ifdef</span> HASH_MAP
+<span class="preprocessor">#include</span> <span class="string">&lt;unordered_map&gt;</span>
+<span class="preprocessor">#else</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;map&gt;</span>
+<span class="preprocessor">#endif</span>
+
+<span class="preprocessor">#include</span> <span class="string">&lt;iostream&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;sstream&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;functional&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;string&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;algorithm&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;limits&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;array&gt;</span>
+
+<span class="preprocessor">#include</span> <span class="string">&lt;parsers.h&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;InStream.h&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;types.h&gt;</span>
+<span class="preprocessor">#include</span> <span class="string">&lt;peg.h&gt;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="constant">parsley</span>;
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="constant">std</span>;
+
+
+
+<span class="comment-delimiter">//</span><span class="comment">==============================================================================
+</span><span class="keyword">enum</span> <span class="type">TERM</span> {<span class="variable-name">EXPR</span> = 1, <span class="variable-name">OP</span>, <span class="variable-name">CP</span>, <span class="variable-name">VALUE</span>, <span class="variable-name">PLUS</span>, <span class="variable-name">MINUS</span>, <span class="variable-name">MUL</span>, <span class="variable-name">DIV</span>, <span class="variable-name">SUM</span>, <span class="variable-name">PRODUCT</span>,
+           <span class="variable-name">NUMBER</span>, <span class="variable-name">POW</span>, <span class="variable-name">POWER</span>};
+
+<span class="constant">std</span>::<span class="type">map</span>&lt; <span class="type">TERM</span>, <span class="type">int</span> &gt; <span class="variable-name">weights</span> = {
+    {NUMBER, 0},
+    {OP, 0},
+    {CP, 0},
+    {POW, 1},
+    {MUL, 2},
+    {DIV, 2},
+    {MINUS, 3},
+    {PLUS, 4}
+};
+
+<span class="type">bool</span> <span class="function-name">ScopeBegin</span>(<span class="type">TERM</span> <span class="variable-name">t</span>) { <span class="keyword">return</span> t == OP; }
+<span class="type">bool</span> <span class="function-name">ScopeEnd</span>(<span class="type">TERM</span> <span class="variable-name">t</span>) { <span class="keyword">return</span> t == CP; }
+
+<span class="constant">std</span>::<span class="type">string</span> <span class="function-name">TermToString</span>(<span class="type">TERM</span> <span class="variable-name">t</span>) {
+    <span class="constant">std</span>::<span class="type">string</span> <span class="variable-name">ret</span>;
+    <span class="keyword">switch</span>(t) {
+        <span class="keyword">case</span> EXPR: ret = <span class="string">"EXPR"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> OP: ret = <span class="string">"("</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> CP: ret = <span class="string">")"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> VALUE: ret = <span class="string">"VALUE"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> PLUS: ret = <span class="string">"+"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> MINUS: ret = <span class="string">"-"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> MUL: ret = <span class="string">"*"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> DIV: ret = <span class="string">"/"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> SUM: ret = <span class="string">"SUM"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> PRODUCT: ret = <span class="string">"PROD"</span>;
+            <span class="keyword">break</span>;
+<span class="comment-delimiter">//        </span><span class="comment">case NUMBER: ret = "";
+</span><span class="comment-delimiter">//            </span><span class="comment">break;
+</span>        <span class="keyword">case</span> POW: ret = <span class="string">"^"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> POWER: ret = <span class="string">"POW"</span>;
+            <span class="keyword">break</span>;
+        <span class="keyword">default</span>: <span class="keyword">break</span>;
+    }
+    <span class="keyword">return</span> ret;
+};
+
+
+<span class="preprocessor">#ifdef</span> HASH_MAP
+DEFINE_HASH(TERM)
+<span class="preprocessor">#endif</span>
+
+<span class="keyword">struct</span> <span class="type">Ctx</span> {};
+<span class="keyword">using</span> <span class="type">ActionFun</span> = <span class="constant">std</span>::<span class="type">function</span>&lt; <span class="type">bool</span> (<span class="type">TERM</span>, <span class="keyword">const</span> <span class="type">Values</span>&amp;, <span class="type">Ctx</span>&amp;, EvalState) &gt;;
+<span class="preprocessor">#ifdef</span> HASH_MAP
+<span class="keyword">using</span> <span class="type">Map</span> = <span class="constant">std</span>::<span class="type">unordered_map</span>&lt; <span class="type">TERM</span>, EvalFun &gt;;
+<span class="keyword">using</span> <span class="type">ActionMap</span> = <span class="constant">std</span>::<span class="type">unordered_map</span>&lt; <span class="type">TERM</span>, <span class="type">ActionFun</span> &gt;;
+<span class="preprocessor">#else</span>
+<span class="keyword">using</span> <span class="type">Map</span> = <span class="constant">std</span>::<span class="type">map</span>&lt; <span class="type">TERM</span>, EvalFun &gt;;
+<span class="keyword">using</span> <span class="type">ActionMap</span> = <span class="constant">std</span>::<span class="type">map</span>&lt; <span class="type">TERM</span>, <span class="type">ActionFun</span>  &gt;;
+<span class="preprocessor">#endif</span>
+
+<span class="type">void</span> <span class="function-name">Go</span>() {
+    <span class="type">Ctx</span> <span class="variable-name">ctx</span>;
+    <span class="type">ActionMap</span> <span class="variable-name">am</span>;
+    <span class="type">int</span> <span class="variable-name">indent</span> = 0;
+    <span class="keyword">auto</span> <span class="type">handleTerm</span> = [&amp;indent](<span class="type">TERM</span> <span class="variable-name">t</span>, <span class="keyword">const</span> <span class="type">Values</span>&amp; <span class="variable-name">v</span>, <span class="type">Ctx</span>&amp;, <span class="type">EvalState</span> <span class="variable-name">es</span>) {
+        <span class="keyword">if</span>(es == <span class="constant">EvalState</span>::BEGIN) {
+            ++indent;
+            <span class="keyword">return</span> <span class="constant">true</span>;
+        } <span class="keyword">else</span> <span class="keyword">if</span>(es == <span class="constant">EvalState</span>::FAIL) {
+            --indent;
+            <span class="keyword">return</span> <span class="constant">false</span>;
+        }
+        <span class="keyword">if</span>(<span class="negation-char">!</span>v.empty())
+        cout &lt;&lt; <span class="constant">std</span>::<span class="variable-name">string</span>(indent, <span class="string">'`'</span>) &lt;&lt; <span class="string">' '</span> &lt;&lt; TermToString(t);
+        <span class="keyword">if</span>(t == NUMBER) {
+            <span class="keyword">if</span>(<span class="negation-char">!</span>v.empty()) cout &lt;&lt; v.begin()-&gt;second;
+        }
+        <span class="keyword">if</span>(<span class="negation-char">!</span>v.empty()) cout &lt;&lt; endl;
+        --indent;
+        <span class="keyword">return</span> <span class="constant">true</span>;
+    };
+    <span class="keyword">auto</span> <span class="type">handleWeightedTerm</span> = [&amp;indent](<span class="type">TERM</span> <span class="variable-name">t</span>, <span class="keyword">const</span> <span class="type">Values</span>&amp; <span class="variable-name">v</span>, <span class="type">Ctx</span>&amp;,
+                                        <span class="type">EvalState</span> <span class="variable-name">es</span>) {
+        <span class="keyword">if</span>(es == <span class="constant">EvalState</span>::BEGIN) <span class="keyword">return</span> <span class="constant">true</span>;
+        <span class="keyword">else</span> <span class="keyword">if</span>(es == <span class="constant">EvalState</span>::FAIL) <span class="keyword">return</span> <span class="constant">false</span>;
+        <span class="keyword">if</span>(ScopeBegin(t)) ++indent;
+        <span class="keyword">if</span>(<span class="negation-char">!</span>v.empty())
+            cout &lt;&lt; <span class="constant">std</span>::string((indent + weights[t]), <span class="string">' '</span>)
+            &lt;&lt; TermToString(t);
+        <span class="keyword">if</span>(t == NUMBER) {
+            <span class="keyword">if</span>(<span class="negation-char">!</span>v.empty()) cout &lt;&lt; v.begin()-&gt;second;
+        }
+        <span class="keyword">if</span>(ScopeEnd(t)) --indent;
+        <span class="keyword">if</span>(<span class="negation-char">!</span>v.empty()) cout &lt;&lt; endl;
+        <span class="keyword">return</span> <span class="constant">true</span>;
+    };
+
+    Set(am, handleWeightedTerm, NUMBER,
+        EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE);
+    <span class="comment-delimiter">//</span><span class="comment">callback function also receives key: it is possible to have same
+</span>    <span class="comment-delimiter">//</span><span class="comment">callbak handle multiple keys; to assign the same callback to multiple
+</span>    <span class="comment-delimiter">//</span><span class="comment">keys in action map use Set helper:
+</span>    <span class="comment-delimiter">//    </span><span class="comment">ActionMap A;
+</span>    <span class="comment-delimiter">//    </span><span class="comment">Set(A,
+</span>    <span class="comment-delimiter">//        </span><span class="comment">[](TERM t, const Values&amp;, Ctx&amp;) {
+</span>    <span class="comment-delimiter">//           </span><span class="comment">cout &lt;&lt; t &lt;&lt; endl; return true; },
+</span>    <span class="comment-delimiter">//        </span><span class="comment">OP, CP, MINUS, MUL);
+</span>    <span class="type">Map</span> <span class="variable-name">g</span>; <span class="comment-delimiter">// </span><span class="comment">grammar
+</span>    <span class="keyword">auto</span> <span class="type">c</span> = MAKE_CBCALL(TERM, g, am, ctx);
+    <span class="keyword">auto</span> <span class="type">n</span> = MAKE_CALL(TERM, g, am, ctx);
+    <span class="keyword">auto</span> <span class="type">mt</span> = MAKE_EVAL(TERM, g, am, ctx);
+    <span class="comment-delimiter">//</span><span class="comment">grammar definition
+</span>    <span class="comment-delimiter">//</span><span class="comment">non-terminal - note the top-down definition through deferred calls using
+</span>    <span class="comment-delimiter">//</span><span class="comment">the 'c' helper function
+</span>    g[EXPR]    = n(SUM);
+    <span class="comment-delimiter">//</span><span class="comment">Option 1:
+</span>    <span class="comment-delimiter">//    </span><span class="comment">g[SUM]     = AND(c(PRODUCT), ZM(AND(OR(c(PLUS), c(MINUS)), c(PRODUCT))));
+</span>    <span class="comment-delimiter">//    </span><span class="comment">g[PRODUCT] = AND(c(VALUE), ZM(AND(OR(c(MUL), c(DIV), c(POW), c(VALUE))));
+</span>    <span class="comment-delimiter">//    </span><span class="comment">g[VALUE]   = OR(c(NUMBER), AND(c(OP),c(EXPR), c(CP)));
+</span>    <span class="comment-delimiter">//</span><span class="comment">Option 2:
+</span>    <span class="comment-delimiter">//    </span><span class="comment">g[SUM]     = c(PRODUCT) &amp; *((c(PLUS) / c(MINUS)) &amp; c(PRODUCT));
+</span>    <span class="comment-delimiter">//    </span><span class="comment">g[PRODUCT] = c(VALUE) &amp; *((c(MUL) / c(DIV) / c(POW)) &amp; c(VALUE));
+</span>    <span class="comment-delimiter">//    </span><span class="comment">g[VALUE]   = c(NUMBER) / (c(OP) &amp; c(EXPR) &amp; c(CP));
+</span>    <span class="comment-delimiter">//</span><span class="comment">Option 3: commas for ANDs, parenthesis required, if not they are parsed
+</span>    <span class="comment-delimiter">//          </span><span class="comment">with standard rules
+</span>    g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
+    g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
+    g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
+    g[VALUE]   = n(NUMBER) / (n(OP), n(EXPR), n(CP));
+    <span class="keyword">using</span> <span class="type">FP</span> = FloatParser;
+    <span class="keyword">using</span> <span class="type">CS</span> = ConstStringParser;
+    <span class="comment-delimiter">//</span><span class="comment">terminal
+</span>    g[NUMBER] = mt(NUMBER, FP());
+    g[OP]     = mt(OP,     CS(<span class="string">"("</span>));
+    g[CP]     = mt(CP,     CS(<span class="string">")"</span>));
+    g[PLUS]   = mt(PLUS,   CS(<span class="string">"+"</span>));
+    g[MINUS]  = mt(MINUS,  CS(<span class="string">"-"</span>));
+    g[MUL]    = mt(MUL,    CS(<span class="string">"*"</span>));
+    g[DIV]    = mt(DIV,    CS(<span class="string">"/"</span>));
+    g[POW]    = mt(POW,    CS(<span class="string">"^"</span>));
+    <span class="comment-delimiter">//</span><span class="comment">text
+</span>    <span class="type">istringstream</span> <span class="variable-name">is</span>(<span class="string">"6*((2+-3)+7^9)"</span>);
+    <span class="type">InStream</span> <span class="variable-name">ins</span>(is);
+    <span class="comment-delimiter">//</span><span class="comment">invoke parser
+</span>    g[EXPR](ins);
+    <span class="comment-delimiter">//</span><span class="comment">NOTE: EOF is set AFTER TRYING TO READ PAST THE END OF THE STREAM!
+</span>    <span class="comment-delimiter">//</span><span class="comment">check
+</span>    <span class="keyword">if</span>(<span class="negation-char">!</span>ins.eof()) <span class="constant">std</span>::cout &lt;&lt; <span class="string">"ERROR AT: "</span> &lt;&lt; ins.get_lines() &lt;&lt; <span class="string">", "</span>
+                             &lt;&lt; ins.get_line_chars() &lt;&lt; <span class="constant">std</span>::endl;
+}
+
+<span class="comment-delimiter">//</span><span class="comment">------------------------------------------------------------------------------
+</span><span class="type">int</span> <span class="function-name">main</span>(<span class="type">int</span>, <span class="type">char</span>**) {
+    <span class="comment-delimiter">//</span><span class="comment">Go();
+</span>    <span class="comment-delimiter">//</span><span class="comment">void TreeTest();
+</span>    <span class="comment-delimiter">//</span><span class="comment">TreeTest();
+</span>        <span class="keyword">return</span> 0;
+}
+
+<span class="comment-delimiter">//</span><span class="comment">LEFTOVERS
+</span><span class="comment-delimiter">//</span><span class="comment">******************************************************************************
+</span><span class="comment-delimiter">//</span><span class="comment">#if 0
+</span><span class="comment-delimiter">//</span><span class="comment">namespace std {
+</span><span class="comment-delimiter">//    </span><span class="comment">template &lt;&gt;
+</span><span class="comment-delimiter">//    </span><span class="comment">struct hash&lt;TERM&gt;
+</span><span class="comment-delimiter">//    </span><span class="comment">{
+</span><span class="comment-delimiter">//        </span><span class="comment">std::size_t operator()(TERM k) const
+</span><span class="comment-delimiter">//        </span><span class="comment">{
+</span><span class="comment-delimiter">//            </span><span class="comment">using std::size_t;
+</span><span class="comment-delimiter">//            </span><span class="comment">using std::hash;
+</span><span class="comment-delimiter">//            </span><span class="comment">
+</span><span class="comment-delimiter">//            </span><span class="comment">// Compute individual hash values for first,
+</span><span class="comment-delimiter">//            </span><span class="comment">// second and third and combine them using XOR
+</span><span class="comment-delimiter">//            </span><span class="comment">// and bit shifting:
+</span><span class="comment-delimiter">//            </span><span class="comment">
+</span><span class="comment-delimiter">//            </span><span class="comment">return std::hash&lt;int&gt;()(int(k));
+</span><span class="comment-delimiter">//        </span><span class="comment">}
+</span><span class="comment-delimiter">//    </span><span class="comment">};
+</span><span class="comment-delimiter">//</span><span class="comment">}
+</span><span class="comment-delimiter">//</span><span class="comment">#endif
+</span><span class="comment-delimiter">//</span><span class="comment">
+</span><span class="comment-delimiter">//</span><span class="comment">
+</span><span class="comment-delimiter">//</span><span class="comment">template &lt; typename T, std::size_t N &gt; class CircularBuffer {
+</span><span class="comment-delimiter">//</span><span class="comment">public:
+</span><span class="comment-delimiter">//    </span><span class="comment">using value_type = T;
+</span><span class="comment-delimiter">//    </span><span class="comment">static size_t Size() { return  N; }
+</span><span class="comment-delimiter">//    </span><span class="comment">CircularBuffer&amp; Put(const T&amp; v) {
+</span><span class="comment-delimiter">//        </span><span class="comment">buf_[p_] = v;
+</span><span class="comment-delimiter">//        </span><span class="comment">p_ = (p_ + 1) % N;
+</span><span class="comment-delimiter">//        </span><span class="comment">return *this;
+</span><span class="comment-delimiter">//    </span><span class="comment">}
+</span><span class="comment-delimiter">//    </span><span class="comment">const T&amp; Get() const { return buf_[p_]; }
+</span><span class="comment-delimiter">//    </span><span class="comment">T&amp; Get() { return buf_[p_]; }
+</span><span class="comment-delimiter">//    </span><span class="comment">bool Same(const T&amp; v) const {//returns true iff all elements are the same
+</span><span class="comment-delimiter">//        </span><span class="comment">for(auto i: buf_) if(i != v) return false;
+</span><span class="comment-delimiter">//        </span><span class="comment">return true;
+</span><span class="comment-delimiter">//    </span><span class="comment">}
+</span><span class="comment-delimiter">//    </span><span class="comment">void Back() {
+</span><span class="comment-delimiter">//        </span><span class="comment">p_ = p_ - 1;
+</span><span class="comment-delimiter">//        </span><span class="comment">p_ = p_ &lt; 0 ? N - p_ : p_;
+</span><span class="comment-delimiter">//    </span><span class="comment">}
+</span><span class="comment-delimiter">//    </span><span class="comment">void Dup() {
+</span><span class="comment-delimiter">//        </span><span class="comment">Put(Get());
+</span><span class="comment-delimiter">//    </span><span class="comment">}
+</span><span class="comment-delimiter">//    </span><span class="comment">template &lt; typename F &gt;
+</span><span class="comment-delimiter">//    </span><span class="comment">F Apply(F f) {
+</span><span class="comment-delimiter">//        </span><span class="comment">for(auto i: buf_) f(i);
+</span><span class="comment-delimiter">//        </span><span class="comment">return f;
+</span><span class="comment-delimiter">//    </span><span class="comment">}
+</span><span class="comment-delimiter">//</span><span class="comment">private:
+</span><span class="comment-delimiter">//    </span><span class="comment">std::array&lt;T, N &gt; buf_;
+</span><span class="comment-delimiter">//    </span><span class="comment">std::size_t p_ = 0;
+</span><span class="comment-delimiter">//</span><span class="comment">};
+</span><span class="comment-delimiter">//</span><span class="comment">
+</span><span class="comment-delimiter">//</span><span class="comment">#if 0
+</span><span class="comment-delimiter">//</span><span class="comment">template &lt; typename KeyT, typename EvalMapT, typename ActionMapT, typename
+</span><span class="comment-delimiter">//</span><span class="comment">ContextT &gt;
+</span><span class="comment-delimiter">//</span><span class="comment">struct C {
+</span><span class="comment-delimiter">//    </span><span class="comment">C(CircularBuffer&lt;KeyT, 2&gt;&amp; l, KeyT k, const EvalMapT&amp; e, ActionMapT&amp; a,
+</span><span class="comment-delimiter">//      </span><span class="comment">ContextT&amp; c) : last(l), terminate(false),
+</span><span class="comment-delimiter">//    </span><span class="comment">key(k), em(std::cref(e)), am(std::ref(a)), ctx(std::ref(c)),
+</span><span class="comment-delimiter">//    </span><span class="comment">prev(std::numeric_limits&lt;std::size_t&gt;::max()) {}
+</span><span class="comment-delimiter">//    </span><span class="comment">bool operator()(InStream&amp; is) const {
+</span><span class="comment-delimiter">//        </span><span class="comment">const EvalMapT&amp; m = em.get();
+</span><span class="comment-delimiter">//        </span><span class="comment">//if(last.get().Get() == key) return false;
+</span><span class="comment-delimiter">//        </span><span class="comment">ActionMapT&amp; a = am.get();
+</span><span class="comment-delimiter">//        </span><span class="comment">assert(m.find(key) != m.end());
+</span><span class="comment-delimiter">//        </span><span class="comment">//last.get().Put(key);
+</span><span class="comment-delimiter">//        </span><span class="comment">//last.get().Put(key);
+</span><span class="comment-delimiter">//        </span><span class="comment">const bool pass = m.find(key)-&gt;second(is);
+</span><span class="comment-delimiter">//        </span><span class="comment">//assert(a.find(key) != a.end());
+</span><span class="comment-delimiter">//        </span><span class="comment">//if(pass) a.find(key)-&gt;second(Values(), ctx);
+</span><span class="comment-delimiter">//        </span><span class="comment">return pass;
+</span><span class="comment-delimiter">//    </span><span class="comment">}
+</span><span class="comment-delimiter">//    </span><span class="comment">mutable bool terminate = false;
+</span><span class="comment-delimiter">//    </span><span class="comment">mutable std::size_t prev;
+</span><span class="comment-delimiter">//    </span><span class="comment">KeyT key;
+</span><span class="comment-delimiter">//    </span><span class="comment">std::reference_wrapper&lt;const EvalMapT&gt; em;
+</span><span class="comment-delimiter">//    </span><span class="comment">mutable std::reference_wrapper&lt;ActionMapT&gt; am;
+</span><span class="comment-delimiter">//    </span><span class="comment">mutable std::reference_wrapper&lt;ContextT&gt; ctx;
+</span><span class="comment-delimiter">//    </span><span class="comment">mutable std::reference_wrapper&lt; CircularBuffer&lt;KeyT, 2&gt; &gt; last;
+</span><span class="comment-delimiter">//</span><span class="comment">};
+</span><span class="comment-delimiter">//</span><span class="comment">#endif
+</span><span class="comment-delimiter">//</span><span class="comment">
+</span><span class="comment-delimiter">////</span><span class="comment">User must implement function
+</span><span class="comment-delimiter">//</span><span class="comment">template &lt; typename KeyT &gt;
+</span><span class="comment-delimiter">//</span><span class="comment">KeyT InitKey();
+</span><span class="comment-delimiter">//</span><span class="comment">template &lt;&gt;
+</span><span class="comment-delimiter">//</span><span class="comment">TERM InitKey&lt;TERM&gt;() { return TERM(); }
+</span><span class="comment-delimiter">//</span><span class="comment">#if 0
+</span><span class="comment-delimiter">//</span><span class="comment">{{NUMBER, [](TERM t, const Values&amp; v, Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//    </span><span class="comment">std::cout &lt;&lt; "NUMBER: ";
+</span><span class="comment-delimiter">//    </span><span class="comment">if(!v.empty()) cout &lt;&lt; v.begin()-&gt;second;
+</span><span class="comment-delimiter">//    </span><span class="comment">cout &lt;&lt; std::endl;
+</span><span class="comment-delimiter">//    </span><span class="comment">return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{EXPR, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "EXPR" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{OP, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "OP" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{CP, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "CP" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{PLUS, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "+" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{MINUS, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "-" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{MUL, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "*" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{DIV, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "/" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{POW, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "^" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{SUM, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "SUM" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{PRODUCT, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "PRODUCT" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{POWER, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "POWER" &lt;&lt; std::endl; return true;}},
+</span><span class="comment-delimiter">//    </span><span class="comment">{VALUE, [](TERM t, const Values&amp; , Ctx&amp;, EvalState) {
+</span><span class="comment-delimiter">//        </span><span class="comment">std::cout &lt;&lt; "VALUE" &lt;&lt; std::endl; return true;}}
+</span><span class="comment-delimiter">//    </span><span class="comment">};
+</span><span class="comment-delimiter">//</span><span class="comment">#endif
+</span>
+
+</pre>
+  </body>
+</html>

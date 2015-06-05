@@ -211,12 +211,13 @@ bool HandleTerm(TERM t, const Values& v, Ctx& ctx, EvalState es) {
     } else if(t == FSEP) {
         ctx.ast.Rewind(FBEGIN);
         return true;
-    } else if(!v.empty()) {
+    } else if(  )else if(!v.empty()) {
         ctx.ast.Add({t, real_t()});
     }
     return true;
 };
-    
+
+//def(f, x, y, z) <= x * y * z
     
 ///Parser callback type
 using ActionFun = std::function< bool (TERM, const Values&, Ctx&, EvalState) >;

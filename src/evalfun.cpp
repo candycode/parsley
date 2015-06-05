@@ -62,51 +62,51 @@ enum TERM {EXPR = 1, OP, CP, VALUE, PLUS, MINUS, MUL, DIV, SUM, PRODUCT,
            NUMBER, POW, POWER};
 
 std::map< TERM, int > weights = {
-    {NUMBER, 0},
-    {OP, 0},
-    {CP, 0},
-    {POW, 1},
-    {MUL, 2},
-    {DIV, 2},
-    {MINUS, 3},
-    {PLUS, 4}
+  {NUMBER, 0},
+  {OP, 0},
+  {CP, 0},
+  {POW, 1},
+  {MUL, 2},
+  {DIV, 2},
+  {MINUS, 3},
+  {PLUS, 4}
 };
 
 bool ScopeBegin(TERM t) { return t == OP; }
 bool ScopeEnd(TERM t) { return t == CP; }
 
 std::string TermToString(TERM t) {
-    std::string ret;
-    switch(t) {
-        case EXPR: ret = "EXPR";
-            break;
-        case OP: ret = "(";
-            break;
-        case CP: ret = ")";
-            break;
-        case VALUE: ret = "VALUE";
-            break;
-        case PLUS: ret = "+";
-            break;
-        case MINUS: ret = "-";
-            break;
-        case MUL: ret = "*";
-            break;
-        case DIV: ret = "/";
-            break;
-        case SUM: ret = "SUM";
-            break;
-        case PRODUCT: ret = "PROD";
-            break;
-//        case NUMBER: ret = "";
-//            break;
-        case POW: ret = "^";
-            break;
-        case POWER: ret = "POW";
-            break;
-        default: break;
-    }
-    return ret;
+  std::string ret;
+  switch(t) {
+  case EXPR: ret = "EXPR";
+    break;
+  case OP: ret = "(";
+    break;
+  case CP: ret = ")";
+    break;
+  case VALUE: ret = "VALUE";
+    break;
+  case PLUS: ret = "+";
+    break;
+  case MINUS: ret = "-";
+    break;
+  case MUL: ret = "*";
+    break;
+  case DIV: ret = "/";
+    break;
+  case SUM: ret = "SUM";
+    break;
+  case PRODUCT: ret = "PROD";
+    break;
+    //        case NUMBER: ret = "";
+    //            break;
+  case POW: ret = "^";
+    break;
+  case POWER: ret = "POW";
+    break;
+  default: break;
+  }
+  return ret;
 };
 
 
@@ -125,102 +125,102 @@ using ActionMap = std::map< TERM, ActionFun  >;
 #endif
 
 void Go() {
-    Ctx ctx;
-    ActionMap am;
-    int indent = 0;
-    auto handleTerm = [&indent](TERM t, const Values& v, Ctx&, EvalState es) {
-        if(es == EvalState::BEGIN) {
-            ++indent;
-            return true;
-        } else if(es == EvalState::FAIL) {
-            --indent;
-            return false;
-        }
-        if(!v.empty())
-        cout << std::string(indent, '`') << ' ' << TermToString(t);
-        if(t == NUMBER) {
-            if(!v.empty()) cout << v.begin()->second;
-        }
-        if(!v.empty()) cout << endl;
-        --indent;
-        return true;
-    };
-    auto handleWeightedTerm = [&indent](TERM t, const Values& v, Ctx&,
-                                        EvalState es) {
-        if(es == EvalState::BEGIN) return true;
-        else if(es == EvalState::FAIL) return false;
-        if(ScopeBegin(t)) ++indent;
-        if(!v.empty())
-            cout << std::string((indent + weights[t]), ' ')
-            << TermToString(t);
-        if(t == NUMBER) {
-            if(!v.empty()) cout << v.begin()->second;
-        }
-        if(ScopeEnd(t)) --indent;
-        if(!v.empty()) cout << endl;
-        return true;
-    };
+  Ctx ctx;
+  ActionMap am;
+  int indent = 0;
+  auto handleTerm = [&indent](TERM t, const Values& v, Ctx&, EvalState es) {
+    if(es == EvalState::BEGIN) {
+      ++indent;
+      return true;
+    } else if(es == EvalState::FAIL) {
+      --indent;
+      return false;
+    }
+    if(!v.empty())
+      cout << std::string(indent, '`') << ' ' << TermToString(t);
+    if(t == NUMBER) {
+      if(!v.empty()) cout << v.begin()->second;
+    }
+    if(!v.empty()) cout << endl;
+    --indent;
+    return true;
+  };
+  auto handleWeightedTerm = [&indent](TERM t, const Values& v, Ctx&,
+                                      EvalState es) {
+    if(es == EvalState::BEGIN) return true;
+    else if(es == EvalState::FAIL) return false;
+    if(ScopeBegin(t)) ++indent;
+    if(!v.empty())
+      cout << std::string((indent + weights[t]), ' ')
+           << TermToString(t);
+    if(t == NUMBER) {
+      if(!v.empty()) cout << v.begin()->second;
+    }
+    if(ScopeEnd(t)) --indent;
+    if(!v.empty()) cout << endl;
+    return true;
+  };
 
-    Set(am, handleWeightedTerm, NUMBER,
-        EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE);
-    //callback function also receives key: it is possible to have same
-    //callbak handle multiple keys; to assign the same callback to multiple
-    //keys in action map use Set helper:
-    //    ActionMap A;
-    //    Set(A,
-    //        [](TERM t, const Values&, Ctx&) {
-    //           cout << t << endl; return true; },
-    //        OP, CP, MINUS, MUL);
-    Map g; // grammar
-    auto c = MAKE_CBCALL(TERM, g, am, ctx);
-    auto n = MAKE_CALL(TERM, g, am, ctx);
-    auto mt = MAKE_EVAL(TERM, g, am, ctx);
-    //grammar definition
-    //non-terminal - note the top-down definition through deferred calls using
-    //the 'c' helper function
-    g[EXPR]    = n(SUM);
-    //Option 1:
-    //    g[SUM]     = AND(c(PRODUCT), ZM(AND(OR(c(PLUS), c(MINUS)), c(PRODUCT))));
-    //    g[PRODUCT] = AND(c(VALUE), ZM(AND(OR(c(MUL), c(DIV), c(POW), c(VALUE))));
-    //    g[VALUE]   = OR(c(NUMBER), AND(c(OP),c(EXPR), c(CP)));
-    //Option 2:
-    //    g[SUM]     = c(PRODUCT) & *((c(PLUS) / c(MINUS)) & c(PRODUCT));
-    //    g[PRODUCT] = c(VALUE) & *((c(MUL) / c(DIV) / c(POW)) & c(VALUE));
-    //    g[VALUE]   = c(NUMBER) / (c(OP) & c(EXPR) & c(CP));
-    //Option 3: commas for ANDs, parenthesis required, if not they are parsed
-    //          with standard rules
-    g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
-    g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
-    g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
-    g[VALUE]   = n(NUMBER) / (n(OP), n(EXPR), n(CP));
-    using FP = FloatParser;
-    using CS = ConstStringParser;
-    //terminal
-    g[NUMBER] = mt(NUMBER, FP());
-    g[OP]     = mt(OP,     CS("("));
-    g[CP]     = mt(CP,     CS(")"));
-    g[PLUS]   = mt(PLUS,   CS("+"));
-    g[MINUS]  = mt(MINUS,  CS("-"));
-    g[MUL]    = mt(MUL,    CS("*"));
-    g[DIV]    = mt(DIV,    CS("/"));
-    g[POW]    = mt(POW,    CS("^"));
-    //text
-    istringstream is("6*((2+-3)+7^9)");
-    InStream ins(is);
-    //invoke parser
-    g[EXPR](ins);
-    //NOTE: EOF is set AFTER TRYING TO READ PAST THE END OF THE STREAM!
-    //check
-    if(!ins.eof()) std::cout << "ERROR AT: " << ins.get_lines() << ", "
-                             << ins.get_line_chars() << std::endl;
+  Set(am, handleWeightedTerm, NUMBER,
+      EXPR, OP, CP, PLUS, MINUS, MUL, DIV, POW, SUM, PRODUCT, POWER, VALUE);
+  //callback function also receives key: it is possible to have same
+  //callbak handle multiple keys; to assign the same callback to multiple
+  //keys in action map use Set helper:
+  //    ActionMap A;
+  //    Set(A,
+  //        [](TERM t, const Values&, Ctx&) {
+  //           cout << t << endl; return true; },
+  //        OP, CP, MINUS, MUL);
+  Map g; // grammar
+  auto c = MAKE_CBCALL(TERM, g, am, ctx);
+  auto n = MAKE_CALL(TERM, g, am, ctx);
+  auto mt = MAKE_EVAL(TERM, g, am, ctx);
+  //grammar definition
+  //non-terminal - note the top-down definition through deferred calls using
+  //the 'c' helper function
+  g[EXPR]    = n(SUM);
+  //Option 1:
+  //    g[SUM]     = AND(c(PRODUCT), ZM(AND(OR(c(PLUS), c(MINUS)), c(PRODUCT))));
+  //    g[PRODUCT] = AND(c(VALUE), ZM(AND(OR(c(MUL), c(DIV), c(POW), c(VALUE))));
+  //    g[VALUE]   = OR(c(NUMBER), AND(c(OP),c(EXPR), c(CP)));
+  //Option 2:
+  //    g[SUM]     = c(PRODUCT) & *((c(PLUS) / c(MINUS)) & c(PRODUCT));
+  //    g[PRODUCT] = c(VALUE) & *((c(MUL) / c(DIV) / c(POW)) & c(VALUE));
+  //    g[VALUE]   = c(NUMBER) / (c(OP) & c(EXPR) & c(CP));
+  //Option 3: commas for ANDs, parenthesis required, if not they are parsed
+  //          with standard rules
+  g[SUM]     = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
+  g[PRODUCT] = (n(POWER), *((n(MUL) / n(DIV) / n(POW)), n(VALUE)));
+  g[POWER]   = (n(VALUE), *(n(POW), n(VALUE)));
+  g[VALUE]   = n(NUMBER) / (n(OP), n(EXPR), n(CP));
+  using FP = FloatParser;
+  using CS = ConstStringParser;
+  //terminal
+  g[NUMBER] = mt(NUMBER, FP());
+  g[OP]     = mt(OP,     CS("("));
+  g[CP]     = mt(CP,     CS(")"));
+  g[PLUS]   = mt(PLUS,   CS("+"));
+  g[MINUS]  = mt(MINUS,  CS("-"));
+  g[MUL]    = mt(MUL,    CS("*"));
+  g[DIV]    = mt(DIV,    CS("/"));
+  g[POW]    = mt(POW,    CS("^"));
+  //text
+  istringstream is("6*((2+-3)+7^9)");
+  InStream ins(is);
+  //invoke parser
+  g[EXPR](ins);
+  //NOTE: EOF is set AFTER TRYING TO READ PAST THE END OF THE STREAM!
+  //check
+  if(!ins.eof()) std::cout << "ERROR AT: " << ins.get_lines() << ", "
+                           << ins.get_line_chars() << std::endl;
 }
 
 //------------------------------------------------------------------------------
 int main(int, char**) {
-    //Go();
-    //void TreeTest();
-    //TreeTest();
-   	return 0;
+  //Go();
+  //void TreeTest();
+  //TreeTest();
+  return 0;
 }
 
 //LEFTOVERS
