@@ -11,55 +11,73 @@ enum class EvalState {BEGIN, PASS, FAIL};
 using EvalFun = std::function< bool (InStream&) >;
 
 
-///@todo add operator () to parser so that function is independent from
-///Parser class
-template < typename InStreamT,
-typename KeyT,
-typename EvalMapT,
-typename ActionMapT,
-typename ContextT >
-typename EvalMapT::value_type::second_type
-MakeTermEval(KeyT k,
-             const EvalMapT& em,
-             Parser p, //use an empty parser to specify non-terminal term
-             //.., NonTerminal(),...
-             ActionMapT& am,
-             ContextT& c,
-             bool cback = true) {
-    std::size_t sp = std::numeric_limits<std::size_t>::max();
-    bool last = false;
-    return [cback, last, sp, k, &em, p, &am, &c](InStreamT& is)
-    mutable -> bool {
-        if(is.tellg() == sp) return last;
-        assert(em.find(k) != em.end());
-        if(cback) assert(am.find(k) != am.end());
-        bool ret = true;
-        std::size_t i = is.tellg();
-        if(cback) {
-            ret = am[k](k, Values(), c, EvalState::BEGIN);
-        }
-        if(!p.Empty()) {
-            ret = ret && p.Parse(is);
-            if(cback) {
-                const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
-                //short circuit evaluation, use am[...] as first arg
-                //if not callback not called with FAIL if ret is false
-                ret = am[k](k, p.GetValues(), c, s) && ret;
-            }
-        } else {
-            ret = ret && em.find(k)->second(is);
-            if(cback) {
-                const EvalState s = ret ? EvalState::PASS : EvalState::FAIL;
-                //short circuit evaluation, use am[...] as first arg
-                //if not callback not called with FAIL if ret is false
-                ret = am[k](k, Values(), c, s) && ret;
-            }
-        }
-        sp = i;
-        last = ret;
-        return ret;
-    };
-}
+///@todo add operator () to parser so that function is can eventually
+///be made independent of Parser class and ivoke operator() instead
+///of Parse() method
+ template < typename InStreamT,
+   typename KeyT,
+   typename EvalMapT,
+   typename ActionMapT,
+   typename ContextT >
+   typename EvalMapT::value_type::second_type
+   MakeTermEval(KeyT k,
+                const EvalMapT& em,
+                Parser p, //use an empty parser to specify 
+                          //non-terminal term
+                //.., NonTerminal(),...
+                ActionMapT& am,
+                ContextT& c,
+                bool cback = true) {
+     std::size_t sp = std::numeric_limits<std::size_t>::max();
+     bool last = false;
+     return [cback, last, sp, k, &em, p, &am, &c](InStreamT& is)
+       mutable -> bool { //mutable required: sp and last to be
+                         //modified by function 
+       //~memoization: if evaluation already performed at stream
+       //position return result (true or false)
+       //at stream position
+       if(is.tellg() == sp) return last;
+       //make sure key is in map
+       assert(em.find(k) != em.end());
+       //if callback requested make sure callback available in
+       //action map
+       if(cback) assert(am.find(k) != am.end());
+       bool ret = true;
+       //record stream position before parsing
+       std::size_t i = is.tellg();
+       //Callback: BEGIN
+       if(cback) {
+         ret = am[k](k, Values(), c, EvalState::BEGIN);
+       }
+       //If parser not empty actually parse values and 
+       //invoke action callback with values
+       if(!p.Empty()) { //parser: parse values
+         ret = ret && p.Parse(is);
+         if(cback) { //parser + callback: parse values then invoke
+                     //action callback with parsed values
+           const EvalState s = ret ? EvalState::PASS 
+                                   : EvalState::FAIL;
+           //short circuit evaluation, use am[...] as first arg
+           //if not callback not called with FAIL if ret is false
+           ret = am[k](k, p.GetValues(), c, s) && ret;
+         }
+       } else { //no parser: simply invoke function at key = k in
+                //eval map
+         ret = ret && em.find(k)->second(is);
+         if(cback) {
+           const EvalState s = ret ? EvalState::PASS 
+                                   : EvalState::FAIL;
+           //short circuit evaluation, use am[...] as first arg
+           //if not callback not called with FAIL if ret is false
+           ret = am[k](k, Values(), c, s) && ret;
+         }
+       }
+       //record stream position and result in clojure
+       sp = i;
+       last = ret;
+       return ret;
+     };
+   }
 
 EvalFun OR() {
     return [](InStream&) { return false; };
@@ -112,23 +130,17 @@ EvalFun OM(F f) {
 template < typename F >
 EvalFun ZO(F f) {
     return [=](InStream& is) {
-        bool pass = false;
-        //REWIND r(pass, is);
-        bool ret = f(is);
-        if(!ret) {
-            pass = true;
-            return true;
-        }
-        ret = f(is);
-        if(!ret) {
-            pass = true;
-            return true;
-        }
-        pass = false;
-        return false;
-    };
+      //return true if f fails (zero)
+      //or if f succeeds (one) and following
+      //call to f fails:
+      //if first call f(is) succeeds !f(s) is false
+      //and the second term is evaluated: if second term
+      //fails then !false == true is returned meaning
+      //only first f(is) succeeded
+      return !f(is) || !f(is);
+    };         
 }
-    
+
 template < typename F >
 EvalFun NOT(F f) {
     return [f](InStream& is) {
@@ -152,8 +164,8 @@ EvalFun NOT(F f) {
 //map
 template < typename KeyT, typename EvalMapT, typename ActionMapT,
 typename ContextT >
-EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, ContextT& c,
-             bool cback) {
+EvalFun Call(KeyT key, const EvalMapT& em, ActionMapT& am, 
+             ContextT& c, bool cback) {
     return MakeTermEval<InStream>(key, em, Parser(), am, c, cback);
 }
 
@@ -199,7 +211,8 @@ F Invoke(const EvalFun& f, const CB& cb, Ctx& c,
     return [cb, f, k, &c, def](InStream& is) {
         cb(k, def, EvalState::BEGIN);
         bool ret = f(is);
-        if(ret) cb(k, def, c, ret ? EvalState::PASS : EvalState::FAIL);
+        if(ret) cb(k, def, c, ret ? EvalState::PASS 
+                                  : EvalState::FAIL);
     };
 }
 
@@ -210,7 +223,8 @@ F InvokeMapped(const EvalFun& f, KeyT k, const MapT& m, Ctx& c,
         m.find(k)->second(k, def, c, EvalState::BEGIN);
         bool ret = f(is);
         if(ret) m.find(k)->second(k, def, c,
-                                  ret ? EvalState::PASS : EvalState::FAIL);
+                                  ret ? EvalState::PASS 
+                                      : EvalState::FAIL);
     };
 }
 
@@ -218,7 +232,8 @@ template < typename M >
 void Set(M& m, typename M::value_type::second_type ) {}
 
 template < typename M, typename KeyT, typename...KeysT >
-void Set(M& m, typename M::value_type::second_type f, KeyT k, KeysT...ks) {
+void Set(M& m, 
+         typename M::value_type::second_type f, KeyT k, KeysT...ks) {
     m[k] = f;
     Set(m, f, ks...);
 }

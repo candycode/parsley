@@ -523,10 +523,7 @@ real_t MathParser(const string& expr, Ctx& ctx) {
         {POW, [](real_t v1, real_t v2) { return pow(v1,v2); }},
         {OP, [](real_t v, real_t a) { return v; }},
         {CP, [](real_t v, real_t ) { return v; }},
-        //HACK TO AVOID USING AN EVAL FUNCTION THAT TAKES FULL Term
-        //INSTANCES AND SUPPORTS DATA OTHER THAN double
         {ASSIGN, [&ctx](real_t key, real_t value ) {
-            cout << "ASSIGN " << ctx.assignKey << endl;
             ctx.keyvalue[ctx.assignKey] = value;
             return value;
         }},
@@ -569,94 +566,3 @@ int main(int, char**) {
     }
     return 0;
 }
-
-//ops[ast.Root()->Data().type](ast.Root(), map);
-//ops[SUM] = [&m](WTRee* p) {
-//    for(auto i: p->children_) {
-//        
-//    }
-//}
-//using one additional level of indirection it is possible to capture
-//operations and perform real-time evaluation
-//
-//[SUM] = n(CSUM)
-//[CSUM] = (n(PRODUCT), *((n(PLUS) / n(MINUS)), n(PRODUCT)));
-//callback[SUM] is called when SUM->CSUM validates and if [NUMBER] loads
-//e.g. into the context then sum can directly evaluate the stored numbers
-
-/////Generate parser table map: each element represent a parsing rule  function
-//ParsingRules GenerateParser(ActionMap& am, Ctx& ctx) {
-//    
-//    ParsingRules g; // grammar
-//    auto n  = MAKE_CALL(TERM, g, am, ctx);
-//    auto c  = MAKE_CBCALL(TERM, g, am, ctx);
-//    auto mt = MAKE_EVAL(TERM, g, am, ctx);
-//    
-//    //grammar definition
-//    //non-terminal - note the top-down definition through deferred calls using
-//    //the 'c' helper function
-//    // c -> callback invoked also for non-terminal states
-//    // n -> callback invoked only for non terminal states
-//    // 'c' is required to captures operations such as 1 + 2: callback is invoked
-//    // after parsing 1 + 2 and can therefore be used to directly evaluate term
-//    // once both operands and operation type have been stored into context
-//    //pattern is:
-//    //grammar[STATE_ID] = c(OPERATION_TO_HANDLE_WITH_CALLBAK)... | ... (...,...)
-//    //grammar[STATE_TO_HANDLE_WITH_CALLBAK] = ...
-//    //this way you have a callback invoked after all the operations associated
-//    //with STATE_TO_HANDLE_WITH_CALLBAK have been completed it is therefore
-//    //possible to handle operations after all operands and operators have been
-//    //parsed instead of having a callback invoked when an operator is found
-//    //with no knowledge of what lies on its right side
-//    g[START]   = n(EXPR);
-//    g[EXPR]    = n(SUM);
-//    //c(SUMTERM) and c(PRODTERM) are only required for non-tree based evaluation
-//    //because a callback needs to be invoked each time a "+ 3"
-//    //expression is parsed in order to be able to properly add a function or
-//    //compute a value each time an operator is encountered
-//    g[SUM]      = (n(PRODUCT), *c(SUMTERM));
-//    g[SUMTERM]  = ((n(PLUS) / n(MINUS)), n(PRODUCT));
-//    g[PRODUCT]  = (n(VALUE), *c(PRODTERM));
-//    g[PRODTERM] = ((n(MUL) / n(DIV) / n(POW)), n(VALUE));
-//    g[VALUE]    = (n(OP), n(EXPR), n(CP))
-//    / n(FUNCTION) / c(ASSIGNMENT) / n(NUMBER);
-//    g[ASSIGNMENT]  = (n(VAR), ZO((n(ASSIGN), n(EXPR))));
-//    g[FUNCTION] = (n(FBEGIN), ZO((n(ARG),*n(ARGS))), n(FEND));
-//    g[ARGS]     = (n(FSEP), n(ARG));
-//    g[ARG]      = n(EXPR);
-//    ///@todo support for multi-arg functions:
-//    //redefinitions of open and close parethesis are used to signal
-//    //the begin/end of argument list;
-//    //eval function of ',' separator takes care of adding result of expression
-//    //into Context::ArgumentArray
-//    //eval function of FOP ('(') puts result of first child (if any) into
-//    //Context::ArgumentArray
-//    //eval function of FUNNAME invokes function passing Context::ArgumentArray
-//    //to function, usually a wrapper which forwards calls to actual math
-//    //function f(const vector<duble>& v) -> atan(v[0], v[1]);
-//    //it is possible to have one arg array per function and therefore also
-//    //memoize by caching last used parameters
-//    //g[FUN]         = (n(FUNNAME), n(FOP), ZO((n(EXPR), *(n(ARGSEP), (EXPR)))),
-//    //                   n(FCP));
-//    using FP = FloatParser;
-//    using CS = ConstStringParser;
-//    using VS = FirstAlphaNumParser;
-//    //terminal
-//    g[NUMBER] = mt(NUMBER, FP());
-//    g[OP]     = mt(OP,     CS("("));
-//    g[CP]     = mt(CP,     CS(")"));
-//    g[PLUS]   = mt(PLUS,   CS("+"));
-//    g[MINUS]  = mt(MINUS,  CS("-"));
-//    g[MUL]    = mt(MUL,    CS("*"));
-//    g[DIV]    = mt(DIV,    CS("/"));
-//    g[POW]    = mt(POW,    CS("^"));
-//    g[ASSIGN] = mt(ASSIGN, CS("<-"));
-//    g[VAR]    = mt(VAR, VS());
-//    g[FBEGIN] = mt(FBEGIN, (VS("name") > CS("(")));
-//    g[FEND]   = mt(FEND, CS(")"));
-//    g[FSEP]   = mt(FSEP, CS(","));
-//    
-//    return g;
-//}
-
-
